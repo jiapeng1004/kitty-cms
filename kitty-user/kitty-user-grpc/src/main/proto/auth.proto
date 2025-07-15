@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package icu.jiapeng.kitty.user.grpc;
+
+option java_multiple_files = true;
+option java_package = "icu.jiapeng.kitty.user.auth.grpc";
+option java_outer_classname = "AuthServiceSup";
+
+service AuthService {
+  rpc TokenIntrospection (TokenIntrospectionReq) returns (TokenIntrospectionResp) {
+  }
+  rpc SaTokenDaoGet (SaTokenDaoGetReq) returns (SaTokenDaoGetResp) {
+  }
+  rpc SaTokenDaoTimeOut (SaTokenDaoTimeOutReq) returns (SaTokenDaoTimeOutResp) {
+  }
+}
+
+// token自省
+message TokenIntrospectionReq  {
+  string token = 1;
+}
+
+// token自省结果
+message TokenIntrospectionResp {
+  // 是否合法token
+  bool valid = 1;
+}
+
+// 获取sa-token的dao key的值
+message SaTokenDaoGetReq {
+  string key = 1;
+}
+message SaTokenDaoGetResp {
+  string value = 1;
+}
+
+// 获取sa-token的dao key的超时时间
+message SaTokenDaoTimeOutReq {
+  string key = 1;
+}
+message SaTokenDaoTimeOutResp {
+  int64 timeOut = 1;
+}

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>icu.jiapeng</groupId>
+        <artifactId>kittycms</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>kitty-user</artifactId>
+
+    <packaging>pom</packaging>
+
+
+    <modules>
+        <module>kitty-user-api</module>
+        <module>kitty-user-grpc</module>
+        <module>kitty-user-plugin-grpc-sa</module>
+        <module>kitty-user-func</module>
+        <module>kitty-user-server</module>
+    </modules>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>icu.jiapeng</groupId>
+                <artifactId>kitty-user-api</artifactId>
+                <version>${kittycms.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>icu.jiapeng</groupId>
+                <artifactId>kitty-user-grpc</artifactId>
+                <version>${kittycms.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>icu.jiapeng</groupId>
+                <artifactId>kitty-user-func</artifactId>
+                <version>${kittycms.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+</project>

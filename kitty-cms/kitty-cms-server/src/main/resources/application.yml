@@ -1,0 +1,39 @@
+spring:
+  profiles:
+    active: "@spring.profiles.active@"
+  application:
+    name: kitty-cms
+
+  r2dbc:
+    url: r2dbc:mysql://localhost:3306/mediaboot
+    username: root
+    password: root
+  data:
+    r2dbc:
+      repositories:
+        enabled: true
+    redis:
+      url: redis://localhost:6379
+      password: 123456
+
+
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    path: /openapi.html
+    tags-sorter: alpha
+  default-produces-media-type: application/json
+  default-consumes-media-type: application/json
+server:
+  port: 9702
+  servlet:
+    context-path: /${spring.application.name}
+
+grpc:
+  server:
+    port: 9802
+  client:
+    kitty-user:
+      address: "static://127.0.0.1:9801"

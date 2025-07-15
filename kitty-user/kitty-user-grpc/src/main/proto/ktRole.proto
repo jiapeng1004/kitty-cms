@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package icu.jiapeng.kitty.user.grpc;
+
+option java_multiple_files = true;
+option java_package = "icu.jiapeng.kitty.user.role.grpc";
+option java_outer_classname = "RoleServiceSup";
+
+service KtRoleService {
+  rpc GetRoleIdsByUserId (UserIdReq) returns (RoleCodesResp) {
+  }
+}
+
+// 用户id
+message UserIdReq  {
+  string userId = 1;
+}
+
+// 权限码集合
+message RoleCodesResp {
+  // 是否合法token
+  repeated string roleCodes = 1;
+}

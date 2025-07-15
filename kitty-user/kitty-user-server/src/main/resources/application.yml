@@ -1,0 +1,110 @@
+server:
+  port: 9701
+  tomcat:
+    threads:
+      max: 200
+      min-spare: 10
+    max-connections: 8192
+    accept-count: 100
+    connection-timeout: 6000
+  servlet:
+    context-path: /${spring.application.name}
+
+grpc:
+  server:
+    port: 9801
+
+spring:
+  profiles:
+    active: "@spring.profiles.active@"
+  application:
+    name: kitty-user
+    version: "@project.version@"
+  security:
+    oauth2:
+      authorizationserver:
+        endpoint:
+          authorization-uri: /oauth2/authorize
+          token-uri: /oauth2/token
+          token-introspection-uri: /oauth2/introspect
+          device-authorization-uri: /oauth2/device_authorization
+          device-verification-uri: /oauth2/device_verification
+          jwk-set-uri: /oauth2/jwks
+          token-revocation-uri: /oauth2/revoke
+          pushed-authorization-request-uri: /oauth2/par
+        issuer: http://${spring.application.name}
+      resourceserver:
+        jwt:
+          public-key-location: ${kitty.user.rsa-public-key}
+      client:
+        provider:
+          kitty-user:
+            token-uri: http://127.0.0.1:${server.port}${server.servlet.context-path}${spring.security.oauth2.authorizationserver.endpoint.token-uri}
+        registration:
+          kitty-user:
+            client-id: root
+            client-secret: 123456
+            authorization-grant-type: client_credentials
+            scope: all
+  #  threads:
+  #    virtual:
+  #      enabled: true
+  data:
+    redis:
+      password: "123456"
+      host: localhost
+      port: 6379
+      database: 8
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/kitty_user?useUnicode=true&characterEncoding=utf-8&useSSL=false&allowPublicKeyRetrieval=true&allowMultiQueries=true&zeroDateTimeBehavior=convertToNull&transformedBitIsBoolean=true&tinyInt1isBit=false&allowLoadLocalInfile=true&allowLocalInfile=true
+    username: root
+    password: 123456
+    druid:
+      min-idle: 5
+      max-active: 10
+      max-wait: 5000
+      initial-size: 2
+    type: com.alibaba.druid.pool.DruidDataSource
+
+
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    path: /openapi.html
+    tags-sorter: alpha
+  default-produces-media-type: application/json
+  default-consumes-media-type: application/json
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+  global-config:
+    db-config:
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+  mapper-locations: classpath*:/mapper/**/*.xml
+logging:
+  level:
+    com.baomidou.mybatisplus: false
+kitty:
+  user:
+    rsa-public-key: classpath:rsa.pub
+    rsa-private-key: classpath:rsa.pri
+    service-basic: b1575b63ee6e141cd3134c75669c6e26b4b958ee38d13d65d7931b18085560a7ca289941b7edaf9a78dfa37906fea65e
+    white-list:
+      - /user/register
+      - /user/login
+      - /view/**
+sa-token:
+  token-name: token
+  timeout: 72000
+  active-timeout: 7200
+  dynamic-active-timeout: true
+  isConcurrent: false
+  is-share: false
+  is-read-body: false
+  is-write-header: true
+  check-same-token: true
