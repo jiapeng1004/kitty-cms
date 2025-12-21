@@ -1,0 +1,17 @@
+{
+  "name": "kitty-cms-frontend",
+  "version": "1.0.0",
+  "description": "Frontend for Kitty CMS",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w admin",
+    "build": "npm run build -w admin",
+    "preview": "npm run preview -w admin"
+  },
+  "keywords": [],
+  "author": "Jia Peng",
+  "license": "Apache-2.0"
+}

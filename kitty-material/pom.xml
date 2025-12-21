@@ -12,8 +12,40 @@
 
     <artifactId>kitty-material</artifactId>
 
+    <packaging>pom</packaging>
+    
+    <modules>
+        <module>kitty-material-api</module>
+        <module>kitty-material-func</module>
+        <module>kitty-material-server</module>
+    </modules>
+
     <description>
         素材管理模块
     </description>
 
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>icu.jiapeng</groupId>
+                <artifactId>kitty-material-api</artifactId>
+                <version>${kittycms.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>icu.jiapeng</groupId>
+                <artifactId>kitty-material-func</artifactId>
+                <version>${kittycms.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>icu.jiapeng</groupId>
+                <artifactId>kitty-material-server</artifactId>
+                <version>${kittycms.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>icu.jiapeng</groupId>
+                <artifactId>kitty-user-grpc-sa-plugin</artifactId>
+                <version>${kittycms.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 </project>

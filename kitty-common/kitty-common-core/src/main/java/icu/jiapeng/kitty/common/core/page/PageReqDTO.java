@@ -13,6 +13,7 @@ package icu.jiapeng.kitty.common.core.page;
 
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.AssertFalse;
 import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 import org.springframework.core.GenericTypeResolver;
@@ -51,10 +52,6 @@ public abstract class PageReqDTO<Vo> {
     @Schema(description = "排序", nullable = true)
     @Getter
     private List<OrderItem> orders;
-    public void setOrders(List<OrderItem> orders) {
-        this.orders = orders;
-        validOrder();
-    }
 
     /**
      * 缓存的目标Vo class
@@ -82,7 +79,7 @@ public abstract class PageReqDTO<Vo> {
     }
 
 
-
+    @AssertFalse
     public boolean illegalOrder() {
         // 获取当前的泛型实参数,检查是不是Vo或者其父类的字段检查order是不是Order的值
         // 没有排序
@@ -116,11 +113,5 @@ public abstract class PageReqDTO<Vo> {
             }
         }
         return false;
-    }
-
-    public void validOrder() {
-        if (this.illegalOrder()) {
-            throw new IllegalArgumentException("排序参数不合法");
-        }
     }
 }
