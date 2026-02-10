@@ -13,10 +13,9 @@ package icu.jiapeng.kitty.user.config;
 
 import lombok.Getter;
 import lombok.Setter;
-import org.jspecify.annotations.NonNull;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-import java.util.Map;
+import java.util.Set;
 
 @ConfigurationProperties(prefix = "kitty.user")
 @Getter
@@ -57,4 +56,9 @@ public class UserConfigProperties {
      * 服务名:token
      */
     private String serviceBasic;
+
+    /**
+     * 忽略的租户迁移表
+     */
+    private Set<String> tenMigrateIgnore;
 }

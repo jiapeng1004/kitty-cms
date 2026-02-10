@@ -80,7 +80,7 @@ public class KtConfigServiceImpl extends ServiceImpl<KtConfigMapper, KtConfig> i
         String val = "";
         KtConfig one = lambdaQuery().eq(KtConfig::getConfigKey, getValDTO.getConfigKey()).one();
         if (Objects.nonNull(one)) {
-            val = one.getConfigValue();
+            val = StrUtil.firstNonBlank(one.getConfigValue(), one.getConfigDefault());
         }
         return val;
     }

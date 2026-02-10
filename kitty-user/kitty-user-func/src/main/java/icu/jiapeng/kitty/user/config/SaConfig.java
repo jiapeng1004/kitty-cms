@@ -30,6 +30,7 @@ public class SaConfig implements WebMvcConfigurer {
                 })).addPathPatterns("/api/**")           // 拦截所有路径
                 .excludePathPatterns("/api/user/login"   // 放行登录接口
                         , "/error" // 放行错误页面
+                        , "/api/tenant/**" // 测试租户
                         , "/api/user/register" // 放行注册接口
                         , "/api/user/captcha" // 放行验证码接口
                         , "/basic/**" // 放行基础接口

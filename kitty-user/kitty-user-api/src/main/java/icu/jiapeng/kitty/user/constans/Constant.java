@@ -17,4 +17,14 @@ public interface Constant {
      * 通过白名单
      */
     String WHITE = "white";
+
+    /**
+     * 上下文租户 id
+     */
+    String X_TENANT_ID = "X-Tenant-Id";
+
+    /**
+     * 上下文用户 id
+     */
+    String X_USER_ID = "X-User-Id";
 }

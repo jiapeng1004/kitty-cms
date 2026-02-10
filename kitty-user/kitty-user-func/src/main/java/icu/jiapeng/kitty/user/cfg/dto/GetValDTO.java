@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.experimental.Accessors;
 
 /**
  * 获取值
@@ -15,6 +16,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @Schema(description = "获取值的参数")
+@Accessors(chain = true)
 public class GetValDTO {
 
     /**

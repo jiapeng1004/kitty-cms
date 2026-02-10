@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.5.7</version>
+        <version>4.0.2</version>
     </parent>
     <groupId>icu.jiapeng</groupId>
     <artifactId>kittycms</artifactId>
@@ -25,6 +25,7 @@
         <module>kitty-user</module>
         <module>kitty-cms</module>
         <module>kitty-material</module>
+        <module>kitty-transcoder</module>
     </modules>
     <scm>
         <connection/>
@@ -35,14 +36,14 @@
     <properties>
         <kittycms.version>0.0.1-SNAPSHOT</kittycms.version>
         <repo.version>1.0.0</repo.version>
-        <java.version>21</java.version>
+        <java.version>25</java.version>
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
         <hutool.version>5.8.41</hutool.version>
         <mapstruct.version>1.6.3</mapstruct.version>
         <humlunit.version>3.9.0</humlunit.version>
         <selenuim.version>3.141.59</selenuim.version>
-        <mybatis-plus.version>3.5.14</mybatis-plus.version>
+        <mybatis-plus.version>3.5.16</mybatis-plus.version>
         <druid.version>1.2.27</druid.version>
         <mysql.version>9.1.0</mysql.version>
         <fastjson.version>2.0.56</fastjson.version>
@@ -60,8 +61,8 @@
         <maven-replacer-plugin.version>1.5.3</maven-replacer-plugin.version>
         <devh.grpc.version>3.1.0.RELEASE</devh.grpc.version>
         <xolstice-protobuf-maven-plugin.version>0.6.1</xolstice-protobuf-maven-plugin.version>
-        <protobuf-java.version>3.25.4</protobuf-java.version>
-        <grpc.version>1.63.0</grpc.version>
+        <protobuf-java.version>4.33.4</protobuf-java.version>
+        <grpc.version>1.79.0</grpc.version>
         <guava.version>33.5.0-jre</guava.version>
         <os-maven-plugin.version>1.7.1</os-maven-plugin.version>
         <just-auth.version>1.4.0</just-auth.version>
@@ -132,7 +133,7 @@
             </dependency>
             <dependency>
                 <groupId>com.baomidou</groupId>
-                <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+                <artifactId>mybatis-plus-spring-boot4-starter</artifactId>
                 <version>${mybatis-plus.version}</version>
             </dependency>
             <!--mybatis plus分页等插件-->
@@ -164,7 +165,8 @@
             <dependency>
                 <groupId>com.mysql</groupId>
                 <artifactId>mysql-connector-j</artifactId>
-                <version>${mysql.version}</version>
+<!--                <version>${mysql.version}</version>-->
+                <version>9.5.0</version>
                 <scope>runtime</scope>
             </dependency>
             <dependency>
@@ -283,9 +285,9 @@
                     <artifactId>protobuf-maven-plugin</artifactId>
                     <version>${xolstice-protobuf-maven-plugin.version}</version>
                     <configuration>
-                        <protocArtifact>com.google.protobuf:protoc:3.17.3:exe:${os.detected.classifier}</protocArtifact>
+                        <protocArtifact>com.google.protobuf:protoc:${protobuf-java.version}:exe:${os.detected.classifier}</protocArtifact>
                         <pluginId>grpc-java</pluginId>
-                        <pluginArtifact>io.grpc:protoc-gen-grpc-java:1.42.0:exe:${os.detected.classifier}
+                        <pluginArtifact>io.grpc:protoc-gen-grpc-java:${grpc.version}:exe:${os.detected.classifier}
                         </pluginArtifact>
                     </configuration>
                     <executions>
@@ -323,7 +325,7 @@
                     <version>${maven-replacer-plugin.version}</version>
                     <executions>
                         <execution>
-                            <phase>generate-sources</phase>
+                            <phase>process-sources</phase>
                             <goals>
                                 <goal>replace</goal>
                             </goals>
@@ -334,6 +336,10 @@
                             <include>${project.build.directory}/**/generated-sources/**/*.java</include>
                         </includes>
                         <replacements>
+                            <replacement>
+                                <token>javax\.annotation\.Generated</token>
+                                <value>jakarta\.annotation\.Generated</value>
+                            </replacement>
                             <replacement>
                                 <token>javax.annotation.Generated</token>
                                 <value>jakarta.annotation.Generated</value>

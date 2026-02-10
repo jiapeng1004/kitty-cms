@@ -3,11 +3,6 @@ spring:
     active: "@spring.profiles.active@"
   application:
     name: kitty-cms
-
-  r2dbc:
-    url: r2dbc:mysql://localhost:3306/mediaboot
-    username: root
-    password: root
   data:
     r2dbc:
       repositories:

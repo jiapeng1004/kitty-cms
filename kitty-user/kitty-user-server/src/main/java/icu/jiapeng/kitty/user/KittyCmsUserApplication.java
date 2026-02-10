@@ -23,7 +23,7 @@ public class KittyCmsUserApplication {
 
     public static ConfigurableApplicationContext app = null;
 
-    public static void main(String[] args) {
+    static void main(String[] args) {
         app = SpringApplication.run(KittyCmsUserApplication.class, args);
         Runtime runtime = Runtime.getRuntime();
         runtime.addShutdownHook(new Thread(() -> {

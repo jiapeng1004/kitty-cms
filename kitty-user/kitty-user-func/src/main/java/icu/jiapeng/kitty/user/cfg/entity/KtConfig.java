@@ -73,6 +73,12 @@ public class KtConfig extends CommonEntity {
     private String configValue;
 
     /**
+     * 配置项默认值
+     */
+    @TableField("config_default")
+    private String configDefault;
+
+    /**
      * 所属分类 id
      */
     @TableField("class_id")

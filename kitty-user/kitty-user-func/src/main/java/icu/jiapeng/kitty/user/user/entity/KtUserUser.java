@@ -11,6 +11,7 @@
  */
 package icu.jiapeng.kitty.user.user.entity;
 
+import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
@@ -73,6 +74,6 @@ public class KtUserUser extends CommonEntity {
      * 逻辑删除
      */
     @TableLogic
-    @TableField("deleted")
+    @TableField(value = "deleted", fill = FieldFill.INSERT)
     private Integer deleted;
 }

@@ -3,8 +3,10 @@ package icu.jiapeng.kitty.user.cfg.service.impl;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.extra.spring.SpringUtil;
-import com.alibaba.druid.spring.boot3.autoconfigure.DruidDataSourceAutoConfigure;
-import com.baomidou.mybatisplus.autoconfigure.*;
+import com.baomidou.mybatisplus.autoconfigure.IdentifierGeneratorAutoConfiguration;
+import com.baomidou.mybatisplus.autoconfigure.MybatisPlusAutoConfiguration;
+import com.baomidou.mybatisplus.autoconfigure.MybatisPlusInnerInterceptorAutoConfiguration;
+import com.baomidou.mybatisplus.autoconfigure.MybatisPlusLanguageDriverAutoConfiguration;
 import icu.jiapeng.kitty.common.core.page.CommonOrder;
 import icu.jiapeng.kitty.common.core.page.PageReqDTO;
 import icu.jiapeng.kitty.common.core.page.PageRespVo;
@@ -14,21 +16,20 @@ import icu.jiapeng.kitty.user.cfg.vo.ConfigListVo;
 import icu.jiapeng.kitty.user.config.UserFuncConfig;
 import jakarta.annotation.Resource;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
+import org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.fail;
 
 
 @SpringBootTest(classes = KtConfigServiceImplTest.class, webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @Import({
         SpringUtil.class
         , DataSourceAutoConfiguration.class
-        , DruidDataSourceAutoConfigure.class
         , MybatisPlusInnerInterceptorAutoConfiguration.class
         , IdentifierGeneratorAutoConfiguration.class
         , MybatisPlusLanguageDriverAutoConfiguration.class

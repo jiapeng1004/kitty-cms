@@ -51,6 +51,7 @@ public abstract class PageReqDTO<Vo> {
      */
     @Schema(description = "排序", nullable = true)
     @Getter
+    @Setter
     private List<OrderItem> orders;
 
     /**

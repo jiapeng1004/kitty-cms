@@ -14,10 +14,12 @@ package icu.jiapeng.kitty.cms.runtime.vo;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.experimental.Accessors;
 
 @Getter
 @Setter
 @Schema(description = "运行时信息")
+@Accessors(chain = true)
 public class RuntimeInfo {
     /**
      * 内存总字节数

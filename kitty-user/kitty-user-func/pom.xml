@@ -37,7 +37,7 @@
         </dependency>
         <dependency>
             <groupId>com.baomidou</groupId>
-            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+            <artifactId>mybatis-plus-spring-boot4-starter</artifactId>
         </dependency>
         <dependency>
             <groupId>com.baomidou</groupId>
@@ -84,10 +84,6 @@
         <dependency>
             <groupId>org.apache.pulsar</groupId>
             <artifactId>bouncy-castle-bc</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.alibaba</groupId>
-            <artifactId>druid-spring-boot-3-starter</artifactId>
         </dependency>
         <dependency>
             <groupId>cn.hutool</groupId>
