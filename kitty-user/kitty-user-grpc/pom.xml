@@ -47,6 +47,30 @@
             <plugin>
                 <groupId>com.google.code.maven-replacer-plugin</groupId>
                 <artifactId>replacer</artifactId>
+                <version>${maven-replacer-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <phase>process-sources</phase>
+                        <goals>
+                            <goal>replace</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <includes>
+                        <include>${project.build.directory}/**/generated-sources/**/*.java</include>
+                    </includes>
+                    <replacements>
+                        <replacement>
+                            <token>javax\.annotation\.Generated</token>
+                            <value>jakarta\.annotation\.Generated</value>
+                        </replacement>
+                        <replacement>
+                            <token>javax.annotation.Generated</token>
+                            <value>jakarta.annotation.Generated</value>
+                        </replacement>
+                    </replacements>
+                </configuration>
             </plugin>
         </plugins>
     </build>

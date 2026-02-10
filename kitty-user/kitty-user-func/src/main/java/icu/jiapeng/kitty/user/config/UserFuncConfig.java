@@ -11,16 +11,18 @@
  */
 package icu.jiapeng.kitty.user.config;
 
-import com.baomidou.mybatisplus.annotation.DbType;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import icu.jiapeng.kitty.common.core.baomidou.KittyMetaDataHandler;
 import icu.jiapeng.kitty.common.core.config.GrpcConfig;
+import icu.jiapeng.kitty.user.filter.TenFilter;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+import org.springframework.core.Ordered;
 
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(UserConfigProperties.class)
@@ -37,5 +39,14 @@ public class UserFuncConfig {
         // 如果配置多个插件, 切记分页最后添加
         interceptor.addInnerInterceptor(new PaginationInnerInterceptor());
         return interceptor;
+    }
+
+    @Bean
+    public FilterRegistrationBean<TenFilter> loggingFilter() {
+        FilterRegistrationBean<TenFilter> registrationBean = new FilterRegistrationBean<>();
+        registrationBean.setFilter(new TenFilter());
+        registrationBean.addUrlPatterns("/*");
+        registrationBean.setOrder(Ordered.HIGHEST_PRECEDENCE);
+        return registrationBean;
     }
 }

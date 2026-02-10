@@ -1,0 +1,29 @@
+-- 创建共享的kitty_cms数据库
+CREATE DATABASE IF NOT EXISTS kitty_cms CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- 使用kitty_cms数据库
+USE kitty_cms;
+
+-- 创建tenant表
+CREATE TABLE IF NOT EXISTS tenant (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL COMMENT '租户名称',
+    schema_name VARCHAR(100) NOT NULL COMMENT '租户对应的数据库Schema名称',
+    status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE' COMMENT '租户状态：ACTIVE, INACTIVE, DELETED',
+    created_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    UNIQUE KEY uk_schema_name (schema_name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='租户表';
+
+-- 创建user_tenant表，用于存储用户与租户的关联关系
+CREATE TABLE IF NOT EXISTS user_tenant (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL COMMENT '用户ID',
+    tenant_id BIGINT NOT NULL COMMENT '租户ID',
+    role VARCHAR(50) NOT NULL DEFAULT 'MEMBER' COMMENT '用户在租户中的角色：ADMIN, MEMBER',
+    status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE' COMMENT '关联状态：ACTIVE, INACTIVE',
+    created_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    UNIQUE KEY uk_user_tenant (user_id, tenant_id),
+    FOREIGN KEY (tenant_id) REFERENCES tenant(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户-租户关联表';

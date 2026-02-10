@@ -13,11 +13,11 @@
     <artifactId>kitty-material</artifactId>
 
     <packaging>pom</packaging>
-    
+
     <modules>
-        <module>kitty-material-api</module>
-        <module>kitty-material-func</module>
-        <module>kitty-material-server</module>
+        <module>${artifactId}-api</module>
+        <module>${artifactId}-func</module>
+        <module>${artifactId}-server</module>
     </modules>
 
     <description>
@@ -27,19 +27,19 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
-                <groupId>icu.jiapeng</groupId>
-                <artifactId>kitty-material-api</artifactId>
-                <version>${kittycms.version}</version>
+                <groupId>${parent.groupId}</groupId>
+                <artifactId>${artifactId}-api</artifactId>
+                <version>${parent.version}</version>
             </dependency>
             <dependency>
-                <groupId>icu.jiapeng</groupId>
-                <artifactId>kitty-material-func</artifactId>
-                <version>${kittycms.version}</version>
+                <groupId>${parent.groupId}</groupId>
+                <artifactId>${artifactId}-func</artifactId>
+                <version>${parent.version}</version>
             </dependency>
             <dependency>
-                <groupId>icu.jiapeng</groupId>
-                <artifactId>kitty-material-server</artifactId>
-                <version>${kittycms.version}</version>
+                <groupId>${parent.groupId}</groupId>
+                <artifactId>${artifactId}-server</artifactId>
+                <version>${parent.version}</version>
             </dependency>
             <dependency>
                 <groupId>icu.jiapeng</groupId>
