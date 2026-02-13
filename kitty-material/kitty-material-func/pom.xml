@@ -16,14 +16,17 @@
         <dependency>
             <groupId>icu.jiapeng</groupId>
             <artifactId>kitty-common-core</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>icu.jiapeng</groupId>
             <artifactId>kitty-material-api</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>icu.jiapeng</groupId>
-            <artifactId>kitty-user-grpc-sa-plugin</artifactId>
+            <artifactId>kitty-user-plugin-grpc-sa</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

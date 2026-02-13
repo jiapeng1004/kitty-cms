@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+说明：
+    1. 文件的命名和加载顺序有关
+       logback.xml早于application.yml加载，logback-spring.xml晚于application.yml加载
+       如果logback配置需要使用application.yml中的属性，需要命名为logback-spring.xml
+    2. logback使用application.yml中的属性
+       使用springProperty才可使用application.yml中的值 可以设置默认值
+    3. if标签依赖 org.codehaus.janino 包
+    4. 日志中输出行号，可能会带来性能问题
+-->
+<configuration scan="true">
+
+    <contextName>TcSem</contextName>
+    <springProperty scope="context" name="env" source="spring.profiles.active" defaultValue="dev"/>
+    <springProperty scope="context" name="appName" source="spring.application.name" defaultValue="kittycms"/>
+    <springProperty scope="context" name="logPath" source="log.path" defaultValue="logs"/>
+    <springProperty scope="context" name="logLevel" source="log.level" defaultValue="debug"/>
+    <springProperty scope="context" name="dyPac" source="log.dyPac" defaultValue="icu.jiapeng.kittycms"/>
+    <property name="POD_IP" value="${LOCAL_IP:-${HOSTNAME}}"/>
+
+    <appender name="console" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>[%d{yyyy-MM-dd HH:mm:ss}] [%thread] %X{cId} %-5level %logger Line:%-1L - %msg%n</pattern>
+            <charset>utf-8</charset>
+        </encoder>
+    </appender>
+
+    <appender name="server" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${logPath}/${appName}-server-${POD_IP}.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${logPath}/${appName}/server-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <maxHistory>7</maxHistory>
+            <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+                <maxFileSize>1000MB</maxFileSize>
+            </timeBasedFileNamingAndTriggeringPolicy>
+        </rollingPolicy>
+        <append>true</append>
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <pattern>[%d{yyyy-MM-dd HH:mm:ss}] [%thread] %X{cId} %-5level %logger - %msg%n</pattern>
+            <charset>utf-8</charset>
+        </encoder>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>info</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+    </appender>
+
+    <appender name="access" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${logPath}/${appName}-access-${POD_IP}.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${logPath}/${appName}/access.%d{yyyy-MM-dd-HH}.log.gz</fileNamePattern>
+            <maxHistory>168</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>[%d{yyyy-MM-dd HH:mm:ss}] [%thread] %X{cId} %-5level %logger - %msg%n</pattern>
+            <charset>utf-8</charset>
+        </encoder>
+    </appender>
+
+    <appender name="response" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${logPath}/${appName}-response-${POD_IP}.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${logPath}/${appName}/response.%d{yyyy-MM-dd-HH}.log.gz</fileNamePattern>
+            <maxHistory>168</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>[%d{yyyy-MM-dd HH:mm:ss}] [%thread] %X{cId} %-5level %logger - %msg%n</pattern>
+            <charset>utf-8</charset>
+        </encoder>
+    </appender>
+
+    <appender name="error" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${logPath}/${appName}-error-${POD_IP}.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${logPath}/${appName}/${appName}-error-${POD_IP}-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <maxHistory>7</maxHistory>
+            <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+                <maxFileSize>1000MB</maxFileSize>
+            </timeBasedFileNamingAndTriggeringPolicy>
+        </rollingPolicy>
+        <append>true</append>
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <pattern>[%d{yyyy-MM-dd HH:mm:ss}] [%thread] %X{cId} %-5level %logger Line:%-1L - %msg%n</pattern>
+            <charset>utf-8</charset>
+        </encoder>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>error</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+    </appender>
+
+    <!-- 异步输出 -->
+    <appender name="async_server" class="ch.qos.logback.classic.AsyncAppender">
+        <!-- 不丢失日志.默认的,如果队列的80%已满,则会丢弃TRACT、DEBUG、INFO级别的日志 -->
+        <discardingThreshold>0</discardingThreshold>
+        <!-- 更改默认的队列的深度,该值会影响性能.默认值为256 -->
+        <queueSize>512</queueSize>
+        <!-- 添加附加的appender,最多只能添加一个 -->
+        <appender-ref ref="server"/>
+    </appender>
+    <logger name="org.mongodb.driver.connection" level="warn"/>
+
+    <!--动态包 用于调试-->
+    <logger name="${dyPac}" level="${logLevel}"/>
+
+    <logger additivity="false" level="info" name="com.disanxian.web.log.Access">
+        <appender-ref ref="access"/>
+    </logger>
+
+    <logger additivity="false" level="info" name="com.disanxian.web.log.Response">
+        <appender-ref ref="response"/>
+    </logger>
+
+    <root level="info">
+        <!-- 输出到日志文件 -->
+        <appender-ref ref="async_server"/>
+        <appender-ref ref="error"/>
+        <!-- 输出到控制台 -->
+        <appender-ref ref="console"/>
+    </root>
+
+</configuration>

@@ -15,9 +15,9 @@
     <packaging>pom</packaging>
 
     <modules>
-        <module>${artifactId}-api</module>
-        <module>${artifactId}-func</module>
-        <module>${artifactId}-server</module>
+        <module>kitty-material-api</module>
+        <module>kitty-material-func</module>
+        <module>kitty-material-server</module>
     </modules>
 
     <description>
@@ -27,24 +27,24 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
-                <groupId>${parent.groupId}</groupId>
-                <artifactId>${artifactId}-api</artifactId>
-                <version>${parent.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>${parent.groupId}</groupId>
-                <artifactId>${artifactId}-func</artifactId>
-                <version>${parent.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>${parent.groupId}</groupId>
-                <artifactId>${artifactId}-server</artifactId>
-                <version>${parent.version}</version>
+                <groupId>icu.jiapeng</groupId>
+                <artifactId>kitty-material-api</artifactId>
+                <version>0.0.1-SNAPSHOT</version>
             </dependency>
             <dependency>
                 <groupId>icu.jiapeng</groupId>
-                <artifactId>kitty-user-grpc-sa-plugin</artifactId>
-                <version>${kittycms.version}</version>
+                <artifactId>kitty-material-func</artifactId>
+                <version>0.0.1-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>icu.jiapeng</groupId>
+                <artifactId>kitty-material-server</artifactId>
+                <version>0.0.1-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>icu.jiapeng</groupId>
+                <artifactId>kitty-user-plugin-grpc-sa</artifactId>
+                <version>0.0.1-SNAPSHOT</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

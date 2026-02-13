@@ -12,21 +12,14 @@
 
     <artifactId>kitty-transcoder-server</artifactId>
     <dependencies>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-autoconfigure</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot</artifactId>
-        </dependency>
+        <!-- 转码服务功能依赖 -->
         <dependency>
             <groupId>icu.jiapeng</groupId>
-            <artifactId>${parent.artifactId}-api</artifactId>
+            <artifactId>kitty-transcoder-func</artifactId>
         </dependency>
         <dependency>
-            <groupId>icu.jiapeng</groupId>
-            <artifactId>${parent.artifactId}-func</artifactId>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
         </dependency>
     </dependencies>
 
@@ -59,7 +52,7 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
-                    <mainClass>icu.jiapeng.kitty.user.KittyCmsUserApplication</mainClass>
+                    <mainClass>icu.jiapeng.kitty.transcoder.KittyTranscoderApplication</mainClass>
                 </configuration>
             </plugin>
             <plugin>

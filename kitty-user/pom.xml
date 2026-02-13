@@ -16,29 +16,29 @@
 
 
     <modules>
-        <module>${artifactId}-api</module>
-        <module>${artifactId}-grpc</module>
-        <module>${artifactId}-plugin-grpc-sa</module>
-        <module>${artifactId}-func</module>
-        <module>${artifactId}-server</module>
+        <module>kitty-user-api</module>
+        <module>kitty-user-grpc</module>
+        <module>kitty-user-plugin-grpc-sa</module>
+        <module>kitty-user-func</module>
+        <module>kitty-user-server</module>
     </modules>
 
     <dependencyManagement>
         <dependencies>
             <dependency>
-                <groupId>${parent.groupId}</groupId>
-                <artifactId>${artifactId}-api</artifactId>
-                <version>${parent.version}</version>
+                <groupId>icu.jiapeng</groupId>
+                <artifactId>kitty-user-api</artifactId>
+                <version>0.0.1-SNAPSHOT</version>
             </dependency>
             <dependency>
-                <groupId>${parent.groupId}</groupId>
-                <artifactId>${artifactId}-func</artifactId>
-                <version>${parent.version}</version>
+                <groupId>icu.jiapeng</groupId>
+                <artifactId>kitty-user-func</artifactId>
+                <version>0.0.1-SNAPSHOT</version>
             </dependency>
             <dependency>
-                <groupId>${parent.groupId}</groupId>
-                <artifactId>${artifactId}-server</artifactId>
-                <version>${parent.version}</version>
+                <groupId>icu.jiapeng</groupId>
+                <artifactId>kitty-user-server</artifactId>
+                <version>0.0.1-SNAPSHOT</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
