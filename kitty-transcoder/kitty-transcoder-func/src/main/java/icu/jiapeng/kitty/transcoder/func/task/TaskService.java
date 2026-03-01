@@ -3,18 +3,19 @@ package icu.jiapeng.kitty.transcoder.func.task;
 import icu.jiapeng.kitty.transcoder.api.CreateTaskRequest;
 import icu.jiapeng.kitty.transcoder.api.ProgressVO;
 import icu.jiapeng.kitty.transcoder.api.TaskVO;
-import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-import reactor.core.publisher.Flux;
+
+import java.util.List;
 
 public interface TaskService {
 
     /**
-     * 创建转码任务
+     * 创建转码任务（可选审计：创建方 AccessKeyId）
      * @param request 创建任务请求
+     * @param createdByAk 创建方 AccessKeyId（可为 null）
      * @return 任务ID
      */
-    String createTask(CreateTaskRequest request);
+    String createTask(CreateTaskRequest request, String createdByAk);
 
     /**
      * 查询转码任务
@@ -22,6 +23,14 @@ public interface TaskService {
      * @return 任务详情
      */
     TaskVO getTask(String taskId);
+
+    /**
+     * 分页查询任务列表
+     * @param page 页码从1开始
+     * @param size 每页条数
+     * @return 任务列表
+     */
+    List<TaskVO> listTasks(int page, int size);
 
     /**
      * 取消转码任务

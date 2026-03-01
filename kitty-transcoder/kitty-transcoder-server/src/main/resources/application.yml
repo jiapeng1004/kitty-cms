@@ -8,14 +8,27 @@ spring:
       database: 0
       password: "123456"
   datasource:
-    url: jdbc:h2:mem:transcode_db
+    # H2 文件库，MySQL 兼容模式（与生产 MySQL 语法一致，仅改 url 即可切回真实 MySQL）
+    url: jdbc:h2:file:./data/transcode;DB_CLOSE_DELAY=-1;AUTO_SERVER=TRUE;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
     driver-class-name: org.h2.Driver
-    username: sa
-    password:
+    username: root
+    password: 123456
+    # 生产切 MySQL 时取消下面注释并注释掉上面 url/driver
+    # url: jdbc:mysql://localhost:3306/kitty_transcoder?useUnicode=true&characterEncoding=utf-8&useSSL=false&allowPublicKeyRetrieval=true&allowMultiQueries=true&zeroDateTimeBehavior=convertToNull
+    # driver-class-name: com.mysql.cj.jdbc.Driver
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+      data-locations: classpath:data.sql
   h2:
     console:
       enabled: true
       path: /h2-console
+  threads:
+    virtual:
+      enabled: true
+
 
 server:
   port: 9703
@@ -31,7 +44,13 @@ springdoc:
 
 # 转码服务配置
 transcoder:
-  temp-dir: C:\\tmp\\transcode
-  max-concurrent-tasks: 10
-  task-timeout: 3600000
-  ffmpeg-path: C:\\ffmpeg\\bin\\ffmpeg.exe
+  temp-dir: ${java.io.tmpdir}/transcode
+  output:
+    http-prefix: ""
+
+# 认证与签名
+auth:
+  session:
+    ttl-seconds: 86400
+  signature:
+    timestamp-drift-seconds: 300

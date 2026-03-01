@@ -15,11 +15,23 @@ public class TaskVO {
     @Schema(description = "转码进度", example = "50")
     private Integer progress;
 
-    @Schema(description = "输入文件路径", example = "/path/to/video.mp4")
+    @Schema(description = "输入类型 DISK/HTTP")
+    private String inputType;
+
+    @Schema(description = "输入路径或URL", example = "/path/to/video.mp4")
+    private String inputPath;
+
+    @Schema(description = "输入文件路径（兼容）", example = "/path/to/video.mp4")
     private String inputFile;
 
-    @Schema(description = "输出文件路径", example = "/path/to/output.mp4")
+    @Schema(description = "输出磁盘路径", example = "/path/to/output.mp4")
+    private String outputPath;
+
+    @Schema(description = "输出文件路径（兼容）", example = "/path/to/output.mp4")
     private String outputFile;
+
+    @Schema(description = "输出 HTTP 地址")
+    private String outputHttpUrl;
 
     @Schema(description = "策略ID", example = "strategy_001")
     private String strategyId;

@@ -1,15 +1,20 @@
 package icu.jiapeng.kitty.transcoder.func.auth;
 
+import icu.jiapeng.kitty.transcoder.api.AccessKeyVO;
+import icu.jiapeng.kitty.transcoder.api.CreateAccessKeyRequest;
+import icu.jiapeng.kitty.transcoder.api.CreateAccessKeyResponse;
+
+import java.util.List;
 import java.util.Map;
 
 public interface AuthService {
 
     /**
      * 生成 Access Key 和 Secret Key
-     * @param description 密钥描述
-     * @return 包含 AK 和 SK 的 Map
+     * @param request 创建请求（含 name）
+     * @return 创建结果（accessKeyId、secretKey、name）
      */
-    Map<String, String> generateAccessKey(String description);
+    CreateAccessKeyResponse generateAccessKey(CreateAccessKeyRequest request);
 
     /**
      * 验证 Access Key 是否存在
@@ -58,4 +63,16 @@ public interface AuthService {
      * @return 是否验证通过
      */
     boolean validateLoginToken(String token);
+
+    /**
+     * 列出 Access Key（不含 secretKey）
+     */
+    List<AccessKeyVO> listAccessKeys();
+
+    /**
+     * 删除 Access Key（按 accessKeyId）
+     * @param accessKeyId Access Key ID
+     * @return 是否删除成功
+     */
+    boolean deleteAccessKey(String accessKeyId);
 }

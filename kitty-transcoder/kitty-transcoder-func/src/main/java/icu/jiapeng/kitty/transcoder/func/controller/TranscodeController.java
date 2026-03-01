@@ -1,10 +1,13 @@
 package icu.jiapeng.kitty.transcoder.func.controller;
 
 import icu.jiapeng.kitty.transcoder.api.*;
+import icu.jiapeng.kitty.transcoder.func.auth.TokenAuthFilter;
 import icu.jiapeng.kitty.transcoder.func.strategy.StrategyService;
 import icu.jiapeng.kitty.transcoder.func.task.TaskService;
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
@@ -13,31 +16,41 @@ import java.util.List;
 @RequestMapping("/api/transcode")
 public class TranscodeController implements TranscodeApi {
 
-    @Autowired
+    @Resource
     private TaskService taskService;
+
+    @Resource
+    private StrategyService strategyService;
 
     @PostMapping("/task")
     public String createTask(@RequestBody CreateTaskRequest request) {
-        return taskService.createTask(request);
+        String accessKeyId = null;
+        if (RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes attrs) {
+            accessKeyId = (String) attrs.getRequest().getAttribute(TokenAuthFilter.ATTR_ACCESS_KEY_ID);
+        }
+        return taskService.createTask(request, accessKeyId);
     }
 
     @GetMapping("/task/{id}")
-    public TaskVO getTask(@PathVariable("id") String id) {
+    public TaskVO getTask(@PathVariable String id) {
         return taskService.getTask(id);
     }
 
+    @GetMapping("/tasks")
+    public List<TaskVO> listTasks(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "20") int size) {
+        return taskService.listTasks(page, size);
+    }
+
     @DeleteMapping("/task/{id}")
-    public Boolean cancelTask(@PathVariable("id") String id) {
+    public Boolean cancelTask(@PathVariable String id) {
         return taskService.cancelTask(id);
     }
 
     @GetMapping("/progress/{id}")
-    public ProgressVO getProgress(@PathVariable("id") String id) {
+    public ProgressVO getProgress(@PathVariable String id) {
         return taskService.getProgress(id);
     }
 
-    @Autowired
-    private StrategyService strategyService;
 
     @PostMapping("/strategy")
     public String createStrategy(@RequestBody CreateStrategyRequest request) {
@@ -50,22 +63,22 @@ public class TranscodeController implements TranscodeApi {
     }
 
     @GetMapping("/strategy/{id}")
-    public StrategyVO getStrategy(@PathVariable("id") String id) {
+    public StrategyVO getStrategy(@PathVariable String id) {
         return strategyService.getStrategy(id);
     }
 
     @PutMapping("/strategy/{id}")
-    public Boolean updateStrategy(@PathVariable("id") String id, @RequestBody CreateStrategyRequest request) {
+    public Boolean updateStrategy(@PathVariable String id, @RequestBody CreateStrategyRequest request) {
         return strategyService.updateStrategy(id, request);
     }
 
     @DeleteMapping("/strategy/{id}")
-    public Boolean deleteStrategy(@PathVariable("id") String id) {
+    public Boolean deleteStrategy(@PathVariable String id) {
         return strategyService.deleteStrategy(id);
     }
 
     @GetMapping("/sse/{id}")
-    public SseEmitter getProgressSSE(@PathVariable("id") String id) {
+    public SseEmitter getProgressSSE(@PathVariable String id) {
         return taskService.getProgressSSE(id);
     }
 }

@@ -11,9 +11,16 @@ import java.util.List;
 @Data
 public class CreateTaskRequest {
 
-    @NotBlank(message = "输入文件不能为空")
-    @Size(max = 500, message = "输入文件路径长度不能超过500")
-    @Schema(description = "输入文件路径", example = "/path/to/video.mp4")
+    @Schema(description = "输入类型：DISK 磁盘路径 / HTTP 地址", example = "DISK", allowableValues = {"DISK", "HTTP"})
+    private String inputType = "DISK";
+
+    @NotBlank(message = "输入不能为空")
+    @Size(max = 1024, message = "输入路径或URL长度不能超过1024")
+    @Schema(description = "输入：磁盘路径或 HTTP URL（根据 inputType）", example = "/path/to/video.mp4")
+    private String inputPath;
+
+    /** @deprecated 使用 inputPath */
+    @Schema(hidden = true)
     private String inputFile;
 
     @NotBlank(message = "策略ID不能为空")
@@ -25,6 +32,6 @@ public class CreateTaskRequest {
     @Schema(description = "通知配置")
     private List<NotificationConfig> notifications;
 
-    @Schema(description = "任务优先级", example = "1")
-    private Integer priority;
+    @Schema(description = "任务优先级 1-10", example = "5")
+    private Integer priority = 5;
 }

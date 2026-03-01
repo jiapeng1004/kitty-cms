@@ -1,0 +1,40 @@
+---
+description: Controller 入参/出参规范：禁止使用 Map，必须为基本类型或 VO/DTO
+globs: **/*Controller.java
+---
+
+# Controller 入参与出参规范
+
+## 规则
+
+- **入参**：不允许使用 `Map<String, ?>` 作为请求体或查询参数。必须使用基本类型（如 `String`、`Long`）或 **DTO / 请求对象**（如 `LoginRequest`、`CreateTaskRequest`）。
+- **出参**：不允许使用 `Map<String, ?>` 或 `List<Map<String, ?>>` 作为接口返回值。必须使用基本类型或 **VO / 响应对象**（如 `LoginResponse`、`TaskVO`、`AccessKeyVO`）。
+
+## 原因
+
+- 契约清晰：DTO/VO 即 API 契约，便于文档与前端对接。
+- 类型安全：编译期校验、IDE 提示与重构友好。
+- 可校验：可在 DTO 上使用 `@Valid`、`@NotBlank` 等注解做入参校验。
+
+## 示例
+
+```java
+// 不推荐
+@PostMapping("/login")
+public Map<String, String> login(@RequestBody Map<String, String> body) { ... }
+
+@GetMapping("/access-key")
+public List<Map<String, Object>> getAccessKeys() { ... }
+
+// 推荐
+@PostMapping("/login")
+public LoginResponse login(@RequestBody @Valid LoginRequest request) { ... }
+
+@GetMapping("/access-key")
+public List<AccessKeyVO> getAccessKeys() { ... }
+```
+
+## 相关
+
+- 请求体 DTO：放在 `*-api` 模块或 `dto` 包，命名如 `XxxRequest`。
+- 响应 VO：放在 `*-api` 模块或 `vo` 包，命名如 `XxxVO`、`XxxResponse`。

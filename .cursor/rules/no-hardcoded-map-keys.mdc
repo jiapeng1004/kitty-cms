@@ -1,0 +1,45 @@
+---
+description: 禁止在 Map 操作中使用硬编码字段名字符串，统一用方法引用或 FieldNameConstants
+globs: **/*.java
+---
+
+# 项目规范：禁止 Map 硬编码字段名
+
+## 背景
+
+本项目不允许在 `map.put("fieldName", value)`、`map.get("fieldName")` 等写法中直接写字段名字符串，以避免拼写错误、重构时遗漏，并保持与实体/API 契约一致。
+
+## 规则
+
+1. **能用方法引用的用方法引用**  
+   例如 MyBatis-Plus / Lambda 查询中：`eq(Entity::getFieldName, value)`，不要写 `eq("field_name", value)`。
+
+2. **用不了的用 Lombok `@FieldNameConstants`**  
+   在实体类上使用 `@FieldNameConstants`，会生成内部类 `Fields`，包含各字段名字符串常量（如 `Entity.Fields.fieldName`），在构建 Map、JSON 键、Redis 会话键等时使用这些常量。
+
+3. **非实体字段的键（如 API 契约、签名参数）**  
+   使用单独的常量类集中定义，例如：  
+   - 登录响应键：`AuthResponseKeys.TOKEN`  
+   - 签名参数名：`SignatureParamNames.ACCESS_KEY_ID`  
+   - 会话存储键：可复用实体 `Fields`（如 `TranscodeAccessKey.Fields.accessKeyId`）或单独 `SessionKeys`。
+
+## 示例
+
+```java
+// 不推荐
+map.put("accessKeyId", ak.getAccessKeyId());
+body.get("secretKey");
+
+// 推荐：实体字段用 FieldNameConstants
+map.put(TranscodeAccessKey.Fields.accessKeyId, ak.getAccessKeyId());
+body.get(TranscodeAccessKey.Fields.secretKey);
+
+// 非实体键用常量类
+map.put(AuthResponseKeys.TOKEN, token);
+params.put(SignatureParamNames.ACCESS_KEY_ID, accessKey);
+```
+
+## 相关
+
+- 实体类：`@Data` + `@FieldNameConstants`（Lombok）
+- 方法引用：Lambda / MyBatis-Plus 等能接受 `Getter` 引用的地方优先用 `Entity::getXxx`
