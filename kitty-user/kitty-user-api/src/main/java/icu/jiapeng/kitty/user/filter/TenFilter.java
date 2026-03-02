@@ -5,7 +5,11 @@ import icu.jiapeng.kitty.user.constans.Constant;
 import icu.jiapeng.kitty.user.scope.TenScoped;
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.jspecify.annotations.NonNull;
+import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
@@ -15,22 +19,22 @@ import java.io.IOException;
  * @author jiapeng
  * @since 2026/2/11
  */
-public class TenFilter implements Filter {
+@Component
+public class TenFilter extends OncePerRequestFilter {
+
     @Override
-    public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
+    protected void doFilterInternal(@NonNull HttpServletRequest servletRequest, @NonNull HttpServletResponse servletResponse, FilterChain filterChain) throws ServletException, IOException {
         // 获取请求头
-        if (servletRequest instanceof HttpServletRequest httpServletRequest) {
-            String tenantId = httpServletRequest.getHeader(Constant.X_TENANT_ID);
-            if (StringUtils.hasText(tenantId)) {
-                TenScoped.run(tenantId, ()->{
-                    try {
-                        filterChain.doFilter(servletRequest, servletResponse);
-                    } catch (IOException | ServletException e) {
-                        throw new RuntimeException(e);
-                    }
-                });
-                return;
-            }
+        String tenantId = servletRequest.getHeader(Constant.X_TENANT_ID);
+        if (StringUtils.hasText(tenantId)) {
+            TenScoped.run(tenantId, () -> {
+                try {
+                    filterChain.doFilter(servletRequest, servletResponse);
+                } catch (IOException | ServletException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+            return;
         }
         filterChain.doFilter(servletRequest, servletResponse);
     }
