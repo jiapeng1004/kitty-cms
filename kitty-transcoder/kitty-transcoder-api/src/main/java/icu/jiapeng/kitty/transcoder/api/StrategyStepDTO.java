@@ -12,7 +12,7 @@ public class StrategyStepDTO {
     @Schema(description = "步骤类型：transcode=转码（可带水印），extract_frames=抽帧，sprite=雪碧图，probe=探测，if=条件分支", example = "transcode")
     private String type = "transcode";
 
-    @Schema(description = "依赖的步骤序号，逗号分隔，如 \"0\"，空表示无依赖")
+    @Schema(description = "依赖的步骤序号，逗号分隔，从 1 开始，如 \"1\" 或 \"1,2\"，空表示无依赖")
     private String depends;
 
     @Schema(description = "输入路径模板，支持 $TASK_ID、$DATE_TIME、$TASK_INPUT、$STEP_OUTPUT_0 等")
@@ -35,15 +35,6 @@ public class StrategyStepDTO {
 
     @Schema(description = "编码器", example = "h264")
     private String encoder;
-
-    @Schema(description = "是否添加水印")
-    private Boolean addWatermark;
-
-    @Schema(description = "水印位置", example = "bottom-right")
-    private String watermarkPosition;
-
-    @Schema(description = "水印图片路径")
-    private String watermarkPath;
 
     @Schema(description = "抽帧间隔，每隔多少帧取一帧（抽帧/雪碧图）", example = "30")
     private Integer frameInterval;

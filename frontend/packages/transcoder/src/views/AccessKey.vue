@@ -18,7 +18,7 @@
              ok-text="创建并复制 Secret">
       <a-form layout="vertical">
         <a-form-item label="名称">
-          <a-input v-model:value="createName" placeholder="如：前端控制台、API 调用方"/>
+          <a-input v-model:value="createName" placeholder="如：前端控制台、API 调用方" @blur="createName = (createName || '').trim()" />
         </a-form-item>
         <a-alert v-if="createdSecret" type="warning" :message="'Secret Key（仅显示一次）：' + createdSecret" show-icon/>
       </a-form>
@@ -61,7 +61,7 @@ async function doCreate() {
   submitting.value = true
   createdSecret.value = ''
   try {
-    const res = await createAccessKey({ name: createName.value })
+    const res = await createAccessKey({ name: (createName.value || '').trim() })
     createdSecret.value = res.secretKey || ''
     message.success('已创建，请复制 Secret Key 妥善保存')
     load()

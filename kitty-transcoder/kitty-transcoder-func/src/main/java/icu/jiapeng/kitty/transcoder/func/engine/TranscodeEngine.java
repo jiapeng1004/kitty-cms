@@ -1,18 +1,23 @@
 package icu.jiapeng.kitty.transcoder.func.engine;
 
+import icu.jiapeng.kitty.transcoder.api.StepProgressItem;
 import icu.jiapeng.kitty.transcoder.api.StrategyStepVO;
 import icu.jiapeng.kitty.transcoder.api.StrategyVO;
 import icu.jiapeng.kitty.transcoder.func.config.TranscodeConfig;
 import icu.jiapeng.kitty.transcoder.func.strategy.StrategyService;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
+import java.util.function.BiConsumer;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
+@Slf4j
 @Component
 public class TranscodeEngine {
 
@@ -25,10 +30,11 @@ public class TranscodeEngine {
     private final ExecutorService stepExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
     public interface ProgressCallback {
-        void updateProgress(String taskId, String status, int progress);
+        void updateProgress(String taskId, String status, int progress, java.util.List<StepProgressItem> stepProgressList);
     }
 
-    public String transcode(String taskId, String inputFile, String strategyId, ProgressCallback progressCallback) throws Exception {
+    public String transcode(String taskId, String inputFile, String strategyId,
+                            String watermarkUrl, String watermarkPosition, ProgressCallback progressCallback) throws Exception {
         StrategyVO strategy = strategyService.getStrategy(strategyId);
         if (strategy == null || strategy.getSteps() == null || strategy.getSteps().isEmpty()) {
             StrategyStepVO defaultStep = new StrategyStepVO();
@@ -38,61 +44,111 @@ public class TranscodeEngine {
             defaultStep.setBitrate(5000);
             defaultStep.setFrameRate(30);
             defaultStep.setEncoder("h264");
+            StepContextImpl ctx = new StepContextImpl((sid, p) -> {
+                throw new UnsupportedOperationException();
+            });
+            ctx.setTaskId(taskId);
+            ctx.setWatermarkUrl(watermarkUrl);
+            ctx.setWatermarkPosition(watermarkPosition);
+            ctx.setWorkDir(transcodeConfig.getWorkDir());
             StepExecutor exec = StepExecutor.Factory.resolveOrFail(StepExecutorType.TRANSCODE.getCode());
-            return exec.execute(inputFile, defaultStep, "_transcoded", null);
+            return exec.execute(inputFile, defaultStep, "_transcoded", ctx);
         }
-        return runWithDependencies(taskId, inputFile, strategy, progressCallback);
+        return runWithDependencies(taskId, inputFile, strategy, watermarkUrl, watermarkPosition, progressCallback);
     }
 
-    private String runWithDependencies(String taskId, String taskInputPath, StrategyVO strategy, ProgressCallback progressCallback) throws Exception {
+    private String runWithDependencies(String taskId, String taskInputPath, StrategyVO strategy,
+                                       String watermarkUrl, String watermarkPosition, ProgressCallback progressCallback) throws Exception {
         List<StrategyStepVO> steps = strategy.getSteps();
-        int n = steps.size();
+        Map<Integer, StrategyStepVO> stepByStepId = new HashMap<>();
+        List<Integer> stepIds = new ArrayList<>();
+        for (StrategyStepVO s : steps) {
+            int sid = s.getStepId() != null ? s.getStepId() : (stepIds.size() + 1);
+            stepByStepId.put(sid, s);
+            stepIds.add(sid);
+        }
         Map<Integer, int[]> depsMap = new HashMap<>();
-        for (int i = 0; i < n; i++) {
-            // 依赖不声明 = 无依赖，使用最上层任务输入，可与其它无依赖步骤并行
-            depsMap.put(i, parseDepends(steps.get(i).getDepends()));
+        for (Map.Entry<Integer, StrategyStepVO> e : stepByStepId.entrySet()) {
+            depsMap.put(e.getKey(), parseDepends(e.getValue().getDepends()));
         }
 
         StepContextImpl.RunStrategyCallback runStrategyCallback = (strategyId, inputPath) -> {
             StrategyVO sub = strategyService.getStrategy(strategyId);
             if (sub == null) throw new IllegalArgumentException("策略不存在：" + strategyId);
-            return runWithDependencies(taskId, inputPath, sub, progressCallback);
+            return runWithDependencies(taskId, inputPath, sub, watermarkUrl, watermarkPosition, progressCallback);
         };
         StepContextImpl ctx = new StepContextImpl(runStrategyCallback);
+        ctx.setTaskId(taskId);
+        ctx.setWatermarkUrl(watermarkUrl);
+        ctx.setWatermarkPosition(watermarkPosition);
+        String workDir = (strategy.getWorkDir() != null && !strategy.getWorkDir().isBlank())
+                ? strategy.getWorkDir() : transcodeConfig.getWorkDir();
+        ctx.setWorkDir(workDir);
 
-        List<List<Integer>> levels = buildLevels(n, depsMap);
+        List<List<Integer>> levels = buildLevels(stepIds, depsMap);
         Map<Integer, String> stepOutputs = new ConcurrentHashMap<>();
-
-        String workDir = transcodeConfig.getTempDir();
         int completed = 0;
+        int n = stepIds.size();
+        Map<Integer, AtomicInteger> currentLevelProgress = new ConcurrentHashMap<>();
         for (List<Integer> level : levels) {
+            final int completedBeforeLevel = completed;
+            currentLevelProgress.clear();
+            for (int sid : level) currentLevelProgress.put(sid, new AtomicInteger(0));
+            final List<Integer> levelSteps = level;
+            BiConsumer<Integer, Integer> reporter = (stepIndex, percent) -> {
+                AtomicInteger ai = currentLevelProgress.get(stepIndex);
+                if (ai != null) ai.set(Math.min(100, Math.max(0, percent)));
+                if (progressCallback == null) return;
+                List<StepProgressItem> merged = buildStepProgressListWithLevelProgress(
+                        stepByStepId, stepIds, completedBeforeLevel, levelSteps, currentLevelProgress);
+                int sum = completedBeforeLevel * 100;
+                for (int stepId : levelSteps) {
+                    AtomicInteger p = currentLevelProgress.get(stepId);
+                    sum += (p != null ? p.get() : 0);
+                }
+                int overall = n > 0 ? Math.min(100, sum / n) : 0;
+                progressCallback.updateProgress(taskId, "PROCESSING", overall, merged);
+            };
+            ((StepContextImpl) ctx).setStepProgressReporter(reporter);
+            List<StepProgressItem> stepList = buildStepProgressList(stepByStepId, stepIds, completed, level, false);
+            if (progressCallback != null && !stepList.isEmpty()) {
+                progressCallback.updateProgress(taskId, "PROCESSING", (completed * 100) / n, stepList);
+            }
             List<CompletableFuture<Void>> futures = new ArrayList<>();
-            for (int idx : level) {
-                StrategyStepVO step = steps.get(idx);
-                int[] deps = depsMap.get(idx);
+            for (int sid : level) {
+                StrategyStepVO step = stepByStepId.get(sid);
+                if (step == null) continue;
+                int[] deps = depsMap.get(sid);
                 String inputPath;
                 if (step.getInputTemplate() != null && !step.getInputTemplate().isBlank()) {
-                    inputPath = StepTemplateResolver.resolve(step.getInputTemplate(), taskId, taskInputPath, stepOutputs, idx, workDir);
+                    inputPath = StepTemplateResolver.resolve(step.getInputTemplate(), taskId, taskInputPath, stepOutputs, sid, workDir);
                 } else {
                     inputPath = deps.length == 0 ? taskInputPath : stepOutputs.get(maxOf(deps));
                 }
-                if (inputPath == null || inputPath.isBlank()) throw new IllegalStateException("步骤 " + idx + " 输入路径为空");
+                if (inputPath == null || inputPath.isBlank())
+                    throw new IllegalStateException("步骤 " + sid + " 输入路径为空");
+                inputPath = MediaStepOps.toLocalFilePath(inputPath, workDir);
                 String resolvedOutputPath = null;
                 if (step.getOutputTemplate() != null && !step.getOutputTemplate().isBlank()) {
-                    resolvedOutputPath = StepTemplateResolver.resolve(step.getOutputTemplate(), taskId, taskInputPath, stepOutputs, idx, workDir);
+                    resolvedOutputPath = StepTemplateResolver.resolve(step.getOutputTemplate(), taskId, taskInputPath, stepOutputs, sid, workDir);
+                    resolvedOutputPath = MediaStepOps.toLocalFilePath(resolvedOutputPath, workDir);
                 }
-                int inputStepIndex = deps.length == 0 ? -1 : maxOf(deps);
-                String stepSuffix = "_s" + idx;
-                ctx.setCurrentStepIndex(idx);
-                ctx.setInputStepIndex(inputStepIndex);
+                int inputStepId = deps.length == 0 ? -1 : maxOf(deps);
+                String stepSuffix = "_s" + sid;
+                ctx.setInputStepIndex(inputStepId);
                 ctx.setResolvedOutputPath(resolvedOutputPath);
                 StepExecutor exec = StepExecutor.Factory.resolveOrFail(step.getType());
                 final String inp = inputPath;
+                final int stepIdForPut = sid;
+                final String workDirFinal = workDir;
                 CompletableFuture<Void> f = CompletableFuture.runAsync(() -> {
                     try {
+                        ctx.setCurrentStepIndex(stepIdForPut);
                         String out = exec.execute(inp, step, stepSuffix, ctx);
-                        stepOutputs.put(idx, out);
+                        out = MediaStepOps.toLocalFilePath(out, workDirFinal);
+                        stepOutputs.put(stepIdForPut, out);
                     } catch (Exception e) {
+                        log.error("步骤 {} 执行失败", sid, e);
                         throw new RuntimeException(e);
                     }
                 }, stepExecutor);
@@ -100,12 +156,13 @@ public class TranscodeEngine {
             }
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
             completed += level.size();
-            if (progressCallback != null) {
-                progressCallback.updateProgress(taskId, "PROCESSING", (completed * 100) / n);
+            List<StepProgressItem> stepListDone = buildStepProgressList(stepByStepId, stepIds, completed, Collections.emptyList(), true);
+            if (progressCallback != null && !stepListDone.isEmpty()) {
+                progressCallback.updateProgress(taskId, "PROCESSING", (completed * 100) / n, stepListDone);
             }
         }
 
-        int lastStep = findLastStepByTopology(n, depsMap);
+        int lastStep = findLastStepByTopology(stepIds, depsMap);
         String lastOutput = stepOutputs.get(lastStep);
         if (lastOutput == null) throw new IllegalStateException("无最终输出");
         return lastOutput;
@@ -118,36 +175,96 @@ public class TranscodeEngine {
         return m;
     }
 
+    /** 解析依赖步骤序号：逗号分隔，从 1 开始，如 "1" 或 "1,2"；空表示无依赖。 */
     private static int[] parseDepends(String depends) {
         if (depends == null || depends.isBlank()) return new int[0];
-        String[] parts = depends.split(",");
+        String s = depends.trim();
+        String[] parts = s.split(",");
         int[] out = new int[parts.length];
-        for (int i = 0; i < parts.length; i++) {
-            out[i] = Integer.parseInt(parts[i].trim());
-        }
+        for (int i = 0; i < parts.length; i++) out[i] = Integer.parseInt(parts[i].trim());
         return out;
     }
 
-    private static int findLastStepByTopology(int n, Map<Integer, int[]> depsMap) {
+    private static int findLastStepByTopology(List<Integer> stepIds, Map<Integer, int[]> depsMap) {
         Set<Integer> hasDependent = new HashSet<>();
-        for (int i = 0; i < n; i++) {
-            for (int d : depsMap.get(i)) hasDependent.add(d);
+        for (int sid : stepIds) {
+            int[] deps = depsMap.get(sid);
+            if (deps != null) for (int d : deps) hasDependent.add(d);
         }
         int last = -1;
-        for (int i = 0; i < n; i++) {
-            if (!hasDependent.contains(i)) last = Math.max(last, i);
+        for (int sid : stepIds) {
+            if (!hasDependent.contains(sid)) last = Math.max(last, sid);
         }
-        return last >= 0 ? last : n - 1;
+        return last >= 0 ? last : stepIds.get(stepIds.size() - 1);
     }
 
-    private static List<List<Integer>> buildLevels(int n, Map<Integer, int[]> depsMap) {
+    private static List<StepProgressItem> buildStepProgressList(Map<Integer, StrategyStepVO> stepByStepId,
+                                                               List<Integer> stepIds, int completedCount,
+                                                               List<Integer> currentLevel, boolean levelDone) {
+        Map<Integer, AtomicInteger> levelProgress = levelDone ? null : Collections.emptyMap();
+        return buildStepProgressListWithLevelProgress(stepByStepId, stepIds, completedCount, currentLevel, levelProgress, levelDone);
+    }
+
+    private static List<StepProgressItem> buildStepProgressListWithLevelProgress(
+            Map<Integer, StrategyStepVO> stepByStepId, List<Integer> stepIds, int completedCount,
+            List<Integer> currentLevel, Map<Integer, AtomicInteger> levelProgress) {
+        return buildStepProgressListWithLevelProgress(stepByStepId, stepIds, completedCount, currentLevel, levelProgress, false);
+    }
+
+    private static List<StepProgressItem> buildStepProgressListWithLevelProgress(
+            Map<Integer, StrategyStepVO> stepByStepId, List<Integer> stepIds, int completedCount,
+            List<Integer> currentLevel, Map<Integer, AtomicInteger> levelProgress, boolean levelDone) {
+        List<StepProgressItem> list = new ArrayList<>();
+        for (int sid : stepIds) {
+            StrategyStepVO step = stepByStepId.get(sid);
+            String type = step != null ? (step.getType() != null ? step.getType() : "transcode") : "transcode";
+            String name = stepTypeName(type) + " (步骤" + sid + ")";
+            StepProgressItem item = new StepProgressItem();
+            item.setStepId(sid);
+            item.setType(type);
+            item.setName(name);
+            int idx = stepIds.indexOf(sid);
+            if (idx < completedCount) {
+                item.setStatus("completed");
+                item.setProgress(100);
+            } else if (currentLevel.contains(sid)) {
+                int pct = levelDone ? 100 : 0;
+                if (!levelDone && levelProgress != null && !levelProgress.isEmpty()) {
+                    AtomicInteger ai = levelProgress.get(sid);
+                    if (ai != null) pct = ai.get();
+                }
+                item.setStatus(pct >= 100 ? "completed" : "processing");
+                item.setProgress(pct);
+            } else {
+                item.setStatus("pending");
+                item.setProgress(0);
+            }
+            list.add(item);
+        }
+        return list;
+    }
+
+    private static String stepTypeName(String type) {
+        if (type == null) return "转码";
+        return switch (type) {
+            case "extract_frames" -> "抽帧";
+            case "sprite" -> "雪碧图";
+            case "probe" -> "媒体分析";
+            case "if" -> "判断";
+            default -> "转码";
+        };
+    }
+
+    private static List<List<Integer>> buildLevels(List<Integer> stepIds, Map<Integer, int[]> depsMap) {
         Set<Integer> done = new HashSet<>();
         List<List<Integer>> levels = new ArrayList<>();
+        int n = stepIds.size();
         while (done.size() < n) {
             List<Integer> level = new ArrayList<>();
-            for (int i = 0; i < n; i++) {
-                if (done.contains(i)) continue;
-                int[] deps = depsMap.get(i);
+            for (int sid : stepIds) {
+                if (done.contains(sid)) continue;
+                int[] deps = depsMap.get(sid);
+                if (deps == null) deps = new int[0];
                 boolean allDone = true;
                 for (int d : deps) {
                     if (!done.contains(d)) {
@@ -155,7 +272,7 @@ public class TranscodeEngine {
                         break;
                     }
                 }
-                if (allDone) level.add(i);
+                if (allDone) level.add(sid);
             }
             if (level.isEmpty()) throw new IllegalStateException("步骤依赖存在环或无效引用");
             levels.add(level);

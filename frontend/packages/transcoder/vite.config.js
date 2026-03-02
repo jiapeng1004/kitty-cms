@@ -8,7 +8,7 @@ export default defineConfig({
     port: 3002,
     proxy: {
       '/api': {
-        target: 'http://localhost:9703',
+        target: 'http://127.0.0.1:9703',
         changeOrigin: true,
         rewrite: (path) => '/kitty-transcoder' + path
       }

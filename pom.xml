@@ -254,6 +254,11 @@
                 <version>${grpc.version}</version>
             </dependency>
             <dependency>
+                <groupId>io.grpc</groupId>
+                <artifactId>grpc-protobuf</artifactId>
+                <version>${grpc.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava</artifactId>
                 <version>${guava.version}</version>
@@ -293,6 +298,11 @@
                 <groupId>org.springframework.grpc</groupId>
                 <artifactId>spring-grpc-server-spring-boot-starter</artifactId>
                 <version>${spring.grpc.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.squareup.okhttp3</groupId>
+                <artifactId>okhttp</artifactId>
+                <version>4.12.0</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

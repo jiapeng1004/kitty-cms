@@ -22,6 +22,9 @@ public class StrategyVO {
     @Schema(description = "步骤列表（详情用），按 stepId 顺序执行，如先 1080p 再 2160p 再加水印")
     private List<StrategyStepVO> steps;
 
+    @Schema(description = "策略级工作目录，本策略下输入/输出与 HTTP 下载均限定在此；空则用全局 transcoder.work-dir")
+    private String workDir;
+
     @Schema(description = "创建时间", example = "1739457045000")
     private Long createdAt;
 
@@ -36,10 +39,4 @@ public class StrategyVO {
     private Integer frameRate;
     @Schema(description = "编码器", example = "h264")
     private String encoder;
-    @Schema(description = "是否添加水印", example = "false")
-    private Boolean addWatermark;
-    @Schema(description = "水印位置", example = "bottom-right")
-    private String watermarkPosition;
-    @Schema(description = "水印路径", example = "/path/to/watermark.png")
-    private String watermarkPath;
 }

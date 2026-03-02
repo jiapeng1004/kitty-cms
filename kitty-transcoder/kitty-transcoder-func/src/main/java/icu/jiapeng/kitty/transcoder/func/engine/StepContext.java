@@ -23,4 +23,22 @@ public interface StepContext {
 
     /** 执行指定策略（子策略），入参为当前输入路径，返回该策略的最终输出路径。 */
     String runStrategy(String strategyId, String inputPath) throws Exception;
+
+    /** 任务级水印地址（发起转码时可选传入，传则转码步骤叠加水印；支持本地路径或 HTTP URL） */
+    String getWatermarkUrl();
+    void setWatermarkUrl(String url);
+    String getWatermarkPosition();
+    void setWatermarkPosition(String position);
+    String getTaskId();
+    void setTaskId(String taskId);
+
+    /** 当前策略工作目录（策略未配则用全局），输入/输出与 HTTP 下载均限定在此 */
+    String getWorkDir();
+    void setWorkDir(String workDir);
+
+    /**
+     * 报告当前步骤的精细进度（0-100），供转码等耗时步骤在内部循环中调用。
+     * 若未设置回调则忽略。
+     */
+    void reportStepProgress(int percent);
 }

@@ -30,13 +30,15 @@ public class StrategyServiceImpl implements StrategyService {
         }
         Long rootId = null;
         for (int i = 0; i < stepDtos.size(); i++) {
+            int stepId = i + 1;
             TranscodeStrategyStep row = new TranscodeStrategyStep();
             row.setRootId(rootId != null ? rootId : 0L);
             row.setStrategyName(request.getName());
-            row.setStepId(i);
-            row.setDepends(stepDtos.get(i).getDepends() != null ? stepDtos.get(i).getDepends() : (i == 0 ? "[]" : String.valueOf(i - 1)));
+            if (stepId == 1 && request.getWorkDir() != null) row.setWorkDir(request.getWorkDir());
+            row.setStepId(stepId);
+            row.setDepends(stepDtos.get(i).getDepends() != null && !stepDtos.get(i).getDepends().isBlank() ? stepDtos.get(i).getDepends().trim() : (stepId == 1 ? "" : String.valueOf(stepId - 1)));
             row.setType(stepDtos.get(i).getType() != null ? stepDtos.get(i).getType() : "transcode");
-            row.setTiAnchor("ti_anchor" + i);
+            row.setTiAnchor("ti_anchor" + stepId);
             row.setParam(toStepParamJson(stepDtos.get(i)));
             row.setCreatedAt(java.time.LocalDateTime.now());
             stepMapper.insert(row);
@@ -59,6 +61,7 @@ public class StrategyServiceImpl implements StrategyService {
         StrategyVO vo = new StrategyVO();
         vo.setId(String.valueOf(id));
         vo.setName(rows.get(0).getStrategyName());
+        vo.setWorkDir(rows.get(0).getWorkDir());
         vo.setStepCount(rows.size());
         vo.setSteps(rows.stream().map(this::stepToVO).collect(Collectors.toList()));
         if (rows.get(0).getCreatedAt() != null)
@@ -69,7 +72,7 @@ public class StrategyServiceImpl implements StrategyService {
     @Override
     public List<StrategyVO> getStrategies() {
         List<TranscodeStrategyStep> roots = stepMapper.selectList(
-                new LambdaQueryWrapper<TranscodeStrategyStep>().eq(TranscodeStrategyStep::getStepId, 0));
+                new LambdaQueryWrapper<TranscodeStrategyStep>().eq(TranscodeStrategyStep::getStepId, 1));
         List<StrategyVO> result = new ArrayList<>();
         for (TranscodeStrategyStep root : roots) {
             Long rootId = root.getRootId() != null ? root.getRootId() : root.getId();
@@ -77,6 +80,7 @@ public class StrategyServiceImpl implements StrategyService {
             StrategyVO vo = new StrategyVO();
             vo.setId(String.valueOf(rootId));
             vo.setName(root.getStrategyName());
+            vo.setWorkDir(root.getWorkDir());
             vo.setStepCount(count);
             if (root.getCreatedAt() != null)
                 vo.setCreatedAt(root.getCreatedAt().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli());
@@ -93,13 +97,15 @@ public class StrategyServiceImpl implements StrategyService {
         List<StrategyStepDTO> stepDtos = request.getSteps();
         if (stepDtos == null || stepDtos.isEmpty()) stepDtos = List.of(defaultStep());
         for (int i = 0; i < stepDtos.size(); i++) {
+            int stepId = i + 1;
             TranscodeStrategyStep row = new TranscodeStrategyStep();
             row.setRootId(id);
             row.setStrategyName(request.getName());
-            row.setStepId(i);
-            row.setDepends(stepDtos.get(i).getDepends() != null ? stepDtos.get(i).getDepends() : (i == 0 ? "[]" : String.valueOf(i - 1)));
+            if (stepId == 1) row.setWorkDir(request.getWorkDir());
+            row.setStepId(stepId);
+            row.setDepends(stepDtos.get(i).getDepends() != null && !stepDtos.get(i).getDepends().isBlank() ? stepDtos.get(i).getDepends().trim() : (stepId == 1 ? "" : String.valueOf(stepId - 1)));
             row.setType(stepDtos.get(i).getType() != null ? stepDtos.get(i).getType() : "transcode");
-            row.setTiAnchor("ti_anchor" + i);
+            row.setTiAnchor("ti_anchor" + stepId);
             row.setParam(toStepParamJson(stepDtos.get(i)));
             row.setCreatedAt(java.time.LocalDateTime.now());
             stepMapper.insert(row);
@@ -151,9 +157,6 @@ public class StrategyServiceImpl implements StrategyService {
                 vo.setBitrate(parsed.getBitrate());
                 vo.setFrameRate(parsed.getFrameRate());
                 vo.setEncoder(parsed.getEncoder());
-                vo.setAddWatermark(parsed.getAddWatermark());
-                vo.setWatermarkPosition(parsed.getWatermarkPosition());
-                vo.setWatermarkPath(parsed.getWatermarkPath());
                 vo.setFrameInterval(parsed.getFrameInterval());
                 vo.setExtractFrameCount(parsed.getExtractFrameCount());
                 vo.setExtractOutputFormat(parsed.getExtractOutputFormat());

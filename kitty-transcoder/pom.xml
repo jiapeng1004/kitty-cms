@@ -17,12 +17,18 @@
 
     <modules>
         <module>kitty-transcoder-api</module>
+        <module>kitty-transcoder-grpc</module>
         <module>kitty-transcoder-func</module>
         <module>kitty-transcoder-server</module>
     </modules>
 
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>icu.jiapeng</groupId>
+                <artifactId>kitty-transcoder-grpc</artifactId>
+                <version>0.0.1-SNAPSHOT</version>
+            </dependency>
             <dependency>
                 <groupId>icu.jiapeng</groupId>
                 <artifactId>kitty-transcoder-api</artifactId>

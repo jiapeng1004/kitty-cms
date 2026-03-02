@@ -37,13 +37,21 @@ public class TranscodeController implements TranscodeApi {
     }
 
     @GetMapping("/tasks")
-    public List<TaskVO> listTasks(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "20") int size) {
-        return taskService.listTasks(page, size);
+    public List<TaskVO> listTasks(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String taskId) {
+        return taskService.listTasks(page, size, taskId);
     }
 
     @DeleteMapping("/task/{id}")
     public Boolean cancelTask(@PathVariable String id) {
         return taskService.cancelTask(id);
+    }
+
+    @DeleteMapping("/task/{id}/record")
+    public Boolean deleteTask(@PathVariable String id) {
+        return taskService.deleteTask(id);
     }
 
     @GetMapping("/progress/{id}")
@@ -80,5 +88,10 @@ public class TranscodeController implements TranscodeApi {
     @GetMapping("/sse/{id}")
     public SseEmitter getProgressSSE(@PathVariable String id) {
         return taskService.getProgressSSE(id);
+    }
+
+    @GetMapping("/progress/stream")
+    public SseEmitter getProgressStream() {
+        return taskService.getProgressStream();
     }
 }

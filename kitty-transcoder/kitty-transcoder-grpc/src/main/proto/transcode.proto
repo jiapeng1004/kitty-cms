@@ -1,0 +1,161 @@
+syntax = "proto3";
+
+package icu.jiapeng.kitty.transcoder.grpc;
+
+option java_multiple_files = true;
+option java_package = "icu.jiapeng.kitty.transcoder.grpc";
+option java_outer_classname = "TranscodeServiceProto";
+
+// 转码服务：任务、策略、进度
+service TranscodeService {
+  rpc CreateTask (CreateTaskReq) returns (CreateTaskResp);
+  rpc GetTask (GetTaskReq) returns (TaskResp);
+  rpc ListTasks (ListTasksReq) returns (ListTasksResp);
+  rpc CancelTask (CancelTaskReq) returns (CancelTaskResp);
+  rpc GetProgress (GetProgressReq) returns (ProgressResp);
+
+  rpc GetStrategies (GetStrategiesReq) returns (GetStrategiesResp);
+  rpc GetStrategy (GetStrategyReq) returns (StrategyResp);
+  rpc CreateStrategy (CreateStrategyReq) returns (CreateStrategyResp);
+  rpc UpdateStrategy (UpdateStrategyReq) returns (UpdateStrategyResp);
+  rpc DeleteStrategy (DeleteStrategyReq) returns (DeleteStrategyResp);
+}
+
+// 创建任务
+message CreateTaskReq {
+  string input_type = 1;
+  string input_path = 2;
+  string strategy_id = 3;
+  int32 priority = 4;
+  string watermark_url = 5;
+  string watermark_position = 6;
+  repeated NotificationConfig notifications = 7;
+}
+message NotificationConfig {
+  string method = 1;
+  string target = 2;
+}
+message CreateTaskResp {
+  string task_id = 1;
+}
+
+// 获取任务
+message GetTaskReq {
+  string task_id = 1;
+}
+message TaskResp {
+  string id = 1;
+  string status = 2;
+  int32 progress = 3;
+  string input_type = 4;
+  string input_path = 5;
+  string output_path = 6;
+  string output_http_url = 7;
+  string strategy_id = 8;
+  string watermark_url = 9;
+  string watermark_position = 10;
+  int64 created_at = 11;
+  int64 started_at = 12;
+  int64 completed_at = 13;
+  string error_message = 14;
+}
+
+// 列表
+message ListTasksReq {
+  int32 page = 1;
+  int32 size = 2;
+}
+message ListTasksResp {
+  repeated TaskResp tasks = 1;
+}
+
+// 取消
+message CancelTaskReq {
+  string task_id = 1;
+}
+message CancelTaskResp {
+  bool success = 1;
+}
+
+// 进度
+message GetProgressReq {
+  string task_id = 1;
+}
+message ProgressResp {
+  string task_id = 1;
+  int32 progress = 2;
+  string status = 3;
+  string current_step = 4;
+  int32 total_steps = 5;
+  repeated StepProgressItem step_progress_list = 6;
+}
+message StepProgressItem {
+  int32 step_id = 1;
+  string type = 2;
+  string name = 3;
+  string status = 4;
+  int32 progress = 5;
+}
+
+// 策略
+message GetStrategiesReq {}
+message GetStrategiesResp {
+  repeated StrategyResp strategies = 1;
+}
+message GetStrategyReq {
+  string strategy_id = 1;
+}
+message StrategyResp {
+  string id = 1;
+  string name = 2;
+  string work_dir = 3;
+  int32 step_count = 4;
+  int64 created_at = 5;
+  repeated StrategyStepResp steps = 6;
+}
+message StrategyStepResp {
+  int32 step_id = 1;
+  string type = 2;
+  string depends = 3;
+  string input_template = 4;
+  string output_template = 5;
+  string target_format = 6;
+  string resolution = 7;
+  int32 bitrate = 8;
+  int32 frame_rate = 9;
+  string encoder = 10;
+}
+message CreateStrategyReq {
+  string name = 1;
+  string work_dir = 2;
+  repeated StrategyStepDto steps = 3;
+}
+message StrategyStepDto {
+  string type = 1;
+  string depends = 2;
+  string input_template = 3;
+  string output_template = 4;
+  string target_format = 5;
+  string resolution = 6;
+  int32 bitrate = 7;
+  int32 frame_rate = 8;
+  string encoder = 9;
+}
+message CreateStrategyResp {
+  string strategy_id = 1;
+}
+message UpdateStrategyReq {
+  string strategy_id = 1;
+  string name = 2;
+  string work_dir = 3;
+  repeated StrategyStepDto steps = 4;
+}
+message UpdateStrategyResp {
+  bool success = 1;
+}
+message DeleteStrategyReq {
+  string strategy_id = 1;
+}
+message DeleteStrategyResp {
+  bool success = 1;
+}

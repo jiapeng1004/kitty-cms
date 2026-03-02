@@ -34,4 +34,10 @@ public class CreateTaskRequest {
 
     @Schema(description = "任务优先级 1-10", example = "5")
     private Integer priority = 5;
+
+    @Schema(description = "水印地址（可选，传则转码时叠加水印；支持本地路径或 HTTP URL）", example = "/path/to/watermark.png")
+    private String watermarkUrl;
+
+    @Schema(description = "水印位置（可选）", example = "bottom-right", allowableValues = {"top-left", "top-right", "bottom-left", "bottom-right"})
+    private String watermarkPosition;
 }

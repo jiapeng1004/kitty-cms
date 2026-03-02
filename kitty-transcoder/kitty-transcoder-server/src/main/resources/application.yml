@@ -9,13 +9,13 @@ spring:
       password: "123456"
   datasource:
     # H2 文件库，MySQL 兼容模式（与生产 MySQL 语法一致，仅改 url 即可切回真实 MySQL）
-    url: jdbc:h2:file:./data/transcode;DB_CLOSE_DELAY=-1;AUTO_SERVER=TRUE;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
-    driver-class-name: org.h2.Driver
+#    url: jdbc:h2:file:./data/transcode;DB_CLOSE_DELAY=-1;AUTO_SERVER=TRUE;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+#    driver-class-name: org.h2.Driver
     username: root
     password: 123456
     # 生产切 MySQL 时取消下面注释并注释掉上面 url/driver
-    # url: jdbc:mysql://localhost:3306/kitty_transcoder?useUnicode=true&characterEncoding=utf-8&useSSL=false&allowPublicKeyRetrieval=true&allowMultiQueries=true&zeroDateTimeBehavior=convertToNull
-    # driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/kitty_transcoder?useUnicode=true&characterEncoding=utf-8&useSSL=false&allowPublicKeyRetrieval=true&allowMultiQueries=true&zeroDateTimeBehavior=convertToNull
+    driver-class-name: com.mysql.cj.jdbc.Driver
   sql:
     init:
       mode: always
@@ -28,6 +28,9 @@ spring:
   threads:
     virtual:
       enabled: true
+  grpc:
+    server:
+      port: 9803
 
 
 server:
@@ -45,6 +48,8 @@ springdoc:
 # 转码服务配置
 transcoder:
   temp-dir: ${java.io.tmpdir}/transcode
+  # 流水线工作目录，步骤输出根路径（$WORK_DIR）；不配则用 temp-dir
+  # work-dir: /data/transcode
   output:
     http-prefix: ""
 

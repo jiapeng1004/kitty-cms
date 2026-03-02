@@ -23,12 +23,17 @@ public final class HttpFileHandler {
      * @return 本地文件路径
      */
     public static String downloadToTemp(String url, String taskId, String tempDir) {
+        return downloadToTemp(url, taskId, tempDir, "input_" + System.currentTimeMillis() + ".mp4");
+    }
+
+    /** 下载到临时目录，指定无扩展名时的默认文件名 */
+    public static String downloadToTemp(String url, String taskId, String tempDir, String defaultFileName) {
         try {
             Path base = Paths.get(tempDir, taskId);
             Files.createDirectories(base);
             String fileName = url.substring(url.lastIndexOf('/') + 1);
             if (fileName.isEmpty() || !fileName.contains(".")) {
-                fileName = "input_" + System.currentTimeMillis() + ".mp4";
+                fileName = defaultFileName;
             }
             Path target = base.resolve(fileName);
             try (InputStream in = URI.create(url).toURL().openStream()) {

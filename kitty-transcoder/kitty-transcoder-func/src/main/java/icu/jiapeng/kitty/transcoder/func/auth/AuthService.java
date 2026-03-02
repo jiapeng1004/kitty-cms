@@ -65,6 +65,11 @@ public interface AuthService {
     boolean validateLoginToken(String token);
 
     /**
+     * 校验签名并消费 Nonce（防重放，用于 gRPC 等）。allParams 需含 Method、SignatureNonce。
+     */
+    boolean validateSignatureAndConsumeNonce(String accessKeyId, String signature, String signatureNonce, long timestampSec, Map<String, String> allParams);
+
+    /**
      * 列出 Access Key（不含 secretKey）
      */
     List<AccessKeyVO> listAccessKeys();

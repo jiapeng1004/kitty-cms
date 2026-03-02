@@ -9,19 +9,19 @@ import lombok.Data;
 @Data
 public class StrategyStepVO {
 
-    @Schema(description = "步骤序号，从 0 开始")
+    @Schema(description = "步骤序号，从 1 开始")
     private Integer stepId;
 
     @Schema(description = "步骤类型：transcode=转码（可带水印），extract_frames=抽帧，sprite=雪碧图，probe=探测，if=条件分支")
     private String type;
 
-    @Schema(description = "依赖的步骤序号，逗号分隔，如 \"0\" 或 \"0,1\"，空表示无依赖")
+    @Schema(description = "依赖的步骤序号，逗号分隔，从 1 开始，如 \"1\" 或 \"1,2\"，空表示无依赖")
     private String depends;
 
-    @Schema(description = "输入路径模板，支持 $TASK_ID、$DATE_TIME、$TASK_INPUT、$STEP_OUTPUT_0 等；留空则按依赖推导")
+    @Schema(description = "输入路径模板，支持 $TASK_ID、$DATE（年/月/日）、$DATE_TIME、$TASK_INPUT、$STEP_OUTPUT_1 等；留空则按依赖推导")
     private String inputTemplate;
 
-    @Schema(description = "输出路径模板，支持 $TASK_ID、$DATE_TIME、$STEP_INDEX、$WORK_DIR 等；留空则由执行器默认生成")
+    @Schema(description = "输出路径模板，支持 $WORK_DIR、$DATE（年/月/日）、$DATE_TIME（年/月/日/时分秒）、$TASK_ID、$STEP_INDEX 等；留空则由执行器默认生成")
     private String outputTemplate;
 
     @Schema(description = "目标格式", example = "mp4")
@@ -38,15 +38,6 @@ public class StrategyStepVO {
 
     @Schema(description = "编码器", example = "h264")
     private String encoder;
-
-    @Schema(description = "是否添加水印（转码步骤可选，传了水印路径则加水印）")
-    private Boolean addWatermark;
-
-    @Schema(description = "水印位置（转码步骤可选）", example = "bottom-right")
-    private String watermarkPosition;
-
-    @Schema(description = "水印图片路径（转码步骤可选，有则转码后叠加水印）")
-    private String watermarkPath;
 
     @Schema(description = "抽帧间隔，每隔多少帧取一帧（抽帧/雪碧图）", example = "30")
     private Integer frameInterval;

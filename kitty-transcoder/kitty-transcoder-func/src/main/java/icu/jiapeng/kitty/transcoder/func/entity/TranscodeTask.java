@@ -19,9 +19,12 @@ public class TranscodeTask {
     private String strategyId;
     private String status;
     private Integer progress;
+    private String progressDetail;
     private String outputPath;
     private String outputHttpUrl;
     private String errorMessage;
+    private String watermarkUrl;
+    private String watermarkPosition;
     private Integer priority;
     private Integer retryCount;
     private String notificationConfig;

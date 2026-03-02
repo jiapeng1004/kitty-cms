@@ -3,10 +3,10 @@
     <a-card title="转码服务登录（AK/SK）" class="card">
       <a-form :model="form" layout="vertical" @finish="onSubmit">
         <a-form-item label="Access Key ID" name="accessKeyId" :rules="[{ required: true }]">
-          <a-input v-model:value="form.accessKeyId" placeholder="AK..." />
+          <a-input v-model:value="form.accessKeyId" placeholder="AK..." @blur="form.accessKeyId = (form.accessKeyId || '').trim()" />
         </a-form-item>
         <a-form-item label="Secret Key" name="secretKey" :rules="[{ required: true }]">
-          <a-input-password v-model:value="form.secretKey" placeholder="SK..." />
+          <a-input-password v-model:value="form.secretKey" placeholder="SK..." @blur="form.secretKey = (form.secretKey || '').trim()" />
         </a-form-item>
         <a-form-item>
           <a-button type="primary" html-type="submit" :loading="loading" block>登录</a-button>
@@ -29,7 +29,7 @@ const form = reactive({ accessKeyId: '', secretKey: '' })
 async function onSubmit() {
   try {
     loading.value = true
-    const res = await login(form)
+    const res = await login({ accessKeyId: (form.accessKeyId || '').trim(), secretKey: (form.secretKey || '').trim() })
     localStorage.setItem('transcoder_token', res.token)
     message.success('登录成功')
     router.push('/')

@@ -36,6 +36,11 @@ public class TaskVO {
     @Schema(description = "策略ID", example = "strategy_001")
     private String strategyId;
 
+    @Schema(description = "水印地址（创建时传入）")
+    private String watermarkUrl;
+    @Schema(description = "水印位置")
+    private String watermarkPosition;
+
     @Schema(description = "创建时间", example = "1739457045000")
     private Long createdAt;
 

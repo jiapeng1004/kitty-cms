@@ -38,6 +38,9 @@ public class TokenAuthFilter extends OncePerRequestFilter {
         if (token == null || token.isEmpty()) {
             token = request.getHeader("X-Api-Token");
         }
+        if (token == null || token.isEmpty()) {
+            token = request.getParameter("token");
+        }
         if (token != null && !token.isEmpty()) {
             RMap<String, Object> session = redissonClient.getMap(SESSION_KEY_PREFIX + token);
             if (session.isExists()) {
