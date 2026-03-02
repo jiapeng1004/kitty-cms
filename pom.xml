@@ -67,6 +67,7 @@
         <os-maven-plugin.version>1.7.1</os-maven-plugin.version>
         <just-auth.version>1.4.0</just-auth.version>
         <redisson.version>4.2.0</redisson.version>
+        <spring.grpc.version>1.0.2</spring.grpc.version>
     </properties>
 
     <dependencyManagement>
@@ -277,6 +278,21 @@
                 <groupId>org.redisson</groupId>
                 <artifactId>redisson-spring-boot-starter</artifactId>
                 <version>${redisson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.grpc</groupId>
+                <artifactId>spring-grpc-spring-boot-starter</artifactId>
+                <version>${spring.grpc.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.grpc</groupId>
+                <artifactId>spring-grpc-client-spring-boot-starter</artifactId>
+                <version>${spring.grpc.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.grpc</groupId>
+                <artifactId>spring-grpc-server-spring-boot-starter</artifactId>
+                <version>${spring.grpc.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
