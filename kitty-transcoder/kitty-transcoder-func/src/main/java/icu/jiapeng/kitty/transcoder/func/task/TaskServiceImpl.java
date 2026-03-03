@@ -113,8 +113,7 @@ public class TaskServiceImpl implements TaskService {
         boolean ok = taskMapper.update(null, u) > 0;
         if (ok && entity != null) {
             entity.setStatus("CANCELLED");
-            progressBroadcaster.broadcast(getProgress(taskId));
-            sendProgressNotification(entity, entity.getProgress() != null ? entity.getProgress() : 0);
+            fireProgressNotification(taskId, entity, entity.getProgress() != null ? entity.getProgress() : 0);
         }
         return ok;
     }
@@ -138,7 +137,7 @@ public class TaskServiceImpl implements TaskService {
             entity.setStatus("PROCESSING");
             entity.setStartedAt(LocalDateTime.now());
             taskMapper.updateById(entity);
-            progressBroadcaster.broadcast(getProgress(taskId));
+            fireProgressNotification(taskId, entity, 0);
 
             String localPath = entity.getInputPath();
             if ("HTTP".equalsIgnoreCase(entity.getInputType())) {
@@ -156,16 +155,14 @@ public class TaskServiceImpl implements TaskService {
             entity.setCompletedAt(LocalDateTime.now());
             entity.setErrorMessage(null);
             taskMapper.updateById(entity);
-            progressBroadcaster.broadcast(getProgress(taskId));
-            sendProgressNotification(entity, 100);
+            fireProgressNotification(taskId, entity, 100);
         } catch (Exception e) {
             updateTaskError(taskId, "转码失败：" + e.getMessage());
             TranscodeTask entity = taskMapper.selectById(taskId);
             if (entity != null) {
                 entity.setStatus("FAILED");
                 taskMapper.updateById(entity);
-                progressBroadcaster.broadcast(getProgress(taskId));
-                sendProgressNotification(entity, entity.getProgress() != null ? entity.getProgress() : 0);
+                fireProgressNotification(taskId, entity, entity.getProgress() != null ? entity.getProgress() : 0);
             }
         } finally {
             if (lock.isHeldByCurrentThread()) {
@@ -185,7 +182,22 @@ public class TaskServiceImpl implements TaskService {
         return icu.jiapeng.kitty.transcoder.func.file.HttpFileHandler.downloadToTemp(url, taskId, workDir);
     }
 
-    /** 任务完成/失败时发送通知，仅包含任务总进度 */
+    /**
+     * 触发进度通知（SSE 广播 + HTTP 回调），异步执行，永不抛出异常。
+     * 保证通知失败不影响转码任务执行。
+     */
+    private void fireProgressNotification(String taskId, TranscodeTask entity, int progress) {
+        Thread.startVirtualThread(() -> {
+            try {
+                progressBroadcaster.broadcast(getProgress(taskId));
+                sendProgressNotification(entity, progress);
+            } catch (Throwable t) {
+                // 静默忽略，通知逻辑不得影响任务执行
+            }
+        });
+    }
+
+    /** 任务完成/失败时发送 HTTP 回调，仅包含任务总进度 */
     private void sendProgressNotification(TranscodeTask entity, int progress) {
         if (entity == null || entity.getNotificationConfig() == null || entity.getNotificationConfig().isBlank()) return;
         try {

@@ -85,7 +85,7 @@ export function buildPreviewUrl(taskId, path) {
 }
 
 /**
- * 订阅全任务进度 SSE 流，任意任务进度更新时回调
+ * 订阅全任务进度 SSE 流，任意任务进度更新时回调。支持断线重连。
  * @param {function(ProgressVO): void} onProgress
  * @returns {function(): void} 取消订阅
  */
@@ -93,44 +93,83 @@ export function subscribeProgressStream(onProgress) {
   const token = localStorage.getItem('transcoder_token')
   const headers = { Accept: 'text/event-stream' }
   if (token) headers.Authorization = `Bearer ${token}`
-  const url = `${PREFIX}/progress/stream`
-  const controller = new AbortController()
-  fetch(url, { headers, signal: controller.signal })
-    .then((res) => {
-      if (!res.ok) return
-      const reader = res.body.getReader()
-      const decoder = new TextDecoder()
-      let buf = ''
-      const read = () => {
-        reader.read().then(({ done, value }) => {
-          if (done) return
-          buf += decoder.decode(value, { stream: true })
-          const lines = buf.split('\n')
-          buf = lines.pop() || ''
-          let data = null
-          for (const line of lines) {
-            if (line.startsWith('data:')) {
-              const payload = line.slice(5).trim()
-              if (payload) {
-                if (data) onProgress(data)
-                try {
-                  data = JSON.parse(payload)
-                } catch (_) {
-                  data = null
+  const base = typeof window !== 'undefined' ? window.location.origin : ''
+  const url = base ? `${base}${PREFIX}/progress/stream` : `${PREFIX}/progress/stream`
+
+  let cancelled = false
+  let controller = null
+  let retryCount = 0
+  const maxRetryDelay = 30000
+  const initialRetryDelay = 1000
+
+  function connect() {
+    if (cancelled) return
+    controller = new AbortController()
+    fetch(url, { headers, signal: controller.signal })
+      .then((res) => {
+        if (cancelled || !res.ok) {
+          if (!res.ok) scheduleReconnect()
+          return
+        }
+        retryCount = 0
+        const reader = res.body.getReader()
+        const decoder = new TextDecoder()
+        let buf = ''
+        const read = () => {
+          if (cancelled) return
+          reader
+            .read()
+            .then(({ done, value }) => {
+              if (cancelled) return
+              if (done) {
+                scheduleReconnect()
+                return
+              }
+              buf += decoder.decode(value, { stream: true })
+              const lines = buf.split('\n')
+              buf = lines.pop() || ''
+              let data = null
+              for (const line of lines) {
+                if (line.startsWith('data:')) {
+                  const payload = line.slice(5).trim()
+                  if (payload) {
+                    if (data) onProgress(data)
+                    try {
+                      data = JSON.parse(payload)
+                    } catch (_) {
+                      data = null
+                    }
+                  }
+                } else if (line.startsWith('event:') || line === '' || line === '\r') {
+                  if (data) {
+                    onProgress(data)
+                    data = null
+                  }
                 }
               }
-            } else if (line.startsWith('event:') || line === '' || line === '\r') {
-              if (data) {
-                onProgress(data)
-                data = null
-              }
-            }
-          }
-          read()
-        }).catch(() => {})
-      }
-      read()
-    })
-    .catch(() => {})
-  return () => controller.abort()
+              read()
+            })
+            .catch(() => {
+              if (!cancelled) scheduleReconnect()
+            })
+        }
+        read()
+      })
+      .catch(() => {
+        if (!cancelled) scheduleReconnect()
+      })
+  }
+
+  function scheduleReconnect() {
+    if (cancelled) return
+    const delay = Math.min(initialRetryDelay * Math.pow(2, retryCount), maxRetryDelay)
+    retryCount++
+    setTimeout(connect, delay)
+  }
+
+  connect()
+  return () => {
+    cancelled = true
+    controller?.abort()
+  }
 }

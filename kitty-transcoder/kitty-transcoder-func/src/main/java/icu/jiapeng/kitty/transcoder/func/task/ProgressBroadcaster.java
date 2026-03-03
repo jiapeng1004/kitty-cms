@@ -6,7 +6,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import java.io.IOException;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
@@ -29,14 +28,19 @@ public class ProgressBroadcaster {
         return emitter;
     }
 
+    /**
+     * 广播进度到所有订阅的 SSE 客户端。
+     * 失败时仅移除该 emitter 并记录日志，不抛出异常，保证不影响转码引擎执行。
+     */
     public void broadcast(ProgressVO progress) {
         if (progress == null) return;
         String data = JSON.toJSONString(progress);
         for (SseEmitter e : emitters) {
             try {
                 e.send(SseEmitter.event().name("progress").data(data));
-            } catch (IOException ex) {
+            } catch (Exception ex) {
                 emitters.remove(e);
+                log.debug("SSE send failed, emitter removed: {}", ex.getMessage());
             }
         }
     }
