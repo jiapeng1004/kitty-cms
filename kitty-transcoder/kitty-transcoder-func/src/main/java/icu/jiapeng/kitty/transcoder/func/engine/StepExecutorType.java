@@ -13,6 +13,7 @@ public enum StepExecutorType {
     TRANSCODE("transcode", "转码（可选带水印）"),
     EXTRACT_FRAMES("extract_frames", "抽帧"),
     SPRITE("sprite", "雪碧图"),
+    IMAGE_CONVERT("image_convert", "图片转换"),
     PROBE("probe", "媒体信息分析"),
     IF("if", "判断");
 

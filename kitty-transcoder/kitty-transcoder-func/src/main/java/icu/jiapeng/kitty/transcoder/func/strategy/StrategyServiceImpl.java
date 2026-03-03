@@ -162,6 +162,9 @@ public class StrategyServiceImpl implements StrategyService {
                 vo.setExtractOutputFormat(parsed.getExtractOutputFormat());
                 vo.setSpriteColumns(parsed.getSpriteColumns());
                 vo.setSpriteRows(parsed.getSpriteRows());
+                vo.setImageTargetFormat(parsed.getImageTargetFormat());
+                vo.setImageQuality(parsed.getImageQuality());
+                vo.setImageResize(parsed.getImageResize());
                 vo.setCondition(parsed.getCondition());
                 vo.setStrategyIdWhenTrue(parsed.getStrategyIdWhenTrue());
                 vo.setStrategyIdWhenFalse(parsed.getStrategyIdWhenFalse());

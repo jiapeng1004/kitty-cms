@@ -249,6 +249,7 @@ public class TranscodeEngine {
         return switch (type) {
             case "extract_frames" -> "抽帧";
             case "sprite" -> "雪碧图";
+            case "image_convert" -> "图片转换";
             case "probe" -> "媒体分析";
             case "if" -> "判断";
             default -> "转码";

@@ -51,6 +51,15 @@ public class StrategyStepDTO {
     @Schema(description = "雪碧图行数", example = "3")
     private Integer spriteRows;
 
+    @Schema(description = "图片转换目标格式（image_convert）", example = "webp")
+    private String imageTargetFormat;
+
+    @Schema(description = "图片质量 1-100（image_convert）", example = "85")
+    private Integer imageQuality;
+
+    @Schema(description = "图片缩放，如 800x600、800x、x600（image_convert）")
+    private String imageResize;
+
     @Schema(description = "if 步骤：条件表达式，如 width>1920、bitrate<5000000")
     private String condition;
 

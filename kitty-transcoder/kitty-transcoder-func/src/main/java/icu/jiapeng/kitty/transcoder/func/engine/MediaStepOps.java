@@ -182,6 +182,81 @@ public class MediaStepOps {
     }
 
     /**
+     * 使用 ImageMagick 命令行进行图片格式转换、缩放、质量调整。
+     * 支持单文件或目录（递归处理目录内图片）。
+     */
+    public String doImageConvert(String inputPath, StrategyStepVO step, String stepSuffix, String resolvedOutputPath, String stepWorkDir) throws Exception {
+        File input = new File(inputPath);
+        String workDir = (stepWorkDir != null && !stepWorkDir.isBlank()) ? stepWorkDir : (transcodeConfig != null ? transcodeConfig.getWorkDir() : null);
+        String targetFormat = step.getImageTargetFormat() != null && !step.getImageTargetFormat().isBlank()
+                ? step.getImageTargetFormat().toLowerCase() : "webp";
+        int quality = step.getImageQuality() != null ? Math.min(100, Math.max(1, step.getImageQuality())) : 85;
+        String resize = step.getImageResize() != null && !step.getImageResize().isBlank() ? step.getImageResize().trim() : null;
+
+        if (input.isFile()) {
+            String outPath = resolvedOutputPath != null && !resolvedOutputPath.isBlank()
+                    ? toLocalFilePath(resolvedOutputPath, workDir)
+                    : parentPath(inputPath) + File.separator + baseName(inputPath) + stepSuffix + "." + targetFormat;
+            File outFile = new File(outPath);
+            if (outFile.getParent() != null) {
+                File parent = new File(outFile.getParent());
+                if (!parent.exists()) parent.mkdirs();
+            }
+            runImageMagickConvert(inputPath, outPath, targetFormat, quality, resize);
+            return outPath;
+        }
+
+        if (input.isDirectory()) {
+            String outDir = resolvedOutputPath != null && !resolvedOutputPath.isBlank()
+                    ? toLocalFilePath(resolvedOutputPath, workDir)
+                    : parentPath(inputPath) + File.separator + baseName(inputPath) + stepSuffix + "_converted";
+            File outDirF = new File(outDir);
+            if (!outDirF.exists()) outDirF.mkdirs();
+            File[] files = input.listFiles((dir, name) -> {
+                String lower = name.toLowerCase();
+                return lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".png")
+                        || lower.endsWith(".webp") || lower.endsWith(".gif") || lower.endsWith(".bmp")
+                        || lower.endsWith(".tiff") || lower.endsWith(".tif");
+            });
+            if (files == null || files.length == 0) throw new IOException("目录内无支持的图片文件");
+            for (File f : files) {
+                String base = baseName(f.getAbsolutePath());
+                String outPath = outDir + File.separator + base + "." + targetFormat;
+                runImageMagickConvert(f.getAbsolutePath(), outPath, targetFormat, quality, resize);
+            }
+            return outDir;
+        }
+
+        throw new IOException("输入路径既不是文件也不是目录: " + inputPath);
+    }
+
+    private void runImageMagickConvert(String inputPath, String outputPath, String targetFormat, int quality, String resize) throws Exception {
+        List<String> args = new ArrayList<>();
+        args.add(inputPath);
+        if (resize != null && !resize.isBlank()) {
+            args.add("-resize");
+            args.add(resize);
+        }
+        if ("jpg".equals(targetFormat) || "jpeg".equals(targetFormat) || "webp".equals(targetFormat)) {
+            args.add("-quality");
+            args.add(String.valueOf(quality));
+        }
+        args.add(outputPath);
+        for (String cmdName : new String[]{"magick", "convert"}) {
+            List<String> cmd = new ArrayList<>();
+            cmd.add(cmdName);
+            if ("magick".equals(cmdName)) cmd.add("convert");
+            cmd.addAll(args);
+            try {
+                Process p = new ProcessBuilder(cmd).inheritIO().start();
+                if (p.waitFor() == 0) return;
+            } catch (Exception ignored) {
+            }
+        }
+        throw new IOException("ImageMagick 执行失败，请确保已安装 ImageMagick (magick 或 convert 命令)");
+    }
+
+    /**
      * 使用 JavaCV 从视频中按间隔抽帧，返回 BufferedImage 列表（与转码一致，不调 ffmpeg 命令）。
      */
     private List<BufferedImage> extractFramesByInterval(String inputPath, int interval, int maxFrames) throws Exception {

@@ -38,6 +38,7 @@
                   <a-radio value="transcode">转码</a-radio>
                   <a-radio value="extract_frames">抽帧</a-radio>
                   <a-radio value="sprite">雪碧图</a-radio>
+                  <a-radio value="image_convert">图片转换</a-radio>
                 </a-radio-group>
               </a-form-item>
               <a-form-item :name="['steps', index, 'depends']" :label="'依赖步骤（步骤 ' + (step.stepId ?? index + 1) + '）'" :rules="[{ validator: (_, v) => { const s = String(v ?? '').trim(); if (!s) return Promise.resolve(); return /^(\d+)(,\d+)*$/.test(s) ? Promise.resolve() : Promise.reject(new Error('格式如 1 或 1,2')); } }]">
@@ -161,6 +162,30 @@
                   </a-col>
                 </a-row>
               </template>
+              <template v-else-if="step.type === 'image_convert'">
+                <a-row :gutter="12">
+                  <a-col :span="8">
+                    <a-form-item label="目标格式">
+                      <a-select v-model:value="step.imageTargetFormat" size="small" style="width:100%">
+                        <a-select-option value="webp">webp</a-select-option>
+                        <a-select-option value="jpg">jpg</a-select-option>
+                        <a-select-option value="png">png</a-select-option>
+                        <a-select-option value="avif">avif</a-select-option>
+                      </a-select>
+                    </a-form-item>
+                  </a-col>
+                  <a-col :span="8">
+                    <a-form-item label="质量(1-100)">
+                      <a-input-number v-model:value="step.imageQuality" :min="1" :max="100" style="width:100%" size="small" placeholder="85" />
+                    </a-form-item>
+                  </a-col>
+                  <a-col :span="8">
+                    <a-form-item label="缩放(可选)">
+                      <a-input v-model:value="step.imageResize" size="small" placeholder="800x600、800x、x600" @blur="step.imageResize = (step.imageResize || '').trim()" />
+                    </a-form-item>
+                  </a-col>
+                </a-row>
+              </template>
             </a-card>
           </div>
           <a-button type="dashed" block class="add-step-btn" @click="addStep">+ 添加步骤</a-button>
@@ -176,7 +201,7 @@ import { message } from 'ant-design-vue'
 import { listStrategies, getStrategy, createStrategy, updateStrategy, deleteStrategy } from '../api/strategy_api'
 
 function stepTypeLabel(type) {
-  const map = { transcode: '转码', extract_frames: '抽帧', sprite: '雪碧图' }
+  const map = { transcode: '转码', extract_frames: '抽帧', sprite: '雪碧图', image_convert: '图片转换' }
   return map[type] || type || '转码'
 }
 
@@ -196,7 +221,10 @@ function defaultStep() {
     extractFrameCount: undefined,
     extractOutputFormat: 'jpg',
     spriteColumns: 4,
-    spriteRows: 3
+    spriteRows: 3,
+    imageTargetFormat: 'webp',
+    imageQuality: 85,
+    imageResize: ''
   }
 }
 
@@ -300,7 +328,10 @@ async function openEdit(record) {
         extractFrameCount: s.extractFrameCount ?? undefined,
         extractOutputFormat: s.extractOutputFormat ?? 'jpg',
         spriteColumns: s.spriteColumns ?? 4,
-        spriteRows: s.spriteRows ?? 3
+        spriteRows: s.spriteRows ?? 3,
+        imageTargetFormat: s.imageTargetFormat ?? 'webp',
+        imageQuality: s.imageQuality ?? 85,
+        imageResize: s.imageResize ?? ''
       }))
     } else {
       stratForm.name = data?.name ?? ''
@@ -344,7 +375,10 @@ async function submitForm() {
       extractFrameCount: s.extractFrameCount ?? undefined,
       extractOutputFormat: s.extractOutputFormat || undefined,
       spriteColumns: s.spriteColumns ?? undefined,
-      spriteRows: s.spriteRows ?? undefined
+      spriteRows: s.spriteRows ?? undefined,
+      imageTargetFormat: s.imageTargetFormat || undefined,
+      imageQuality: s.imageQuality ?? undefined,
+      imageResize: (s.imageResize || '').trim() || undefined
     }))
   }
   submitting.value = true
