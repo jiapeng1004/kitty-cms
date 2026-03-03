@@ -39,13 +39,13 @@ public class StrategyStepVO {
     @Schema(description = "编码器", example = "h264")
     private String encoder;
 
-    @Schema(description = "抽帧间隔，每隔多少帧取一帧（抽帧/雪碧图）", example = "30")
+    @Schema(description = "抽帧间隔，每隔多少帧取一帧（仅抽帧步骤）", example = "30")
     private Integer frameInterval;
 
     @Schema(description = "抽帧数量，指定则抽指定帧数，不指定则默认 1 帧（仅抽帧步骤）")
     private Integer extractFrameCount;
 
-    @Schema(description = "抽帧输出图片格式（抽帧/雪碧图）", example = "jpg")
+    @Schema(description = "抽帧/雪碧图输出图片格式", example = "jpg")
     private String extractOutputFormat;
 
     @Schema(description = "雪碧图列数", example = "4")

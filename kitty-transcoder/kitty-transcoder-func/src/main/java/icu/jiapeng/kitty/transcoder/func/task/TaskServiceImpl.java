@@ -26,6 +26,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
 
@@ -157,7 +158,16 @@ public class TaskServiceImpl implements TaskService {
             taskMapper.updateById(entity);
             fireProgressNotification(taskId, entity, 100);
         } catch (Exception e) {
-            updateTaskError(taskId, "转码失败：" + e.getMessage());
+            Throwable cause = e;
+            while (cause instanceof CompletionException && cause.getCause() != null) {
+                cause = cause.getCause();
+            }
+            String msg = cause != null ? cause.getMessage() : e.getMessage();
+            if (msg != null && msg.startsWith("STEP_FAILED:")) {
+                int idx = msg.indexOf(':', 11);
+                msg = idx > 0 ? msg.substring(idx + 1) : msg;
+            }
+            updateTaskError(taskId, "转码失败：" + (msg != null ? msg : e.getClass().getSimpleName()));
             TranscodeTask entity = taskMapper.selectById(taskId);
             if (entity != null) {
                 entity.setStatus("FAILED");

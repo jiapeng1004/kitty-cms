@@ -18,6 +18,7 @@
             <span class="step-status">{{ stepStatusText(s.status) }}</span>
             <a-progress v-if="s.status === 'processing'" type="circle" :size="24" :percent="s.progress ?? 0" />
             <a-tag v-else-if="s.status === 'completed'" color="success">完成</a-tag>
+            <a-tag v-else-if="s.status === 'failed'" color="error">失败</a-tag>
             <a-tag v-else color="default">待执行</a-tag>
           </div>
         </div>
@@ -88,12 +89,12 @@ function statusColor(s) {
 }
 
 function stepStatusColor(s) {
-  const m = { completed: 'success', processing: 'processing', pending: 'default' }
+  const m = { completed: 'success', processing: 'processing', pending: 'default', failed: 'error' }
   return m[s] || 'default'
 }
 
 function stepStatusText(s) {
-  const m = { completed: '已完成', processing: '进行中', pending: '待执行' }
+  const m = { completed: '已完成', processing: '进行中', pending: '待执行', failed: '失败' }
   return m[s] || s
 }
 

@@ -1,8 +1,10 @@
 package icu.jiapeng.kitty.transcoder.func.engine;
 
+import cn.hutool.core.img.ImgUtil;
 import icu.jiapeng.kitty.transcoder.api.StrategyStepVO;
 import icu.jiapeng.kitty.transcoder.func.config.TranscodeConfig;
 import icu.jiapeng.kitty.transcoder.func.file.HttpFileHandler;
+import org.bytedeco.javacv.FFmpegFrameFilter;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
 import org.bytedeco.javacv.FFmpegFrameRecorder;
 import org.bytedeco.javacv.Frame;
@@ -145,11 +147,72 @@ public class MediaStepOps {
         if (input.isDirectory()) throw new IOException("雪碧图步骤需要文件输入，当前为目录");
         int cols = step.getSpriteColumns() != null && step.getSpriteColumns() > 0 ? step.getSpriteColumns() : 4;
         int rows = step.getSpriteRows() != null && step.getSpriteRows() > 0 ? step.getSpriteRows() : 3;
-        int interval = step.getFrameInterval() != null && step.getFrameInterval() > 0 ? step.getFrameInterval() : 30;
+        int count = cols * rows;
         String fmt = "jpg";
         if (step.getExtractOutputFormat() != null && step.getExtractOutputFormat().equalsIgnoreCase("png")) fmt = "png";
-        List<BufferedImage> images = extractFramesByInterval(inputPath, interval, cols * rows);
-        if (images.isEmpty()) throw new IOException("未抽到帧");
+        BufferedImage sprite = buildSpriteWithFilter(inputPath, cols, rows, count);
+        if (sprite == null) {
+            List<BufferedImage> images = extractFramesByTimestamp(inputPath, count);
+            if (images.isEmpty()) images = extractFramesByInterval(inputPath, 30, count);
+            if (images.isEmpty()) throw new IOException("未抽到帧");
+            sprite = buildSpriteFromImages(images, cols, rows);
+        }
+        String baseName = baseName(inputPath);
+        String workDir = (stepWorkDir != null && !stepWorkDir.isBlank()) ? stepWorkDir : (transcodeConfig != null ? transcodeConfig.getWorkDir() : null);
+        String outPath = resolvedOutputPath != null && !resolvedOutputPath.isBlank()
+                ? toLocalFilePath(resolvedOutputPath, workDir)
+                : parentPath(inputPath) + File.separator + baseName + stepSuffix + "_sprite." + fmt;
+        File outFile = new File(outPath);
+        if (outFile.getParent() != null) {
+            File parent = new File(outFile.getParent());
+            if (!parent.exists()) parent.mkdirs();
+        }
+        ImgUtil.write(sprite, outFile);
+        return outPath;
+    }
+
+    /**
+     * 使用 FFmpegFrameFilter 一步到位生成雪碧图：select+scale(iw/4:ih/4)+tile，无需先抽帧。
+     */
+    private BufferedImage buildSpriteWithFilter(String inputPath, int cols, int rows, int count) throws Exception {
+        try (FFmpegFrameGrabber grabber = new FFmpegFrameGrabber(inputPath);
+             Java2DFrameConverter converter = new Java2DFrameConverter()) {
+            grabber.start();
+            int w = grabber.getImageWidth();
+            int h = grabber.getImageHeight();
+            if (w <= 0 || h <= 0) return null;
+            long durationUs = grabber.getLengthInTime();
+            double fps = grabber.getFrameRate();
+            long totalFrames = (durationUs > 0 && fps > 0) ? (long) ((durationUs / 1e6) * fps) : 300;
+            int interval = Math.max(1, (int) (totalFrames / count));
+            String filterStr = "select=not(mod(n\\," + interval + ")),scale=iw/4:ih/4,tile=" + cols + "x" + rows;
+            try (FFmpegFrameFilter filter = new FFmpegFrameFilter(filterStr, w, h)) {
+                int pf = grabber.getPixelFormat();
+                if (pf >= 0) filter.setPixelFormat(pf);
+                filter.setFrameRate(fps > 0 ? fps : 30);
+                filter.start();
+                Frame frame;
+                while ((frame = grabber.grab()) != null) {
+                    if (frame.image != null) {
+                        filter.push(frame);
+                        Frame out = filter.pull();
+                        if (out != null && out.image != null) {
+                            return converter.convert(out);
+                        }
+                    }
+                }
+                filter.push(null);
+                Frame out = filter.pull();
+                if (out != null && out.image != null) {
+                    return converter.convert(out);
+                }
+            }
+            grabber.stop();
+        }
+        return null;
+    }
+
+    private BufferedImage buildSpriteFromImages(List<BufferedImage> images, int cols, int rows) {
         int maxW = 0, maxH = 0;
         for (BufferedImage img : images) {
             if (img != null) {
@@ -167,18 +230,7 @@ public class MediaStepOps {
             }
         }
         g.dispose();
-        String baseName = baseName(inputPath);
-        String workDir = (stepWorkDir != null && !stepWorkDir.isBlank()) ? stepWorkDir : (transcodeConfig != null ? transcodeConfig.getWorkDir() : null);
-        String outPath = resolvedOutputPath != null && !resolvedOutputPath.isBlank()
-                ? toLocalFilePath(resolvedOutputPath, workDir)
-                : parentPath(inputPath) + File.separator + baseName + stepSuffix + "_sprite." + fmt;
-        File outFile = new File(outPath);
-        if (outFile.getParent() != null) {
-            File parent = new File(outFile.getParent());
-            if (!parent.exists()) parent.mkdirs();
-        }
-        ImageIO.write(sprite, fmt, outFile);
-        return outPath;
+        return sprite;
     }
 
     /**
@@ -257,7 +309,33 @@ public class MediaStepOps {
     }
 
     /**
-     * 使用 JavaCV 从视频中按间隔抽帧，返回 BufferedImage 列表（与转码一致，不调 ffmpeg 命令）。
+     * 按时长均匀抽帧（雪碧图用），使用 setTimestamp 兼容性优于 setFrameNumber。
+     */
+    private List<BufferedImage> extractFramesByTimestamp(String inputPath, int count) throws Exception {
+        if (count <= 0) return new ArrayList<>();
+        List<BufferedImage> list = new ArrayList<>();
+        try (FFmpegFrameGrabber grabber = new FFmpegFrameGrabber(inputPath);
+             Java2DFrameConverter converter = new Java2DFrameConverter()) {
+            grabber.start();
+            long durationUs = grabber.getLengthInTime();
+            if (durationUs <= 0) return new ArrayList<>();
+            for (int i = 0; i < count; i++) {
+                long ts = (count <= 1) ? 0 : (i * durationUs) / (count - 1);
+                grabber.setTimestamp(ts);
+                Frame frame = grabber.grab();
+                if (frame != null && frame.image != null) {
+                    BufferedImage img = converter.convert(frame);
+                    if (img != null) list.add(img);
+                }
+            }
+            grabber.stop();
+        }
+        return list;
+    }
+
+    /**
+     * 使用 JavaCV 从视频中按间隔抽帧，返回 BufferedImage 列表。
+     * 抽帧步骤使用此方法，顺序 grab 兼容性最好。
      */
     private List<BufferedImage> extractFramesByInterval(String inputPath, int interval, int maxFrames) throws Exception {
         List<BufferedImage> list = new ArrayList<>();

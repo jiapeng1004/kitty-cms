@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -149,12 +150,23 @@ public class TranscodeEngine {
                         stepOutputs.put(stepIdForPut, out);
                     } catch (Exception e) {
                         log.error("步骤 {} 执行失败", sid, e);
-                        throw new RuntimeException(e);
+                        throw new RuntimeException("STEP_FAILED:" + sid + ":" + e.getMessage(), e);
                     }
                 }, stepExecutor);
                 futures.add(f);
             }
-            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+            try {
+                CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+            } catch (CompletionException e) {
+                int failedStepId = extractFailedStepId(e.getCause());
+                if (progressCallback != null && failedStepId > 0) {
+                    List<StepProgressItem> failedList = buildStepProgressListWithFailure(
+                            stepByStepId, stepIds, completedBeforeLevel, levelSteps, failedStepId);
+                    progressCallback.updateProgress(taskId, "FAILED",
+                            Math.min(100, (completedBeforeLevel + levelSteps.size()) * 100 / n), failedList);
+                }
+                throw e;
+            }
             completed += level.size();
             List<StepProgressItem> stepListDone = buildStepProgressList(stepByStepId, stepIds, completed, Collections.emptyList(), true);
             if (progressCallback != null && !stepListDone.isEmpty()) {
@@ -173,6 +185,50 @@ public class TranscodeEngine {
         int m = a[0];
         for (int i = 1; i < a.length; i++) if (a[i] > m) m = a[i];
         return m;
+    }
+
+    private static int extractFailedStepId(Throwable cause) {
+        if (cause == null || cause.getMessage() == null) return -1;
+        String msg = cause.getMessage();
+        if (!msg.startsWith("STEP_FAILED:")) return -1;
+        int colon = msg.indexOf(':', 11);
+        if (colon <= 11) return -1;
+        try {
+            return Integer.parseInt(msg.substring(11, colon));
+        } catch (NumberFormatException e) {
+            return -1;
+        }
+    }
+
+    private static List<StepProgressItem> buildStepProgressListWithFailure(
+            Map<Integer, StrategyStepVO> stepByStepId, List<Integer> stepIds, int completedCount,
+            List<Integer> currentLevel, int failedStepId) {
+        List<StepProgressItem> list = new ArrayList<>();
+        for (int sid : stepIds) {
+            StrategyStepVO step = stepByStepId.get(sid);
+            String type = step != null ? (step.getType() != null ? step.getType() : "transcode") : "transcode";
+            String name = stepTypeName(type) + " (步骤" + sid + ")";
+            StepProgressItem item = new StepProgressItem();
+            item.setStepId(sid);
+            item.setType(type);
+            item.setName(name);
+            int idx = stepIds.indexOf(sid);
+            if (idx < completedCount) {
+                item.setStatus("completed");
+                item.setProgress(100);
+            } else if (sid == failedStepId) {
+                item.setStatus("failed");
+                item.setProgress(0);
+            } else if (currentLevel.contains(sid)) {
+                item.setStatus("processing");
+                item.setProgress(0);
+            } else {
+                item.setStatus("pending");
+                item.setProgress(0);
+            }
+            list.add(item);
+        }
+        return list;
     }
 
     /** 解析依赖步骤序号：逗号分隔，从 1 开始，如 "1" 或 "1,2"；空表示无依赖。 */

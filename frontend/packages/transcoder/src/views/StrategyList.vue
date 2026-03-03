@@ -28,7 +28,7 @@
           />
         </a-form-item>
         <a-form-item label="步骤（依赖留空=无依赖、用任务输入可并行；填 1 或 1,2 等=依赖该步骤输出）">
-          <div v-for="(step, index) in stratForm.steps" :key="index" class="step-card">
+          <div v-for="(step, index) in stratForm.steps" :key="step._key ?? index" class="step-card">
             <a-card size="small" :title="`步骤 ${step.stepId ?? index + 1}：${stepTypeLabel(step.type)}`" class="step-item">
               <template #extra>
                 <a-button type="text" danger size="small" :disabled="stratForm.steps.length <= 1" @click="removeStep(index)">删除</a-button>
@@ -41,7 +41,7 @@
                   <a-radio value="image_convert">图片转换</a-radio>
                 </a-radio-group>
               </a-form-item>
-              <a-form-item :name="['steps', index, 'depends']" :label="'依赖步骤（步骤 ' + (step.stepId ?? index + 1) + '）'" :rules="[{ validator: (_, v) => { const s = String(v ?? '').trim(); if (!s) return Promise.resolve(); return /^(\d+)(,\d+)*$/.test(s) ? Promise.resolve() : Promise.reject(new Error('格式如 1 或 1,2')); } }]">
+              <a-form-item :name="['steps', index, 'depends']" :label="'依赖步骤（步骤 ' + (step.stepId ?? index + 1) + '）'" :rules="dependsRules">
                 <a-input
                   v-model:value="step.depends"
                   placeholder="留空=无依赖；或填 1、1,2 等指定依赖的步骤"
@@ -125,7 +125,7 @@
                     </a-form-item>
                   </a-col>
                   <a-col :span="8">
-                    <a-form-item :name="['steps', index, 'extractFrameCount']" label="抽取帧数" :rules="[{ validator: (_, v) => { if (v == null || v === '') return Promise.resolve(); const n = Number(v); if (isNaN(n) || n < 1 || n > 100) return Promise.reject(new Error('1-100')); return Promise.resolve(); } }]">
+                    <a-form-item :name="['steps', index, 'extractFrameCount']" label="抽取帧数" :rules="extractFrameCountRules">
                       <a-input-number v-model:value="step.extractFrameCount" :min="1" :max="100" style="width:100%" size="small" placeholder="不填默认1帧" />
                     </a-form-item>
                   </a-col>
@@ -140,11 +140,6 @@
               <template v-else-if="step.type === 'sprite'">
                 <a-row :gutter="12">
                   <a-col :span="8">
-                    <a-form-item :name="['steps', index, 'frameInterval']" label="抽帧间隔" :rules="[{ type: 'number', min: 1, max: 300, message: '1-300' }]">
-                      <a-input-number v-model:value="step.frameInterval" :min="1" :max="300" style="width:100%" size="small" placeholder="30" />
-                    </a-form-item>
-                  </a-col>
-                  <a-col :span="8">
                     <a-form-item :name="['steps', index, 'spriteColumns']" label="列数" :rules="[{ type: 'number', min: 1, max: 20, message: '1-20' }]">
                       <a-input-number v-model:value="step.spriteColumns" :min="1" :max="20" style="width:100%" size="small" placeholder="4" />
                     </a-form-item>
@@ -153,6 +148,9 @@
                     <a-form-item :name="['steps', index, 'spriteRows']" label="行数" :rules="[{ type: 'number', min: 1, max: 20, message: '1-20' }]">
                       <a-input-number v-model:value="step.spriteRows" :min="1" :max="20" style="width:100%" size="small" placeholder="3" />
                     </a-form-item>
+                  </a-col>
+                  <a-col :span="8">
+                    <div class="sprite-count-hint">共 {{ (step.spriteColumns ?? 4) * (step.spriteRows ?? 3) }} 张，均匀分布</div>
                   </a-col>
                   <a-col :span="12">
                     <a-form-item label="输出格式"><a-select v-model:value="step.extractOutputFormat" size="small" style="width:100%">
@@ -205,8 +203,10 @@ function stepTypeLabel(type) {
   return map[type] || type || '转码'
 }
 
+let _stepKey = 0
 function defaultStep() {
   return {
+    _key: `step_${++_stepKey}_${Date.now()}`,
     type: 'transcode',
     depends: '',
     inputTemplate: '',
@@ -259,14 +259,36 @@ function getResolutionOptions(step) {
   return [...resolutionOptions, { label: val, value: val }]
 }
 
+const dependsRules = [
+  {
+    validator: (_rule, value, callback) => {
+      const s = String(value ?? '').trim()
+      if (!s) return callback()
+      if (/^(\d+)(,\d+)*$/.test(s)) return callback()
+      callback(new Error('格式如 1 或 1,2'))
+    }
+  }
+]
+
+const extractFrameCountRules = [
+  {
+    validator: (_rule, value, callback) => {
+      if (value == null || value === '') return callback()
+      const n = Number(value)
+      if (isNaN(n) || n < 1 || n > 100) return callback(new Error('1-100'))
+      callback()
+    }
+  }
+]
+
 function resolutionRules(step) {
   return [
     {
-      validator: (_, value) => {
+      validator: (_rule, value, callback) => {
         const v = step?.resolution === 'custom' ? step?.resolutionCustom : value
-        if (!v) return Promise.reject(new Error('请选择或输入分辨率'))
-        if (!/^\d+[xX×]\d+$/.test(v)) return Promise.reject(new Error('格式如 1920x1080'))
-        return Promise.resolve()
+        if (!v) return callback(new Error('请选择或输入分辨率'))
+        if (!/^\d+[xX×]\d+$/.test(v)) return callback(new Error('格式如 1920x1080'))
+        callback()
       }
     }
   ]
@@ -312,7 +334,8 @@ async function openEdit(record) {
     if (data && data.steps && data.steps.length) {
       stratForm.name = data.name ?? ''
       stratForm.workDir = data.workDir ?? ''
-      stratForm.steps = data.steps.map(s => ({
+      stratForm.steps = data.steps.map((s, i) => ({
+        _key: `step_${++_stepKey}_${Date.now()}_${i}`,
         stepId: s.stepId,
         type: s.type || 'transcode',
         depends: s.depends ?? '',
@@ -361,25 +384,28 @@ async function submitForm() {
   const payload = {
     name: (stratForm.name || '').trim(),
     workDir: (stratForm.workDir || '').trim() || undefined,
-    steps: stratForm.steps.map(s => ({
-      type: s.type || 'transcode',
-      depends: (s.depends || '').trim() || undefined,
-      inputTemplate: (s.inputTemplate || '').trim() || undefined,
-      outputTemplate: (s.outputTemplate || '').trim() || undefined,
-      targetFormat: s.targetFormat || undefined,
-      resolution: (s.resolution === 'custom' ? (s.resolutionCustom || '').trim() : s.resolution) || undefined,
-      bitrate: s.bitrate ?? undefined,
-      frameRate: s.frameRate ?? undefined,
-      encoder: s.encoder || undefined,
-      frameInterval: s.frameInterval ?? undefined,
-      extractFrameCount: s.extractFrameCount ?? undefined,
-      extractOutputFormat: s.extractOutputFormat || undefined,
-      spriteColumns: s.spriteColumns ?? undefined,
-      spriteRows: s.spriteRows ?? undefined,
-      imageTargetFormat: s.imageTargetFormat || undefined,
-      imageQuality: s.imageQuality ?? undefined,
-      imageResize: (s.imageResize || '').trim() || undefined
-    }))
+    steps: stratForm.steps.map(s => {
+      const { _key, ...rest } = s
+      return {
+        type: rest.type || 'transcode',
+      depends: (rest.depends || '').trim() || undefined,
+        inputTemplate: (rest.inputTemplate || '').trim() || undefined,
+        outputTemplate: (rest.outputTemplate || '').trim() || undefined,
+        targetFormat: rest.targetFormat || undefined,
+        resolution: (rest.resolution === 'custom' ? (rest.resolutionCustom || '').trim() : rest.resolution) || undefined,
+        bitrate: rest.bitrate ?? undefined,
+        frameRate: rest.frameRate ?? undefined,
+        encoder: rest.encoder || undefined,
+        frameInterval: rest.frameInterval ?? undefined,
+        extractFrameCount: rest.extractFrameCount ?? undefined,
+        extractOutputFormat: rest.extractOutputFormat || undefined,
+        spriteColumns: rest.spriteColumns ?? undefined,
+        spriteRows: rest.spriteRows ?? undefined,
+        imageTargetFormat: rest.imageTargetFormat || undefined,
+        imageQuality: rest.imageQuality ?? undefined,
+        imageResize: (rest.imageResize || '').trim() || undefined
+      }
+    })
   }
   submitting.value = true
   try {
@@ -431,4 +457,5 @@ onMounted(load)
 .step-item { margin-bottom: 8px; }
 .add-step-btn { margin-top: 8px; }
 .danger { color: var(--ant-color-error); }
+.sprite-count-hint { padding: 4px 0; font-size: 12px; color: var(--ant-color-text-secondary); }
 </style>
