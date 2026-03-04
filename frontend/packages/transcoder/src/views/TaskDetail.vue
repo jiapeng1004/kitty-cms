@@ -15,6 +15,7 @@
         <div class="step-progress-list">
           <div v-for="s in progressData.stepProgressList" :key="s.stepId" class="step-item">
             <a-tag :color="stepStatusColor(s.status)">{{ s.name }}</a-tag>
+            <span v-if="formatDepends(s.depends)" class="step-depends" title="步骤依赖关系">↳ {{ formatDepends(s.depends) }}</span>
             <span class="step-status">{{ stepStatusText(s.status) }}</span>
             <a-progress v-if="s.status === 'processing'" type="circle" :size="24" :percent="s.progress ?? 0" />
             <a-tag v-else-if="s.status === 'completed'" color="success">完成</a-tag>
@@ -96,6 +97,14 @@ function stepStatusColor(s) {
 function stepStatusText(s) {
   const m = { completed: '已完成', processing: '进行中', pending: '待执行', failed: '失败' }
   return m[s] || s
+}
+
+function formatDepends(depends) {
+  const s = (depends || '').trim()
+  if (!s) return ''
+  const parts = s.split(',').map((p) => p.trim()).filter(Boolean)
+  if (parts.length === 0) return ''
+  return '依赖步骤' + parts.join('、')
 }
 
 function onProgress(p) {
@@ -180,6 +189,7 @@ onBeforeUnmount(() => {
 .step-progress-list { display: flex; flex-direction: column; gap: 8px; }
 .step-item { display: flex; align-items: center; gap: 8px; }
 .step-status { font-size: 12px; color: #666; margin-right: 4px; }
+.step-depends { font-size: 12px; color: #666; margin-right: 8px; padding: 2px 6px; background: #f0f0f0; border-radius: 4px; }
 .preview-list { display: flex; flex-direction: column; gap: 16px; }
 .preview-item { display: flex; flex-direction: column; gap: 8px; padding: 8px; background: #fafafa; border-radius: 4px; }
 .preview-path { font-family: monospace; font-size: 12px; color: #666; word-break: break-all; }

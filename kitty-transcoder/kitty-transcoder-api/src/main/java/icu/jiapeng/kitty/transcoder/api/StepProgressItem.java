@@ -15,6 +15,9 @@ public class StepProgressItem {
     @Schema(description = "步骤名称", example = "转码")
     private String name;
 
+    @Schema(description = "依赖的步骤序号，如 1 或 1,2，空表示无依赖")
+    private String depends;
+
     @Schema(description = "状态：completed/processing/pending/failed", example = "processing")
     private String status;
 

@@ -212,6 +212,7 @@ public class TranscodeEngine {
             item.setStepId(sid);
             item.setType(type);
             item.setName(name);
+            item.setDepends(step != null ? step.getDepends() : null);
             int idx = stepIds.indexOf(sid);
             if (idx < completedCount) {
                 item.setStatus("completed");
@@ -279,6 +280,7 @@ public class TranscodeEngine {
             item.setStepId(sid);
             item.setType(type);
             item.setName(name);
+            item.setDepends(step != null ? step.getDepends() : null);
             int idx = stepIds.indexOf(sid);
             if (idx < completedCount) {
                 item.setStatus("completed");

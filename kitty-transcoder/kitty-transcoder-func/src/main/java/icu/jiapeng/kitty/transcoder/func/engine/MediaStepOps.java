@@ -148,14 +148,15 @@ public class MediaStepOps {
         int cols = step.getSpriteColumns() != null && step.getSpriteColumns() > 0 ? step.getSpriteColumns() : 4;
         int rows = step.getSpriteRows() != null && step.getSpriteRows() > 0 ? step.getSpriteRows() : 3;
         int count = cols * rows;
+        int scale = step.getSpriteScale() != null && step.getSpriteScale() > 0 ? step.getSpriteScale() : 4;
         String fmt = "jpg";
         if (step.getExtractOutputFormat() != null && step.getExtractOutputFormat().equalsIgnoreCase("png")) fmt = "png";
-        BufferedImage sprite = buildSpriteWithFilter(inputPath, cols, rows, count);
+        BufferedImage sprite = buildSpriteWithFilter(inputPath, cols, rows, count, scale);
         if (sprite == null) {
             List<BufferedImage> images = extractFramesByTimestamp(inputPath, count);
             if (images.isEmpty()) images = extractFramesByInterval(inputPath, 30, count);
             if (images.isEmpty()) throw new IOException("未抽到帧");
-            sprite = buildSpriteFromImages(images, cols, rows);
+            sprite = buildSpriteFromImages(images, cols, rows, scale);
         }
         String baseName = baseName(inputPath);
         String workDir = (stepWorkDir != null && !stepWorkDir.isBlank()) ? stepWorkDir : (transcodeConfig != null ? transcodeConfig.getWorkDir() : null);
@@ -172,9 +173,9 @@ public class MediaStepOps {
     }
 
     /**
-     * 使用 FFmpegFrameFilter 一步到位生成雪碧图：select+scale(iw/4:ih/4)+tile，无需先抽帧。
+     * 使用 FFmpegFrameFilter 一步到位生成雪碧图：select+scale(iw/N:ih/N)+tile，无需先抽帧。
      */
-    private BufferedImage buildSpriteWithFilter(String inputPath, int cols, int rows, int count) throws Exception {
+    private BufferedImage buildSpriteWithFilter(String inputPath, int cols, int rows, int count, int scale) throws Exception {
         try (FFmpegFrameGrabber grabber = new FFmpegFrameGrabber(inputPath);
              Java2DFrameConverter converter = new Java2DFrameConverter()) {
             grabber.start();
@@ -185,7 +186,8 @@ public class MediaStepOps {
             double fps = grabber.getFrameRate();
             long totalFrames = (durationUs > 0 && fps > 0) ? (long) ((durationUs / 1e6) * fps) : 300;
             int interval = Math.max(1, (int) (totalFrames / count));
-            String filterStr = "select=not(mod(n\\," + interval + ")),scale=iw/4:ih/4,tile=" + cols + "x" + rows;
+            int s = Math.max(1, scale);
+            String filterStr = "select=not(mod(n\\," + interval + ")),scale=iw/" + s + ":ih/" + s + ",tile=" + cols + "x" + rows;
             try (FFmpegFrameFilter filter = new FFmpegFrameFilter(filterStr, w, h)) {
                 int pf = grabber.getPixelFormat();
                 if (pf >= 0) filter.setPixelFormat(pf);
@@ -212,7 +214,7 @@ public class MediaStepOps {
         return null;
     }
 
-    private BufferedImage buildSpriteFromImages(List<BufferedImage> images, int cols, int rows) {
+    private BufferedImage buildSpriteFromImages(List<BufferedImage> images, int cols, int rows, int scale) {
         int maxW = 0, maxH = 0;
         for (BufferedImage img : images) {
             if (img != null) {
@@ -220,13 +222,16 @@ public class MediaStepOps {
                 maxH = Math.max(maxH, img.getHeight());
             }
         }
-        BufferedImage sprite = new BufferedImage(maxW * cols, maxH * rows, BufferedImage.TYPE_INT_RGB);
+        int s = Math.max(1, scale);
+        int cellW = maxW / s;
+        int cellH = maxH / s;
+        BufferedImage sprite = new BufferedImage(cellW * cols, cellH * rows, BufferedImage.TYPE_INT_RGB);
         Graphics2D g = sprite.createGraphics();
         for (int i = 0; i < images.size(); i++) {
             BufferedImage img = images.get(i);
             if (img != null) {
                 int r = i / cols, c = i % cols;
-                g.drawImage(img, c * maxW, r * maxH, maxW, maxH, null);
+                g.drawImage(img, c * cellW, r * cellH, cellW, cellH, null);
             }
         }
         g.dispose();

@@ -150,6 +150,11 @@
                     </a-form-item>
                   </a-col>
                   <a-col :span="8">
+                    <a-form-item :name="['steps', index, 'spriteScale']" label="缩放倍数">
+                      <a-input-number v-model:value="step.spriteScale" :min="1" :max="32" style="width:100%" size="small" placeholder="默认为4" />
+                    </a-form-item>
+                  </a-col>
+                  <a-col :span="8">
                     <div class="sprite-count-hint">共 {{ (step.spriteColumns ?? 4) * (step.spriteRows ?? 3) }} 张，均匀分布</div>
                   </a-col>
                   <a-col :span="12">
@@ -222,6 +227,7 @@ function defaultStep() {
     extractOutputFormat: 'jpg',
     spriteColumns: 4,
     spriteRows: 3,
+    spriteScale: 4,
     imageTargetFormat: 'webp',
     imageQuality: 85,
     imageResize: ''
@@ -352,6 +358,7 @@ async function openEdit(record) {
         extractOutputFormat: s.extractOutputFormat ?? 'jpg',
         spriteColumns: s.spriteColumns ?? 4,
         spriteRows: s.spriteRows ?? 3,
+        spriteScale: s.spriteScale ?? 4,
         imageTargetFormat: s.imageTargetFormat ?? 'webp',
         imageQuality: s.imageQuality ?? 85,
         imageResize: s.imageResize ?? ''
@@ -401,6 +408,7 @@ async function submitForm() {
         extractOutputFormat: rest.extractOutputFormat || undefined,
         spriteColumns: rest.spriteColumns ?? undefined,
         spriteRows: rest.spriteRows ?? undefined,
+        spriteScale: rest.spriteScale ?? undefined,
         imageTargetFormat: rest.imageTargetFormat || undefined,
         imageQuality: rest.imageQuality ?? undefined,
         imageResize: (rest.imageResize || '').trim() || undefined

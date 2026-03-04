@@ -15,6 +15,8 @@ import icu.jiapeng.kitty.transcoder.func.engine.TranscodeEngine;
 import icu.jiapeng.kitty.transcoder.func.mapper.TranscodeTaskMapper;
 import icu.jiapeng.kitty.transcoder.func.mapping.TaskVoMapper;
 import icu.jiapeng.kitty.transcoder.func.notification.HttpNotificationClient;
+import icu.jiapeng.kitty.transcoder.api.StrategyStepVO;
+import icu.jiapeng.kitty.transcoder.api.StrategyVO;
 import icu.jiapeng.kitty.transcoder.func.strategy.StrategyService;
 import org.redisson.api.RBlockingQueue;
 import org.redisson.api.RLock;
@@ -24,7 +26,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
@@ -273,6 +277,7 @@ public class TaskServiceImpl implements TaskService {
         if (entity != null && entity.getProgressDetail() != null && !entity.getProgressDetail().isBlank()) {
             try {
                 List<StepProgressItem> list = JSON.parseArray(entity.getProgressDetail(), StepProgressItem.class);
+                enrichStepDepends(list, entity.getStrategyId());
                 vo.setStepProgressList(list);
                 vo.setTotalSteps(list != null ? list.size() : null);
                 if (list != null && !list.isEmpty()) {
@@ -284,6 +289,28 @@ public class TaskServiceImpl implements TaskService {
             }
         }
         return vo;
+    }
+
+    /** 从策略补充步骤依赖信息，确保前端能正确展示依赖关系 */
+    private void enrichStepDepends(List<StepProgressItem> list, String strategyId) {
+        if (list == null || list.isEmpty() || strategyId == null || strategyId.isBlank()) return;
+        try {
+            StrategyVO strategy = strategyService.getStrategy(strategyId);
+            if (strategy == null || strategy.getSteps() == null) return;
+            Map<Integer, String> dependsByStepId = new HashMap<>();
+            for (StrategyStepVO step : strategy.getSteps()) {
+                int sid = step.getStepId() != null ? step.getStepId() : 0;
+                if (sid > 0) {
+                    String d = step.getDepends();
+                    dependsByStepId.put(sid, (d != null && !d.isBlank()) ? d.trim() : (sid == 1 ? "" : String.valueOf(sid - 1)));
+                }
+            }
+            for (StepProgressItem item : list) {
+                String d = dependsByStepId.get(item.getStepId());
+                if (d != null) item.setDepends(d);
+            }
+        } catch (Exception ignored) {
+        }
     }
 
     @Override

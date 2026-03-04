@@ -51,6 +51,9 @@ public class StrategyStepDTO {
     @Schema(description = "雪碧图行数", example = "3")
     private Integer spriteRows;
 
+    @Schema(description = "雪碧图缩放倍数，画面等比缩小到 1/N，默认 4", example = "4")
+    private Integer spriteScale;
+
     @Schema(description = "图片转换目标格式（image_convert）", example = "webp")
     private String imageTargetFormat;
 
