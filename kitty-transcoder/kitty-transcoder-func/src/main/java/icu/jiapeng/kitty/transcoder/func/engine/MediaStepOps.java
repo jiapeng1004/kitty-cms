@@ -4,6 +4,7 @@ import cn.hutool.core.img.ImgUtil;
 import icu.jiapeng.kitty.transcoder.api.StrategyStepVO;
 import icu.jiapeng.kitty.transcoder.func.config.TranscodeConfig;
 import icu.jiapeng.kitty.transcoder.func.file.HttpFileHandler;
+import lombok.extern.slf4j.Slf4j;
 import org.bytedeco.javacv.FFmpegFrameFilter;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
 import org.bytedeco.javacv.FFmpegFrameRecorder;
@@ -27,6 +28,7 @@ import java.util.List;
 import static org.bytedeco.ffmpeg.global.avcodec.AV_CODEC_ID_H264;
 import static org.bytedeco.ffmpeg.global.avutil.AV_PIX_FMT_YUV420P;
 
+@Slf4j
 @Component
 public class MediaStepOps {
 
@@ -299,18 +301,17 @@ public class MediaStepOps {
             args.add(String.valueOf(quality));
         }
         args.add(outputPath);
-        for (String cmdName : new String[]{"magick", "convert"}) {
-            List<String> cmd = new ArrayList<>();
-            cmd.add(cmdName);
-            if ("magick".equals(cmdName)) cmd.add("convert");
-            cmd.addAll(args);
-            try {
-                Process p = new ProcessBuilder(cmd).inheritIO().start();
-                if (p.waitFor() == 0) return;
-            } catch (Exception ignored) {
-            }
+        List<String> cmd = new ArrayList<>();
+        cmd.add("magick");
+        cmd.addAll(args);
+        try {
+            Process p = new ProcessBuilder(cmd).inheritIO().start();
+            if (p.waitFor() == 0) return;
+        } catch (Exception e) {
+            log.error("ImageMagick 执行失败", e);
+            throw new IOException("ImageMagick 执行失败，" + e.getMessage());
         }
-        throw new IOException("ImageMagick 执行失败，请确保已安装 ImageMagick (magick 或 convert 命令)");
+        throw new IOException("ImageMagick 执行失败，请确保已安装 ImageMagick (magick命令)");
     }
 
     /**

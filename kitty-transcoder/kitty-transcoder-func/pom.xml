@@ -15,7 +15,6 @@
         <javacv.version>1.5.10</javacv.version>
         <ffmpeg.version>6.1.1-1.5.10</ffmpeg.version>
         <os-maven-plugin.version>1.7.0</os-maven-plugin.version>
-        <ffmpeg.classifier>windows-x86_64</ffmpeg.classifier>
     </properties>
     <dependencies>
         <dependency>
@@ -90,24 +89,11 @@
             <artifactId>jackson-databind</artifactId>
         </dependency>
 
-        <!-- JavaCV 依赖（用于 FFmpeg 转码） -->
+        <!-- JavaCV 依赖（FFmpeg/OpenCV 等），由 profile 控制平台 -->
         <dependency>
             <groupId>org.bytedeco</groupId>
             <artifactId>javacv-platform</artifactId>
             <version>${javacv.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.bytedeco</groupId>
-            <artifactId>javacv</artifactId>
-            <version>${javacv.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.bytedeco</groupId>
-            <artifactId>ffmpeg</artifactId>
-            <version>${ffmpeg.version}</version>
-            <classifier>${ffmpeg.classifier}</classifier>
         </dependency>
         <dependency>
             <groupId>com.baomidou</groupId>
@@ -162,31 +148,16 @@
     </build>
 
     <profiles>
+        <!--
+        生产环境：仅 Linux x64。
+        javacv-platform 会拉取 ffmpeg、opencv、openblas 等，prod 时仅保留 linux-x86_64。
+        构建命令：mvn -Pprod -Djavacpp.platform=linux-x86_64 package
+        -->
         <profile>
-            <id>production</id>
+            <id>prod</id>
             <properties>
-                <ffmpeg.classifier>linux-musl-x86_64</ffmpeg.classifier>
+                <javacpp.platform>linux-x86_64</javacpp.platform>
             </properties>
-            <dependencies>
-                <dependency>
-                    <groupId>org.bytedeco</groupId>
-                    <artifactId>javacv-platform</artifactId>
-                    <version>${javacv.version}</version>
-                </dependency>
-
-                <dependency>
-                    <groupId>org.bytedeco</groupId>
-                    <artifactId>javacv</artifactId>
-                    <version>${javacv.version}</version>
-                </dependency>
-
-                <dependency>
-                    <groupId>org.bytedeco</groupId>
-                    <artifactId>ffmpeg</artifactId>
-                    <version>${ffmpeg.version}</version>
-                    <classifier>${ffmpeg.classifier}</classifier>
-                </dependency>
-            </dependencies>
         </profile>
     </profiles>
 
