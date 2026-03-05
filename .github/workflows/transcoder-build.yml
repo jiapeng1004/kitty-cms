@@ -33,7 +33,7 @@ jobs:
       - name: Build kitty-transcoder
         run: |
           chmod +x mvnw
-          ./mvnw -B -Djavacpp.platform=linux-x86_64 -pl kitty-transcoder/kitty-transcoder-server -am -DskipTests clean package
+          ./mvnw -B "-Djavacpp.platform=linux-x86_64" -pl kitty-transcoder/kitty-transcoder-server -am -DskipTests clean package
 
       - name: Verify app.jar
         run: |
