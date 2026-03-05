@@ -1,0 +1,51 @@
+name: kitty-transcoder Build
+
+on:
+  push:
+    branches: [main, develop]
+    tags: ['*']
+
+jobs:
+  transcoder:
+    runs-on: ubuntu-latest
+    # 提交消息魔法：tag 或 commit message 以 _transcoder 结尾时触发
+    if: |
+      (startsWith(github.ref, 'refs/tags/') && endsWith(github.ref_name, '_transcoder')) ||
+      (!startsWith(github.ref, 'refs/tags/') && github.event.head_commit != null && (endsWith(github.event.head_commit.message, '_transcoder') || endsWith(github.event.head_commit.message, '_transcoder\n')))
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '25'
+
+      - name: Cache Maven M2 (transcoder)
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: maven-transcoder-${{ runner.os }}-${{ hashFiles('pom.xml', 'kitty-transcoder/**/pom.xml') }}
+          restore-keys: |
+            maven-transcoder-${{ runner.os }}-
+
+      - name: Build kitty-transcoder
+        run: |
+          chmod +x mvnw
+          ./mvnw -B -Pprod -Djavacpp.platform=linux-x86_64 \
+            -pl kitty-transcoder -am \
+            -DskipTests \
+            clean package
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./kitty-transcoder
+          file: ./kitty-transcoder/Dockerfile
+          push: false
+          tags: kitty-transcoder:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
