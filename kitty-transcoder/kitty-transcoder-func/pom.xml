@@ -28,12 +28,10 @@
         <dependency>
             <groupId>icu.jiapeng</groupId>
             <artifactId>kitty-transcoder-api</artifactId>
-            <version>0.0.1-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>icu.jiapeng</groupId>
             <artifactId>kitty-transcoder-grpc</artifactId>
-            <version>0.0.1-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>cn.hutool</groupId>
