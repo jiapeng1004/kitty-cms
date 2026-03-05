@@ -1,3 +1,7 @@
+# 需在 Settings → Secrets → Actions 配置：
+#   ALIYUN_ACR_REGISTRY: registry.cn-hangzhou.aliyuncs.com
+#   ALIYUN_ACR_USERNAME: aliyun7248933279
+#   ALIYUN_ACR_PASSWORD: (ACR 访问凭证密码)
 name: kitty-transcoder Build
 
 on:
@@ -32,17 +36,31 @@ jobs:
       - name: Build kitty-transcoder
         run: |
           chmod +x mvnw
-          ./mvnw -B -Pprod -pl kitty-transcoder/kitty-transcoder-server -am -DskipTests clean package
+          ./mvnw -B -Pprod -Djavacpp.platform=linux-x86_64 -pl kitty-transcoder -am -DskipTests clean package
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Docker image
+      - name: Login to Alibaba ACR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.ALIYUN_ACR_REGISTRY }}
+          username: ${{ secrets.ALIYUN_ACR_USERNAME }}
+          password: ${{ secrets.ALIYUN_ACR_PASSWORD }}
+
+      - name: Pull previous image (for cache)
+        run: |
+          docker pull ${{ secrets.ALIYUN_ACR_REGISTRY }}/jp-java/kitty-transcoder:latest || true
+        continue-on-error: true
+
+      - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
           context: ./kitty-transcoder
           file: ./kitty-transcoder/Dockerfile
-          push: false
-          tags: kitty-transcoder:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          push: true
+          tags: |
+            ${{ secrets.ALIYUN_ACR_REGISTRY }}/jp-java/kitty-transcoder:${{ github.ref_type == 'tag' && github.ref_name || github.sha }}
+            ${{ secrets.ALIYUN_ACR_REGISTRY }}/jp-java/kitty-transcoder:latest
+          cache-from: type=registry,ref=${{ secrets.ALIYUN_ACR_REGISTRY }}/jp-java/kitty-transcoder:latest
+          cache-to: type=inline
