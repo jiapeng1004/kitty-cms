@@ -32,10 +32,7 @@ jobs:
       - name: Build kitty-transcoder
         run: |
           chmod +x mvnw
-          ./mvnw -B -Pprod -Djavacpp.platform=linux-x86_64 \
-            -pl kitty-transcoder -am \
-            -DskipTests \
-            clean package
+          ./mvnw -B -Pprod -pl kitty-transcoder/kitty-transcoder-server -am -DskipTests clean package
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3

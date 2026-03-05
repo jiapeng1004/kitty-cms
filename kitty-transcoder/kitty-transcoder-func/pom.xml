@@ -146,19 +146,4 @@
             </plugin>
         </plugins>
     </build>
-
-    <profiles>
-        <!--
-        生产环境：仅 Linux x64。
-        javacv-platform 会拉取 ffmpeg、opencv、openblas 等，prod 时仅保留 linux-x86_64。
-        构建命令：mvn -Pprod -Djavacpp.platform=linux-x86_64 package
-        -->
-        <profile>
-            <id>prod</id>
-            <properties>
-                <javacpp.platform>linux-x86_64</javacpp.platform>
-            </properties>
-        </profile>
-    </profiles>
-
 </project>
