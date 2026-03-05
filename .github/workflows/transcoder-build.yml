@@ -1,6 +1,4 @@
 # 需在 Settings → Secrets → Actions 配置：
-#   ALIYUN_ACR_REGISTRY: registry.cn-hangzhou.aliyuncs.com
-#   ALIYUN_ACR_USERNAME: aliyun7248933279
 #   ALIYUN_ACR_PASSWORD: (ACR 访问凭证密码)
 name: kitty-transcoder Build
 
@@ -30,13 +28,17 @@ jobs:
         with:
           path: ~/.m2/repository
           key: maven-transcoder-${{ runner.os }}-${{ hashFiles('pom.xml', 'kitty-transcoder/**/pom.xml') }}
-          restore-keys: |
-            maven-transcoder-${{ runner.os }}-
+          # 不使用 restore-keys，避免恢复错误/不完整缓存导致构建异常
 
       - name: Build kitty-transcoder
         run: |
           chmod +x mvnw
-          ./mvnw -B -Pprod -Djavacpp.platform=linux-x86_64 -pl kitty-transcoder -am -DskipTests clean package
+          ./mvnw -B -Pprod -Djavacpp.platform=linux-x86_64 -pl kitty-transcoder/kitty-transcoder-server -am -DskipTests clean package
+
+      - name: Verify app.jar
+        run: |
+          ls -la kitty-transcoder/kitty-transcoder-server/target/
+          test -f kitty-transcoder/kitty-transcoder-server/target/app.jar || (echo "app.jar not found" && exit 1)
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -44,13 +46,13 @@ jobs:
       - name: Login to Alibaba ACR
         uses: docker/login-action@v3
         with:
-          registry: ${{ secrets.ALIYUN_ACR_REGISTRY }}
-          username: ${{ secrets.ALIYUN_ACR_USERNAME }}
+          registry: registry.cn-hangzhou.aliyuncs.com
+          username: aliyun7248933279
           password: ${{ secrets.ALIYUN_ACR_PASSWORD }}
 
       - name: Pull previous image (for cache)
         run: |
-          docker pull ${{ secrets.ALIYUN_ACR_REGISTRY }}/jp-java/kitty-transcoder:latest || true
+          docker pull registry.cn-hangzhou.aliyuncs.com/jp-java/kitty-transcoder:latest || true
         continue-on-error: true
 
       - name: Build and push Docker image
@@ -60,7 +62,7 @@ jobs:
           file: ./kitty-transcoder/Dockerfile
           push: true
           tags: |
-            ${{ secrets.ALIYUN_ACR_REGISTRY }}/jp-java/kitty-transcoder:${{ github.ref_type == 'tag' && github.ref_name || github.sha }}
-            ${{ secrets.ALIYUN_ACR_REGISTRY }}/jp-java/kitty-transcoder:latest
-          cache-from: type=registry,ref=${{ secrets.ALIYUN_ACR_REGISTRY }}/jp-java/kitty-transcoder:latest
+            registry.cn-hangzhou.aliyuncs.com/jp-java/kitty-transcoder:${{ github.ref_type == 'tag' && github.ref_name || github.sha }}
+            registry.cn-hangzhou.aliyuncs.com/jp-java/kitty-transcoder:latest
+          cache-from: type=registry,ref=registry.cn-hangzhou.aliyuncs.com/jp-java/kitty-transcoder:latest
           cache-to: type=inline
