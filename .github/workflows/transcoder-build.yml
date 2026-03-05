@@ -8,9 +8,8 @@ on:
     tags: ['*']
 
 jobs:
-  transcoder:
+  build-backend:
     runs-on: ubuntu-latest
-    # 提交消息魔法：tag 或 commit message 以 _transcoder 结尾时触发
     if: |
       (startsWith(github.ref, 'refs/tags/') && endsWith(github.ref_name, '_transcoder')) ||
       (!startsWith(github.ref, 'refs/tags/') && github.event.head_commit != null && (endsWith(github.event.head_commit.message, '_transcoder') || endsWith(github.event.head_commit.message, '_transcoder\n')))
@@ -28,7 +27,6 @@ jobs:
         with:
           path: ~/.m2/repository
           key: maven-transcoder-${{ runner.os }}-${{ hashFiles('pom.xml', 'kitty-transcoder/**/pom.xml') }}
-          # 不使用 restore-keys，避免恢复错误/不完整缓存导致构建异常
 
       - name: Build kitty-transcoder
         run: |
@@ -37,8 +35,70 @@ jobs:
 
       - name: Verify app.jar
         run: |
-          ls -la kitty-transcoder/kitty-transcoder-server/target/
           test -f kitty-transcoder/kitty-transcoder-server/target/app.jar || (echo "app.jar not found" && exit 1)
+
+      - name: Upload backend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-jar
+          path: kitty-transcoder/kitty-transcoder-server/target/app.jar
+
+  build-frontend:
+    runs-on: ubuntu-latest
+    if: |
+      (startsWith(github.ref, 'refs/tags/') && endsWith(github.ref_name, '_transcoder')) ||
+      (!startsWith(github.ref, 'refs/tags/') && github.event.head_commit != null && (endsWith(github.event.head_commit.message, '_transcoder') || endsWith(github.event.head_commit.message, '_transcoder\n')))
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Cache npm (transcoder)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            frontend/node_modules
+            frontend/packages/transcoder/node_modules
+          key: npm-transcoder-${{ runner.os }}-${{ hashFiles('frontend/packages/transcoder/package.json') }}
+          restore-keys: |
+            npm-transcoder-${{ runner.os }}-
+
+      - name: Install and build frontend
+        run: |
+          cd frontend
+          npm ci
+          npm run build:transcoder
+
+      - name: Upload frontend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/packages/transcoder/dist
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: [build-backend, build-frontend]
+    if: |
+      (startsWith(github.ref, 'refs/tags/') && endsWith(github.ref_name, '_transcoder')) ||
+      (!startsWith(github.ref, 'refs/tags/') && github.event.head_commit != null && (endsWith(github.event.head_commit.message, '_transcoder') || endsWith(github.event.head_commit.message, '_transcoder\n')))
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download backend artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-jar
+          path: kitty-transcoder/kitty-transcoder-server/target
+
+      - name: Download frontend artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/packages/transcoder/dist
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -58,7 +118,7 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
-          context: ./kitty-transcoder
+          context: .
           file: ./kitty-transcoder/Dockerfile
           push: true
           tags: |
