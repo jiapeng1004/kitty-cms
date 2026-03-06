@@ -3,7 +3,10 @@ package icu.jiapeng.kitty.transcoder.func.grpc;
 import icu.jiapeng.kitty.transcoder.api.*;
 import icu.jiapeng.kitty.transcoder.func.strategy.StrategyService;
 import icu.jiapeng.kitty.transcoder.func.task.TaskService;
-import icu.jiapeng.kitty.transcoder.grpc.*;
+import icu.jiapeng.kitty.transcoder.grpc.CreateTaskReq;
+import icu.jiapeng.kitty.transcoder.grpc.CreateTaskResp;
+import icu.jiapeng.kitty.transcoder.grpc.GetTaskReq;
+import icu.jiapeng.kitty.transcoder.grpc.TranscodeServiceGrpc;
 import io.grpc.stub.StreamObserver;
 import jakarta.annotation.Resource;
 import org.springframework.grpc.server.service.GrpcService;
@@ -50,14 +53,14 @@ public class TranscodeGrpcServiceImpl extends TranscodeServiceGrpc.TranscodeServ
     }
 
     @Override
-    public void getTask(GetTaskReq request, StreamObserver<TaskResp> responseObserver) {
+    public void getTask(GetTaskReq request, StreamObserver<icu.jiapeng.kitty.transcoder.grpc.TaskResp> responseObserver) {
         try {
             TaskVO vo = taskService.getTask(request.getTaskId());
             if (vo == null) {
                 responseObserver.onError(io.grpc.Status.NOT_FOUND.asException());
                 return;
             }
-            TaskResp.Builder b = TaskResp.newBuilder()
+            icu.jiapeng.kitty.transcoder.grpc.TaskResp.Builder b = icu.jiapeng.kitty.transcoder.grpc.TaskResp.newBuilder()
                     .setId(vo.getId())
                     .setStatus(vo.getStatus() != null ? vo.getStatus() : "")
                     .setProgress(vo.getProgress() != null ? vo.getProgress() : 0)
@@ -81,12 +84,12 @@ public class TranscodeGrpcServiceImpl extends TranscodeServiceGrpc.TranscodeServ
     }
 
     @Override
-    public void listTasks(ListTasksReq request, StreamObserver<ListTasksResp> responseObserver) {
+    public void listTasks(icu.jiapeng.kitty.transcoder.grpc.ListTasksReq request, StreamObserver<icu.jiapeng.kitty.transcoder.grpc.ListTasksResp> responseObserver) {
         try {
             int page = request.getPage() > 0 ? request.getPage() : 1;
             int size = request.getSize() > 0 ? request.getSize() : 20;
             List<TaskVO> list = taskService.listTasks(page, size, null);
-            ListTasksResp.Builder b = ListTasksResp.newBuilder();
+            icu.jiapeng.kitty.transcoder.grpc.ListTasksResp.Builder b = icu.jiapeng.kitty.transcoder.grpc.ListTasksResp.newBuilder();
             for (TaskVO vo : list) {
                 b.addTasks(toTaskResp(vo));
             }
@@ -99,10 +102,10 @@ public class TranscodeGrpcServiceImpl extends TranscodeServiceGrpc.TranscodeServ
     }
 
     @Override
-    public void cancelTask(CancelTaskReq request, StreamObserver<CancelTaskResp> responseObserver) {
+    public void cancelTask(icu.jiapeng.kitty.transcoder.grpc.CancelTaskReq request, StreamObserver<icu.jiapeng.kitty.transcoder.grpc.CancelTaskResp> responseObserver) {
         try {
             boolean ok = taskService.cancelTask(request.getTaskId());
-            responseObserver.onNext(CancelTaskResp.newBuilder().setSuccess(ok).build());
+            responseObserver.onNext(icu.jiapeng.kitty.transcoder.grpc.CancelTaskResp.newBuilder().setSuccess(ok).build());
         } catch (Exception e) {
             responseObserver.onError(io.grpc.Status.INTERNAL.withDescription(e.getMessage()).asException());
         } finally {
@@ -111,10 +114,10 @@ public class TranscodeGrpcServiceImpl extends TranscodeServiceGrpc.TranscodeServ
     }
 
     @Override
-    public void getProgress(GetProgressReq request, StreamObserver<ProgressResp> responseObserver) {
+    public void getProgress(icu.jiapeng.kitty.transcoder.grpc.GetProgressReq request, StreamObserver<icu.jiapeng.kitty.transcoder.grpc.ProgressResp> responseObserver) {
         try {
             ProgressVO vo = taskService.getProgress(request.getTaskId());
-            ProgressResp.Builder b = ProgressResp.newBuilder()
+            icu.jiapeng.kitty.transcoder.grpc.ProgressResp.Builder b = icu.jiapeng.kitty.transcoder.grpc.ProgressResp.newBuilder()
                     .setTaskId(vo.getTaskId())
                     .setProgress(vo.getProgress() != null ? vo.getProgress() : 0)
                     .setStatus(vo.getStatus() != null ? vo.getStatus() : "");
@@ -140,10 +143,10 @@ public class TranscodeGrpcServiceImpl extends TranscodeServiceGrpc.TranscodeServ
     }
 
     @Override
-    public void getStrategies(GetStrategiesReq request, StreamObserver<GetStrategiesResp> responseObserver) {
+    public void getStrategies(icu.jiapeng.kitty.transcoder.grpc.GetStrategiesReq request, StreamObserver<icu.jiapeng.kitty.transcoder.grpc.GetStrategiesResp> responseObserver) {
         try {
             List<StrategyVO> list = strategyService.getStrategies();
-            GetStrategiesResp.Builder b = GetStrategiesResp.newBuilder();
+            icu.jiapeng.kitty.transcoder.grpc.GetStrategiesResp.Builder b = icu.jiapeng.kitty.transcoder.grpc.GetStrategiesResp.newBuilder();
             for (StrategyVO vo : list) {
                 b.addStrategies(toStrategyResp(vo));
             }
@@ -156,7 +159,7 @@ public class TranscodeGrpcServiceImpl extends TranscodeServiceGrpc.TranscodeServ
     }
 
     @Override
-    public void getStrategy(GetStrategyReq request, StreamObserver<StrategyResp> responseObserver) {
+    public void getStrategy(icu.jiapeng.kitty.transcoder.grpc.GetStrategyReq request, StreamObserver<icu.jiapeng.kitty.transcoder.grpc.StrategyResp> responseObserver) {
         try {
             StrategyVO vo = strategyService.getStrategy(request.getStrategyId());
             if (vo == null) {
@@ -172,11 +175,11 @@ public class TranscodeGrpcServiceImpl extends TranscodeServiceGrpc.TranscodeServ
     }
 
     @Override
-    public void createStrategy(CreateStrategyReq request, StreamObserver<CreateStrategyResp> responseObserver) {
+    public void createStrategy(icu.jiapeng.kitty.transcoder.grpc.CreateStrategyReq request, StreamObserver<icu.jiapeng.kitty.transcoder.grpc.CreateStrategyResp> responseObserver) {
         try {
             CreateStrategyRequest req = reqFromProto(request);
             String id = strategyService.createStrategy(req);
-            responseObserver.onNext(CreateStrategyResp.newBuilder().setStrategyId(id).build());
+            responseObserver.onNext(icu.jiapeng.kitty.transcoder.grpc.CreateStrategyResp.newBuilder().setStrategyId(id).build());
         } catch (Exception e) {
             responseObserver.onError(io.grpc.Status.INTERNAL.withDescription(e.getMessage()).asException());
         } finally {
@@ -185,14 +188,14 @@ public class TranscodeGrpcServiceImpl extends TranscodeServiceGrpc.TranscodeServ
     }
 
     @Override
-    public void updateStrategy(UpdateStrategyReq request, StreamObserver<UpdateStrategyResp> responseObserver) {
+    public void updateStrategy(icu.jiapeng.kitty.transcoder.grpc.UpdateStrategyReq request, StreamObserver<icu.jiapeng.kitty.transcoder.grpc.UpdateStrategyResp> responseObserver) {
         try {
             CreateStrategyRequest req = new CreateStrategyRequest();
             req.setName(request.getName());
             req.setWorkDir(request.getWorkDir().isEmpty() ? null : request.getWorkDir());
             req.setSteps(request.getStepsList().stream().map(this::stepDtoFromProto).collect(Collectors.toList()));
             boolean ok = strategyService.updateStrategy(request.getStrategyId(), req);
-            responseObserver.onNext(UpdateStrategyResp.newBuilder().setSuccess(ok).build());
+            responseObserver.onNext(icu.jiapeng.kitty.transcoder.grpc.UpdateStrategyResp.newBuilder().setSuccess(ok).build());
         } catch (Exception e) {
             responseObserver.onError(io.grpc.Status.INTERNAL.withDescription(e.getMessage()).asException());
         } finally {
@@ -201,10 +204,10 @@ public class TranscodeGrpcServiceImpl extends TranscodeServiceGrpc.TranscodeServ
     }
 
     @Override
-    public void deleteStrategy(DeleteStrategyReq request, StreamObserver<DeleteStrategyResp> responseObserver) {
+    public void deleteStrategy(icu.jiapeng.kitty.transcoder.grpc.DeleteStrategyReq request, StreamObserver<icu.jiapeng.kitty.transcoder.grpc.DeleteStrategyResp> responseObserver) {
         try {
             boolean ok = strategyService.deleteStrategy(request.getStrategyId());
-            responseObserver.onNext(DeleteStrategyResp.newBuilder().setSuccess(ok).build());
+            responseObserver.onNext(icu.jiapeng.kitty.transcoder.grpc.DeleteStrategyResp.newBuilder().setSuccess(ok).build());
         } catch (Exception e) {
             responseObserver.onError(io.grpc.Status.INTERNAL.withDescription(e.getMessage()).asException());
         } finally {
@@ -212,8 +215,8 @@ public class TranscodeGrpcServiceImpl extends TranscodeServiceGrpc.TranscodeServ
         }
     }
 
-    private static TaskResp toTaskResp(TaskVO vo) {
-        TaskResp.Builder b = TaskResp.newBuilder()
+    private static icu.jiapeng.kitty.transcoder.grpc.TaskResp toTaskResp(TaskVO vo) {
+        icu.jiapeng.kitty.transcoder.grpc.TaskResp.Builder b = icu.jiapeng.kitty.transcoder.grpc.TaskResp.newBuilder()
                 .setId(vo.getId())
                 .setStatus(vo.getStatus() != null ? vo.getStatus() : "")
                 .setProgress(vo.getProgress() != null ? vo.getProgress() : 0)
@@ -228,8 +231,8 @@ public class TranscodeGrpcServiceImpl extends TranscodeServiceGrpc.TranscodeServ
         return b.build();
     }
 
-    private static StrategyResp toStrategyResp(StrategyVO vo) {
-        StrategyResp.Builder b = StrategyResp.newBuilder()
+    private static icu.jiapeng.kitty.transcoder.grpc.StrategyResp toStrategyResp(StrategyVO vo) {
+        icu.jiapeng.kitty.transcoder.grpc.StrategyResp.Builder b = icu.jiapeng.kitty.transcoder.grpc.StrategyResp.newBuilder()
                 .setId(vo.getId())
                 .setName(vo.getName() != null ? vo.getName() : "")
                 .setStepCount(vo.getStepCount() != null ? vo.getStepCount() : 0);
@@ -237,7 +240,7 @@ public class TranscodeGrpcServiceImpl extends TranscodeServiceGrpc.TranscodeServ
         if (vo.getCreatedAt() != null) b.setCreatedAt(vo.getCreatedAt());
         if (vo.getSteps() != null) {
             for (StrategyStepVO s : vo.getSteps()) {
-                StrategyStepResp.Builder sb = StrategyStepResp.newBuilder()
+                icu.jiapeng.kitty.transcoder.grpc.StrategyStepResp.Builder sb = icu.jiapeng.kitty.transcoder.grpc.StrategyStepResp.newBuilder()
                         .setStepId(s.getStepId() != null ? s.getStepId() : 0)
                         .setType(s.getType() != null ? s.getType() : "transcode")
                         .setDepends(s.getDepends() != null ? s.getDepends() : "");
@@ -254,7 +257,7 @@ public class TranscodeGrpcServiceImpl extends TranscodeServiceGrpc.TranscodeServ
         return b.build();
     }
 
-    private CreateStrategyRequest reqFromProto(CreateStrategyReq r) {
+    private CreateStrategyRequest reqFromProto(icu.jiapeng.kitty.transcoder.grpc.CreateStrategyReq r) {
         CreateStrategyRequest req = new CreateStrategyRequest();
         req.setName(r.getName());
         req.setWorkDir(r.getWorkDir().isEmpty() ? null : r.getWorkDir());
@@ -262,7 +265,7 @@ public class TranscodeGrpcServiceImpl extends TranscodeServiceGrpc.TranscodeServ
         return req;
     }
 
-    private StrategyStepDTO stepDtoFromProto(StrategyStepDto d) {
+    private StrategyStepDTO stepDtoFromProto(icu.jiapeng.kitty.transcoder.grpc.StrategyStepDto d) {
         StrategyStepDTO s = new StrategyStepDTO();
         s.setType(d.getType().isEmpty() ? null : d.getType());
         s.setDepends(d.getDepends().isEmpty() ? null : d.getDepends());
