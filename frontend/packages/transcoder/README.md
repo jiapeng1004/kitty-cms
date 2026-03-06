@@ -1,27 +1,53 @@
-# 转码服务前端
+# 🎬 Transcoder Console
 
-Vue 3 + Ant Design Vue + Vite。对接转码后端（默认 `http://localhost:9703/kitty-transcoder`）。
+<p align="center">
+  <img src="https://img.shields.io/badge/Vue-3-42B883?style=flat-square&logo=vuedotjs" alt="Vue 3"/>
+  <img src="https://img.shields.io/badge/Vite-5-646CFF?style=flat-square&logo=vite" alt="Vite 5"/>
+  <img src="https://img.shields.io/badge/Ant%20Design%20Vue-4-0170FE?style=flat-square" alt="Ant Design Vue"/>
+  <img src="https://img.shields.io/badge/Playwright-E2E-2EAD4B?style=flat-square&logo=playwright" alt="Playwright"/>
+</p>
 
-## 开发
+<p align="center">
+  <strong>Transcoder Service Console</strong> · 转码服务控制台
+</p>
+
+---
+
+## 📖 简介 | Introduction
+
+**Transcoder Console** 是 Kitty Transcoder 转码服务的 Web 控制台，基于 Vue 3 + Ant Design Vue + Vite 构建，对接转码后端 API（默认 `http://localhost:9703/kitty-transcoder`）。
+
+**Transcoder Console** is the web UI for Kitty Transcoder, built with Vue 3, Ant Design Vue, and Vite, connecting to the transcoder backend API.
+
+---
+
+## 🚀 开发 | Development
 
 ```bash
-# 安装依赖（在 frontend 根目录）
-npm install
-
-# 启动后端（在项目根目录）
-cd kitty-transcoder/kitty-transcoder-server && mvn spring-boot:run
-
-# 启动前端（在 frontend 根目录）
+# 在 frontend 根目录
 npm run dev:transcoder
 ```
 
-前端: http://localhost:3002  
-后端 API: http://localhost:9703/kitty-transcoder  
-需先在后端创建 Access Key（或通过本前端的 Access Key 页创建），再用 AK/SK 登录。
+| 地址 | 说明 |
+|------|------|
+| 前端 | http://localhost:3002（以 Vite 配置为准） |
+| 后端 API | http://localhost:9703/kitty-transcoder |
 
-## Chrome E2E 测试（Playwright）
+**前置**：需先启动转码后端；创建 Access Key 后使用 AK/SK 登录。
 
-**前置**：Redis 已启动；后端已启动（9703）；前端已启动（3002）。
+---
+
+## 📦 构建 | Build
+
+```bash
+npm run build:transcoder
+```
+
+---
+
+## 🧪 E2E 测试 | Playwright E2E
+
+**前置**：Redis、转码后端（9703）、前端（3002）已启动。
 
 ```bash
 cd frontend/packages/transcoder
@@ -30,16 +56,20 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-带界面调试：
+带界面调试：`npm run test:e2e:ui`
 
-```bash
-npm run test:e2e:ui
-```
+### 环境变量
 
-环境变量（可选）：
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `TRANSCODER_UI_URL` | http://localhost:3002 | 前端地址 |
+| `TRANSCODER_API_URL` | http://localhost:9703/kitty-transcoder | 后端 API |
+| `HEADLESS` | 1 | 0=有头模式 |
 
-- `TRANSCODER_UI_URL`：前端地址，默认 `http://localhost:3002`
-- `TRANSCODER_API_URL`：后端 API 根地址，默认 `http://localhost:9703/kitty-transcoder`
-- `HEADLESS=0`：有头模式运行浏览器
+测试流程：创建 AK → 登录 → 创建策略 → 创建任务 → 查看任务详情。
 
-测试流程：创建 AK -> 登录 -> 创建策略 -> 创建任务 -> 查看任务详情。
+---
+
+## 📄 许可证 | License
+
+[Apache-2.0](../../../LICENSE)
