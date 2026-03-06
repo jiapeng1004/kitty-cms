@@ -39,8 +39,8 @@ public class TranscodeGrpcServiceImpl extends TranscodeServiceGrpc.TranscodeServ
                         })
                         .collect(Collectors.toList()));
             }
-            String accessKeyId = TranscoderGrpcAuthInterceptor.ACCESS_KEY_ID_CTX.get();
-            String taskId = taskService.createTask(req, accessKeyId);
+//            String accessKeyId = TranscoderGrpcAuthInterceptor.ACCESS_KEY_ID_CTX.get();
+            String taskId = taskService.createTask(req, null);
             responseObserver.onNext(CreateTaskResp.newBuilder().setTaskId(taskId).build());
         } catch (Exception e) {
             responseObserver.onError(io.grpc.Status.INTERNAL.withDescription(e.getMessage()).asException());

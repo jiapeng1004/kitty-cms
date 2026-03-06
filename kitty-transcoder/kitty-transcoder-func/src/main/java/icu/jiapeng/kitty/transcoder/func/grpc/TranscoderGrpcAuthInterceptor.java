@@ -3,9 +3,6 @@ package icu.jiapeng.kitty.transcoder.func.grpc;
 import io.grpc.*;
 import org.redisson.api.RMap;
 import org.redisson.api.RedissonClient;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.grpc.server.GlobalServerInterceptor;
-import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -15,16 +12,16 @@ import java.util.Map;
  * - Token：metadata "authorization" = "Bearer {token}"，校验 Redis session 获取 accessKeyId
  * - 签名：metadata "x-access-key-id"、"x-signature"、"x-timestamp"、"x-signature-nonce"，校验签名
  */
-@Component
-@GlobalServerInterceptor
+//@Component
+//@GlobalServerInterceptor
 public class TranscoderGrpcAuthInterceptor implements ServerInterceptor {
 
     private static final String SESSION_KEY_PREFIX = "transcode:session:token:";
     public static final Context.Key<String> ACCESS_KEY_ID_CTX = Context.key("transcode.accessKeyId");
 
-    @Autowired
+//    @Autowired
     private RedissonClient redissonClient;
-    @Autowired
+//    @Autowired
     private icu.jiapeng.kitty.transcoder.func.auth.AuthService authService;
 
     @Override
