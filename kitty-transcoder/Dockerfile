@@ -1,8 +1,11 @@
-FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/openjdk:25-jdk-slim
+FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/eclipse-temurin:25-jdk-noble
 
 LABEL maintainer="jiapeng_aoa@163.com"
 LABEL version="1.0"
 LABEL description="kitty-transcoder"
+
+# 字体和imagemagick
+RUN apt update && apt install -y fontconfig imagemagick && ln -s /usr/bin/convert /usr/bin/magick
 
 # 后端 jar
 COPY kitty-transcoder/kitty-transcoder-server/target/app.jar /app/app.jar
