@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package icu.jiapeng.kitty.transcoder.grpc;
+
+option java_multiple_files = true;
+option java_package = "icu.jiapeng.kitty.transcoder.grpc";
+option java_outer_classname = "TranscodeListenerProto";
+
+// TranscodeListenerService：由调用转码的一方实现，转码服务作为 gRPC 客户端回调。
+// 调用方需启动 gRPC 服务并实现本接口，在 NotificationConfig 中配置 method=GRPC、target=host:port。
+service TranscodeListenerService {
+  // 进度/状态变更回调（含 PROCESSING、COMPLETED、FAILED、CANCELLED）
+  rpc OnProgress (TranscodeProgressEvent) returns (TranscodeListenerAck);
+}
+
+message TranscodeProgressEvent {
+  string task_id = 1;
+  string status = 2;           // PROCESSING, COMPLETED, FAILED, CANCELLED
+  int32 progress = 3;
+  string output_path = 4;      // 完成时
+  string output_http_url = 5;  // 完成时
+  string error_message = 6;    // 失败时
+}
+
+message TranscodeListenerAck {
+  bool success = 1;
+}

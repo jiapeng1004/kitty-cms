@@ -1,6 +1,9 @@
 package icu.jiapeng.kitty.transcoder.func.controller;
 
 import icu.jiapeng.kitty.transcoder.func.preview.PreviewService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.HttpHeaders;
@@ -15,11 +18,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-/**
- * 预览接口：不依赖 output.httpPrefix，直接通过接口预览转码输出、抽帧、雪碧图等。
- */
 @RestController
 @RequestMapping("/api/transcode")
+@Tag(name = "预览", description = "转码输出文件流式预览、可预览文件列表")
 public class PreviewController {
 
     @Resource
@@ -39,16 +40,11 @@ public class PreviewController {
             Map.entry("webp", "image/webp")
     );
 
-    /**
-     * 流式返回预览文件内容
-     *
-     * @param taskId 任务 ID
-     * @param path   相对路径，空则返回主输出文件
-     */
+    @Operation(summary = "流式预览文件", description = "path 为空则返回主输出文件")
     @GetMapping("/preview")
     public ResponseEntity<org.springframework.core.io.Resource> preview(
-            @RequestParam String taskId,
-            @RequestParam(required = false) String path) {
+            @RequestParam @Parameter(description = "任务 ID") String taskId,
+            @RequestParam(required = false) @Parameter(description = "相对路径，空则主输出") String path) {
         File file = previewService.resolveFile(taskId, path);
         if (file == null) {
             return ResponseEntity.notFound().build();
@@ -62,12 +58,7 @@ public class PreviewController {
                 .body(resource);
     }
 
-    /**
-     * 获取任务可预览文件列表：路径 + 预览链接
-     *
-     * @param taskId 任务 ID
-     * @param baseUrl 预览基础 URL（可选，前端传入用于生成完整链接）
-     */
+    @Operation(summary = "可预览文件列表", description = "返回路径与预览链接，baseUrl 可选用于生成完整 URL")
     @GetMapping("/preview/info")
     public Map<String, Object> previewInfo(
             @RequestParam String taskId,

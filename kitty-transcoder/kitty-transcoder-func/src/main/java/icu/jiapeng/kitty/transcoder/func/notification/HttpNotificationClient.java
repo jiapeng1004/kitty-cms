@@ -1,6 +1,10 @@
 package icu.jiapeng.kitty.transcoder.func.notification;
 
+import com.alibaba.fastjson.JSON;
+import icu.jiapeng.kitty.transcoder.api.NotificationConfig;
+import icu.jiapeng.kitty.transcoder.api.TranscodeProgressNotifyVO;
 import okhttp3.*;
+import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -9,14 +13,14 @@ import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 /**
- * HTTP 通知客户端，使用 OkHttp3 发送任务进度回调。
- * 所有方法均不抛出异常，保证不影响转码任务执行。
+ * HTTP 通知客户端，POST JSON 到 target URL。
+ * 与 gRPC 共用 TranscodeProgressNotifyVO，格式一致。
  */
 @Component
-public class HttpNotificationClient {
+public class HttpNotificationClient implements NotificationClient {
 
     private static final Logger log = LoggerFactory.getLogger(HttpNotificationClient.class);
-    private static final MediaType JSON = MediaType.parse("application/json; charset=utf-8");
+    private static final MediaType JSON_MEDIA = MediaType.parse("application/json; charset=utf-8");
 
     private final OkHttpClient client = new OkHttpClient.Builder()
             .connectTimeout(5, TimeUnit.SECONDS)
@@ -24,29 +28,40 @@ public class HttpNotificationClient {
             .readTimeout(10, TimeUnit.SECONDS)
             .build();
 
-    /**
-     * 异步 POST JSON 到指定 URL，fire-and-forget。
-     * 永不抛出异常，失败时仅记录日志。
-     */
-    public void postJsonAsync(String url, String jsonBody) {
-        try {
-            Request request = new Request.Builder()
-                    .url(url)
-                    .post(RequestBody.create(jsonBody, JSON))
-                    .build();
-            client.newCall(request).enqueue(new Callback() {
-                @Override
-                public void onFailure(Call call, IOException e) {
-                    log.debug("HTTP notification failed: {} - {}", url, e.getMessage());
-                }
+    @Override
+    public boolean supports(String method) {
+        return "HTTP".equalsIgnoreCase(method);
+    }
 
-                @Override
-                public void onResponse(Call call, Response response) {
-                    response.close();
+    @Override
+    public void notifyAsync(NotificationConfig config, TranscodeProgressNotifyVO vo) {
+        if (config == null || config.getTarget() == null || config.getTarget().isBlank()) return;
+        String target = config.getTarget().trim();
+        Thread.startVirtualThread(() -> {
+            try {
+                String body = JSON.toJSONString(vo);
+                Request request = new Request.Builder()
+                        .url(target)
+                        .post(RequestBody.create(body, JSON_MEDIA))
+                        .build();
+                client.newCall(request).enqueue(new Callback() {
+                    @Override
+                    public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                        if (log.isDebugEnabled()) {
+                            log.debug("HTTP notification failed: {} - {}", target, e.getMessage());
+                        }
+                    }
+
+                    @Override
+                    public void onResponse(@NonNull Call call, @NonNull Response response) {
+                        response.close();
+                    }
+                });
+            } catch (Exception e) {
+                if (log.isWarnEnabled()) {
+                    log.warn("HTTP notification setup failed: {} - {}", target, e.getMessage());
                 }
-            });
-        } catch (Exception e) {
-            log.debug("HTTP notification setup failed: {} - {}", url, e.getMessage());
-        }
+            }
+        });
     }
 }

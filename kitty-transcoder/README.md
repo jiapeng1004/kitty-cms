@@ -31,6 +31,7 @@
 | ⚙️ **策略** | 转码策略 CRUD、预设模板 |
 | 🔐 **认证** | 登录、AccessKey 管理、签名校验 |
 | 📡 **双协议** | REST API + gRPC |
+| 📞 **回调** | HTTP / gRPC 进度回调（调用方实现 TranscodeListenerService） |
 
 ---
 
@@ -127,9 +128,32 @@ java -jar kitty-transcoder-server/target/app.jar
 
 # 访问
 # HTTP: http://localhost:9703
-# Swagger: http://localhost:9703/swagger-ui.html
+# Swagger UI: http://localhost:9703/swagger-ui.html
+# OpenAPI JSON: http://localhost:9703/v3/api-docs
 # gRPC: localhost:9803
 ```
+
+---
+
+## 回调通知 | Notification Callback
+
+创建任务时可配置 `notifications`，支持两种方式，**统一载荷** `TranscodeProgressNotifyVO`：
+
+| method | target | 说明 |
+|--------|--------|------|
+| HTTP | 回调 URL | POST JSON，载荷同上 |
+| GRPC | host:port | 调用方需实现 [TranscodeListenerService](kitty-transcoder-grpc/src/main/proto/transcode_listener.proto)，转码服务作为 gRPC 客户端回调 `OnProgress` |
+
+**统一载荷字段**：`taskId`, `status`, `progress`, `outputPath`, `outputHttpUrl`, `errorMessage`
+
+### 自省观察员 | Self-Introspection（开发阶段）
+
+无外部调用方时，可将通知目标指向转码服务自身，仅打日志便于观察：
+
+| method | target | 说明 |
+|--------|--------|------|
+| HTTP | `http://localhost:9703/api/transcode/introspection/notification` | 本服务内置 HTTP 回调端点，仅 log |
+| GRPC | `localhost:9803` | 本服务内置 TranscodeListenerService 实现，仅 log |
 
 ---
 

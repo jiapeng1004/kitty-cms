@@ -14,7 +14,8 @@ import icu.jiapeng.kitty.transcoder.func.entity.TranscodeTask;
 import icu.jiapeng.kitty.transcoder.func.engine.TranscodeEngine;
 import icu.jiapeng.kitty.transcoder.func.mapper.TranscodeTaskMapper;
 import icu.jiapeng.kitty.transcoder.func.mapping.TaskVoMapper;
-import icu.jiapeng.kitty.transcoder.func.notification.HttpNotificationClient;
+import icu.jiapeng.kitty.transcoder.api.TranscodeProgressNotifyVO;
+import icu.jiapeng.kitty.transcoder.func.notification.NotificationDispatcher;
 import icu.jiapeng.kitty.transcoder.api.StrategyStepVO;
 import icu.jiapeng.kitty.transcoder.api.StrategyVO;
 import icu.jiapeng.kitty.transcoder.func.strategy.StrategyService;
@@ -55,7 +56,7 @@ public class TaskServiceImpl implements TaskService {
     @Autowired
     private ProgressBroadcaster progressBroadcaster;
     @Autowired
-    private HttpNotificationClient httpNotificationClient;
+    private NotificationDispatcher notificationDispatcher;
 
     @Override
     public String createTask(CreateTaskRequest request, String createdByAk) {
@@ -211,21 +212,22 @@ public class TaskServiceImpl implements TaskService {
         });
     }
 
-    /** 任务完成/失败时发送 HTTP 回调，仅包含任务总进度 */
+    /** 任务进度/完成/失败时发送回调（HTTP 或 gRPC），统一使用 TranscodeProgressNotifyVO */
     private void sendProgressNotification(TranscodeTask entity, int progress) {
         if (entity == null || entity.getNotificationConfig() == null || entity.getNotificationConfig().isBlank()) return;
         try {
             List<NotificationConfig> configs = JSON.parseArray(entity.getNotificationConfig(), NotificationConfig.class);
             if (configs == null || configs.isEmpty()) return;
-            String body = JSON.toJSONString(java.util.Map.of(
-                    "taskId", entity.getId(),
-                    "status", entity.getStatus(),
-                    "progress", progress
-            ));
+            TranscodeProgressNotifyVO vo = new TranscodeProgressNotifyVO();
+            vo.setTaskId(entity.getId());
+            vo.setStatus(entity.getStatus());
+            vo.setProgress(progress);
+            vo.setOutputPath(entity.getOutputPath());
+            vo.setOutputHttpUrl(entity.getOutputHttpUrl());
+            vo.setErrorMessage(entity.getErrorMessage());
             for (NotificationConfig nc : configs) {
-                if ("HTTP".equalsIgnoreCase(nc.getMethod()) && nc.getTarget() != null && !nc.getTarget().isBlank()) {
-                    httpNotificationClient.postJsonAsync(nc.getTarget().trim(), body);
-                }
+                if (nc.getTarget() == null || nc.getTarget().isBlank()) continue;
+                notificationDispatcher.dispatch(nc, vo);
             }
         } catch (Exception ignored) {
         }

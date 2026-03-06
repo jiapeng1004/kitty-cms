@@ -8,6 +8,7 @@
         <template v-if="column.key === 'action'">
           <a-space>
             <a @click="openEdit(record)">编辑</a>
+            <a @click="onCopy(record)">复制</a>
             <a-popconfirm title="确定删除该策略？删除后无法恢复。" ok-text="删除" cancel-text="取消" @confirm="onDelete(record.id)">
               <a class="danger">删除</a>
             </a-popconfirm>
@@ -305,7 +306,7 @@ const columns = [
   { title: '名称', dataIndex: 'name', key: 'name' },
   { title: '工作目录', dataIndex: 'workDir', key: 'workDir', ellipsis: true },
   { title: '步骤数', dataIndex: 'stepCount', key: 'stepCount', width: 90 },
-  { title: '操作', key: 'action', width: 140 }
+  { title: '操作', key: 'action', width: 180 }
 ]
 
 function addStep() {
@@ -441,6 +442,51 @@ async function onDelete(id) {
     load()
   } catch (e) {
     message.error(e?.message || '删除失败')
+  }
+}
+
+async function onCopy(record) {
+  try {
+    const data = await getStrategy(record.id)
+    if (!data) {
+      message.error('加载策略失败')
+      return
+    }
+    const payload = {
+      name: ((data.name || '').trim() || '未命名') + ' - 副本',
+      workDir: (data.workDir || '').trim() || undefined,
+      steps: (data.steps || []).map(s => ({
+        type: s.type || 'transcode',
+        depends: (s.depends || '').trim() || undefined,
+        inputTemplate: (s.inputTemplate || '').trim() || undefined,
+        outputTemplate: (s.outputTemplate || '').trim() || undefined,
+        targetFormat: s.targetFormat || undefined,
+        resolution: s.resolution || undefined,
+        bitrate: s.bitrate ?? undefined,
+        frameRate: s.frameRate ?? undefined,
+        encoder: s.encoder || undefined,
+        frameInterval: s.frameInterval ?? undefined,
+        extractFrameCount: s.extractFrameCount ?? undefined,
+        extractOutputFormat: s.extractOutputFormat || undefined,
+        spriteColumns: s.spriteColumns ?? undefined,
+        spriteRows: s.spriteRows ?? undefined,
+        spriteScale: s.spriteScale ?? undefined,
+        imageTargetFormat: s.imageTargetFormat || undefined,
+        imageQuality: s.imageQuality ?? undefined,
+        imageResize: (s.imageResize || '').trim() || undefined,
+        condition: (s.condition || '').trim() || undefined,
+        strategyIdWhenTrue: s.strategyIdWhenTrue || undefined,
+        strategyIdWhenFalse: s.strategyIdWhenFalse || undefined
+      }))
+    }
+    if (payload.steps.length === 0) {
+      payload.steps = [{ type: 'transcode', targetFormat: 'mp4', resolution: '1920x1080', bitrate: 5000, frameRate: 30, encoder: 'h264' }]
+    }
+    await createStrategy(payload)
+    message.success('复制成功')
+    load()
+  } catch (e) {
+    message.error(e?.message || '复制失败')
   }
 }
 
