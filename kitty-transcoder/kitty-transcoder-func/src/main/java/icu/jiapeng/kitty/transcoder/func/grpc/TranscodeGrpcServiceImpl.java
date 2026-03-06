@@ -1,6 +1,7 @@
 package icu.jiapeng.kitty.transcoder.func.grpc;
 
 import icu.jiapeng.kitty.transcoder.api.*;
+import icu.jiapeng.kitty.transcoder.func.magic.MagicService;
 import icu.jiapeng.kitty.transcoder.func.strategy.StrategyService;
 import icu.jiapeng.kitty.transcoder.func.task.TaskService;
 import icu.jiapeng.kitty.transcoder.grpc.CreateTaskReq;
@@ -21,6 +22,8 @@ public class TranscodeGrpcServiceImpl extends TranscodeServiceGrpc.TranscodeServ
     private TaskService taskService;
     @Resource
     private StrategyService strategyService;
+    @Resource
+    private MagicService magicService;
 
     @Override
     public void createTask(CreateTaskReq request, StreamObserver<CreateTaskResp> responseObserver) {
@@ -86,9 +89,19 @@ public class TranscodeGrpcServiceImpl extends TranscodeServiceGrpc.TranscodeServ
     @Override
     public void listTasks(icu.jiapeng.kitty.transcoder.grpc.ListTasksReq request, StreamObserver<icu.jiapeng.kitty.transcoder.grpc.ListTasksResp> responseObserver) {
         try {
-            int page = request.getPage() > 0 ? request.getPage() : 1;
-            int size = request.getSize() > 0 ? request.getSize() : 20;
-            List<TaskVO> list = taskService.listTasks(page, size, null);
+            ListTasksRequest req = new ListTasksRequest();
+            req.setPage(request.getPage() > 0 ? request.getPage() : 1);
+            req.setSize(request.getSize() > 0 ? request.getSize() : 20);
+            if (!request.getTaskId().isEmpty()) req.setTaskId(request.getTaskId());
+            if (!request.getFilename().isEmpty()) req.setFilename(request.getFilename());
+            if (request.getTimeFrom() > 0) req.setTimeFrom(request.getTimeFrom());
+            if (request.getTimeTo() > 0) req.setTimeTo(request.getTimeTo());
+            if (!request.getStrategyId().isEmpty()) req.setStrategyId(request.getStrategyId());
+            if (!request.getStatus().isEmpty()) req.setStatus(request.getStatus());
+            if (!request.getTaskType().isEmpty()) req.setTaskType(request.getTaskType());
+            if (!request.getSortBy().isEmpty()) req.setSortBy(request.getSortBy());
+            if (!request.getSortOrder().isEmpty()) req.setSortOrder(request.getSortOrder());
+            List<TaskVO> list = taskService.listTasks(req);
             icu.jiapeng.kitty.transcoder.grpc.ListTasksResp.Builder b = icu.jiapeng.kitty.transcoder.grpc.ListTasksResp.newBuilder();
             for (TaskVO vo : list) {
                 b.addTasks(toTaskResp(vo));
@@ -215,6 +228,86 @@ public class TranscodeGrpcServiceImpl extends TranscodeServiceGrpc.TranscodeServ
         }
     }
 
+    @Override
+    public void magicExtractFrames(icu.jiapeng.kitty.transcoder.grpc.MagicExtractFramesReq request, StreamObserver<icu.jiapeng.kitty.transcoder.grpc.TaskResp> responseObserver) {
+        try {
+            MagicExtractFramesRequest req = new MagicExtractFramesRequest();
+            req.setInputType(request.getInputType().isEmpty() ? "DISK" : request.getInputType());
+            req.setInputPath(request.getInputPath());
+            req.setFrameInterval(request.getFrameInterval() > 0 ? request.getFrameInterval() : 30);
+            req.setFrameCount(request.getFrameCount() > 0 ? request.getFrameCount() : 1);
+            req.setOutputFormat(request.getOutputFormat().isEmpty() ? "jpg" : request.getOutputFormat());
+            TaskVO vo = magicService.extractFrames(req);
+            responseObserver.onNext(toTaskResp(vo));
+        } catch (Exception e) {
+            responseObserver.onError(io.grpc.Status.INTERNAL.withDescription(e.getMessage()).asException());
+        } finally {
+            responseObserver.onCompleted();
+        }
+    }
+
+    @Override
+    public void magicImageConvert(icu.jiapeng.kitty.transcoder.grpc.MagicImageConvertReq request, StreamObserver<icu.jiapeng.kitty.transcoder.grpc.TaskResp> responseObserver) {
+        try {
+            MagicImageConvertRequest req = new MagicImageConvertRequest();
+            req.setInputType(request.getInputType().isEmpty() ? "DISK" : request.getInputType());
+            req.setInputPath(request.getInputPath());
+            req.setTargetFormat(request.getTargetFormat().isEmpty() ? "webp" : request.getTargetFormat());
+            req.setQuality(request.getQuality() > 0 ? request.getQuality() : 85);
+            req.setResize(request.getResize().isEmpty() ? null : request.getResize());
+            TaskVO vo = magicService.imageConvert(req);
+            responseObserver.onNext(toTaskResp(vo));
+        } catch (Exception e) {
+            responseObserver.onError(io.grpc.Status.INTERNAL.withDescription(e.getMessage()).asException());
+        } finally {
+            responseObserver.onCompleted();
+        }
+    }
+
+    @Override
+    public void magicTranscode(icu.jiapeng.kitty.transcoder.grpc.MagicTranscodeReq request, StreamObserver<icu.jiapeng.kitty.transcoder.grpc.ProgressResp> responseObserver) {
+        try {
+            MagicTranscodeRequest req = new MagicTranscodeRequest();
+            req.setInputType(request.getInputType().isEmpty() ? "DISK" : request.getInputType());
+            req.setInputPath(request.getInputPath());
+            req.setTargetFormat(request.getTargetFormat().isEmpty() ? "mp4" : request.getTargetFormat());
+            req.setResolution(request.getResolution().isEmpty() ? "1920x1080" : request.getResolution());
+            req.setBitrate(request.getBitrate() > 0 ? request.getBitrate() : 5000);
+            req.setFrameRate(request.getFrameRate() > 0 ? request.getFrameRate() : 30);
+            magicService.transcode(req, progress -> {
+                try {
+                    responseObserver.onNext(toProgressResp(progress));
+                } catch (Exception e) {
+                    responseObserver.onError(io.grpc.Status.INTERNAL.withDescription(e.getMessage()).asException());
+                }
+            });
+            responseObserver.onCompleted();
+        } catch (Exception e) {
+            responseObserver.onError(io.grpc.Status.INTERNAL.withDescription(e.getMessage()).asException());
+        }
+    }
+
+    private static icu.jiapeng.kitty.transcoder.grpc.ProgressResp toProgressResp(ProgressVO vo) {
+        icu.jiapeng.kitty.transcoder.grpc.ProgressResp.Builder b = icu.jiapeng.kitty.transcoder.grpc.ProgressResp.newBuilder()
+                .setTaskId(vo.getTaskId())
+                .setProgress(vo.getProgress() != null ? vo.getProgress() : 0)
+                .setStatus(vo.getStatus() != null ? vo.getStatus() : "");
+        if (vo.getCurrentStep() != null) b.setCurrentStep(vo.getCurrentStep());
+        if (vo.getTotalSteps() != null) b.setTotalSteps(vo.getTotalSteps());
+        if (vo.getStepProgressList() != null) {
+            for (icu.jiapeng.kitty.transcoder.api.StepProgressItem item : vo.getStepProgressList()) {
+                b.addStepProgressList(icu.jiapeng.kitty.transcoder.grpc.StepProgressItem.newBuilder()
+                        .setStepId(item.getStepId() != null ? item.getStepId() : 0)
+                        .setType(item.getType() != null ? item.getType() : "")
+                        .setName(item.getName() != null ? item.getName() : "")
+                        .setStatus(item.getStatus() != null ? item.getStatus() : "")
+                        .setProgress(item.getProgress() != null ? item.getProgress() : 0)
+                        .build());
+            }
+        }
+        return b.build();
+    }
+
     private static icu.jiapeng.kitty.transcoder.grpc.TaskResp toTaskResp(TaskVO vo) {
         icu.jiapeng.kitty.transcoder.grpc.TaskResp.Builder b = icu.jiapeng.kitty.transcoder.grpc.TaskResp.newBuilder()
                 .setId(vo.getId())
@@ -228,6 +321,8 @@ public class TranscodeGrpcServiceImpl extends TranscodeServiceGrpc.TranscodeServ
         if (vo.getCreatedAt() != null) b.setCreatedAt(vo.getCreatedAt());
         if (vo.getStartedAt() != null) b.setStartedAt(vo.getStartedAt());
         if (vo.getCompletedAt() != null) b.setCompletedAt(vo.getCompletedAt());
+        if (vo.getTaskType() != null) b.setTaskType(vo.getTaskType());
+        if (vo.getErrorMessage() != null) b.setErrorMessage(vo.getErrorMessage());
         return b.build();
     }
 

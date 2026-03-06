@@ -34,6 +34,27 @@ public class TranscodeEngine {
         void updateProgress(String taskId, String status, int progress, java.util.List<StepProgressItem> stepProgressList);
     }
 
+    /**
+     * 同步单目标转码（魔法接口）：无策略，直接按参数转码。
+     */
+    public String transcodeSingleTarget(String taskId, String inputFile,
+                                        String targetFormat, String resolution, Integer bitrate, Integer frameRate,
+                                        ProgressCallback progressCallback) throws Exception {
+        StrategyStepVO step = new StrategyStepVO();
+        step.setStepId(1);
+        step.setType(StepExecutorType.TRANSCODE.getCode());
+        step.setTargetFormat(targetFormat != null && !targetFormat.isBlank() ? targetFormat : "mp4");
+        step.setResolution(resolution != null && !resolution.isBlank() ? resolution : "1920x1080");
+        step.setBitrate(bitrate != null ? bitrate : 5000);
+        step.setFrameRate(frameRate != null ? frameRate : 30);
+        step.setEncoder("h264");
+        step.setDepends("");
+        StrategyVO strategy = new StrategyVO();
+        strategy.setSteps(Collections.singletonList(step));
+        strategy.setWorkDir(transcodeConfig.getWorkDir());
+        return runWithDependencies(taskId, inputFile, strategy, null, null, progressCallback);
+    }
+
     public String transcode(String taskId, String inputFile, String strategyId,
                             String watermarkUrl, String watermarkPosition, ProgressCallback progressCallback) throws Exception {
         StrategyVO strategy = strategyService.getStrategy(strategyId);

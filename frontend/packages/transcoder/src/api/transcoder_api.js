@@ -12,14 +12,20 @@ export function getTask(taskId) {
 }
 
 /**
- * 分页获取任务列表（按创建时间倒序）
- * @param {{ page?: number, size?: number, taskId?: string }} params - taskId 支持模糊检索
+ * 分页获取任务列表
+ * @param {{ page?: number, size?: number, taskId?: string, filename?: string, timeFrom?: number, timeTo?: number, strategyId?: string, status?: string, taskType?: string, sortBy?: string, sortOrder?: string }} params
  * @returns {Promise<Array<object>>}
  */
 export function listTasks(params = {}) {
-  const { page = 1, size = 50, taskId } = params
-  const p = { page, size }
+  const { page = 1, size = 50, taskId, filename, timeFrom, timeTo, strategyId, status, taskType, sortBy = 'createdAt', sortOrder = 'desc' } = params
+  const p = { page, size, sortBy, sortOrder }
   if (taskId != null && String(taskId).trim()) p.taskId = String(taskId).trim()
+  if (filename != null && String(filename).trim()) p.filename = String(filename).trim()
+  if (timeFrom != null && timeFrom > 0) p.timeFrom = timeFrom
+  if (timeTo != null && timeTo > 0) p.timeTo = timeTo
+  if (strategyId != null && String(strategyId).trim()) p.strategyId = String(strategyId).trim()
+  if (status != null && String(status).trim()) p.status = String(status).trim()
+  if (taskType != null && String(taskType).trim()) p.taskType = String(taskType).trim()
   return api.get(`${PREFIX}/tasks`, { params: p })
 }
 
@@ -48,6 +54,33 @@ export function cancelTask(taskId) {
  */
 export function deleteTask(taskId) {
   return api.delete(`${PREFIX}/task/${taskId}/record`)
+}
+
+/**
+ * 魔法接口：同步抽帧
+ * @param {object} body - inputType, inputPath, frameInterval, frameCount, outputFormat
+ * @returns {Promise<object>} 任务详情
+ */
+export function magicExtractFrames(body) {
+  return api.post(`${PREFIX}/magic/extract-frames`, body)
+}
+
+/**
+ * 魔法接口：同步 ImageMagick 图转
+ * @param {object} body - inputType, inputPath, targetFormat, quality, resize
+ * @returns {Promise<object>} 任务详情
+ */
+export function magicImageConvert(body) {
+  return api.post(`${PREFIX}/magic/image-convert`, body)
+}
+
+/**
+ * 魔法接口：同步单目标转码
+ * @param {object} body - inputType, inputPath, targetFormat, resolution, bitrate, frameRate
+ * @returns {Promise<object>} 任务详情
+ */
+export function magicTranscode(body) {
+  return api.post(`${PREFIX}/magic/transcode`, body)
 }
 
 /**

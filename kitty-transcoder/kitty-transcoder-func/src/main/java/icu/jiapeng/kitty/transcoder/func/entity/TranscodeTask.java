@@ -14,6 +14,7 @@ public class TranscodeTask {
 
     @TableId
     private String id;
+    private String taskType;
     private String inputType;
     private String inputPath;
     private String strategyId;

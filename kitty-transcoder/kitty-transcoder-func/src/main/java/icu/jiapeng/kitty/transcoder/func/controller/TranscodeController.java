@@ -49,10 +49,30 @@ public class TranscodeController implements TranscodeApi {
     @Operation(summary = "分页查询任务列表")
     @GetMapping("/tasks")
     public List<TaskVO> listTasks(
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int size,
-            @RequestParam(required = false) String taskId) {
-        return taskService.listTasks(page, size, taskId);
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "20") Integer size,
+            @RequestParam(required = false) String taskId,
+            @RequestParam(required = false) String filename,
+            @RequestParam(required = false) Long timeFrom,
+            @RequestParam(required = false) Long timeTo,
+            @RequestParam(required = false) String strategyId,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String taskType,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortOrder) {
+        ListTasksRequest req = new ListTasksRequest();
+        req.setPage(page);
+        req.setSize(size);
+        req.setTaskId(taskId);
+        req.setFilename(filename);
+        req.setTimeFrom(timeFrom);
+        req.setTimeTo(timeTo);
+        req.setStrategyId(strategyId);
+        req.setStatus(status);
+        req.setTaskType(taskType);
+        req.setSortBy(sortBy);
+        req.setSortOrder(sortOrder);
+        return taskService.listTasks(req);
     }
 
     @DeleteMapping("/task/{id}")

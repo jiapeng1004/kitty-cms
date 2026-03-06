@@ -1,9 +1,10 @@
 -- 转码任务表
 CREATE TABLE IF NOT EXISTS transcode_task (
     id VARCHAR(64) PRIMARY KEY,
+    task_type VARCHAR(32) NOT NULL DEFAULT 'SCHEDULED_TRANSCODE',
     input_type VARCHAR(16) NOT NULL,
     input_path VARCHAR(1024) NOT NULL,
-    strategy_id VARCHAR(64) NOT NULL,
+    strategy_id VARCHAR(64),
     status VARCHAR(32) NOT NULL DEFAULT 'PENDING',
     progress INT NOT NULL DEFAULT 0,
     progress_detail TEXT,
@@ -21,7 +22,9 @@ CREATE TABLE IF NOT EXISTS transcode_task (
     created_by_ak VARCHAR(64),
     INDEX idx_transcode_task_strategy_id (strategy_id),
     INDEX idx_transcode_task_status (status),
-    INDEX idx_transcode_task_created_at (created_at)
+    INDEX idx_transcode_task_created_at (created_at),
+    INDEX idx_transcode_task_task_type (task_type),
+    INDEX idx_transcode_task_completed_at (completed_at)
 );
 
 -- 策略步骤表（策略=主键 id，root_id 仅用于多步骤分组，根步骤 root_id=id）

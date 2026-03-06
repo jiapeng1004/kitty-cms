@@ -25,13 +25,11 @@ public interface TaskService {
     TaskVO getTask(String taskId);
 
     /**
-     * 分页查询任务列表（按创建时间倒序）
-     * @param page 页码从1开始
-     * @param size 每页条数
-     * @param taskId 任务ID（可选，支持模糊检索）
+     * 分页查询任务列表
+     * @param req 查询参数（taskId、filename、timeFrom、timeTo、strategyId、status、taskType、sortBy、sortOrder）
      * @return 任务列表
      */
-    List<TaskVO> listTasks(int page, int size, String taskId);
+    List<TaskVO> listTasks(icu.jiapeng.kitty.transcoder.api.ListTasksRequest req);
 
     /**
      * 取消转码任务
@@ -92,5 +90,19 @@ public interface TaskService {
      * @return SSE事件流
      */
     SseEmitter getProgressStream();
+
+    /**
+     * 创建魔法任务记录（不入队，无策略，仅用于列表展示）
+     * @param taskId 任务ID
+     * @param taskType 任务类型
+     * @param inputType 输入类型
+     * @param inputPath 输入路径
+     */
+    void createMagicTaskRecord(String taskId, String taskType, String inputType, String inputPath);
+
+    /**
+     * 完成魔法任务（含输出路径、HTTP URL）
+     */
+    void completeMagicTask(String taskId, String outputPath, String outputHttpUrl);
 
 }

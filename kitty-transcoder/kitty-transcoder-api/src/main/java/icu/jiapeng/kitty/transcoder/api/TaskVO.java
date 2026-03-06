@@ -9,6 +9,9 @@ public class TaskVO {
     @Schema(description = "任务ID", example = "task_123456")
     private String id;
 
+    @Schema(description = "任务类型：SCHEDULED_TRANSCODE=预定策略转码，MAGIC_EXTRACT_FRAMES=同步抽帧，MAGIC_IMAGE_CONVERT=同步图转，MAGIC_SYNC_TRANSCODE=同步单目标转码")
+    private String taskType;
+
     @Schema(description = "任务状态", example = "PROCESSING")
     private String status;
 

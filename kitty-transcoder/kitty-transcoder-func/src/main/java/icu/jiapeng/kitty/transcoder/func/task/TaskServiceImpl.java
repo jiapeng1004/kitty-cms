@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.alibaba.fastjson.JSON;
 import icu.jiapeng.kitty.transcoder.api.CreateTaskRequest;
+import icu.jiapeng.kitty.transcoder.api.ListTasksRequest;
 import icu.jiapeng.kitty.transcoder.api.ProgressVO;
 import icu.jiapeng.kitty.transcoder.api.NotificationConfig;
 import icu.jiapeng.kitty.transcoder.api.StepProgressItem;
@@ -70,6 +71,7 @@ public class TaskServiceImpl implements TaskService {
 
         TranscodeTask entity = new TranscodeTask();
         entity.setId(taskId);
+        entity.setTaskType("SCHEDULED_TRANSCODE");
         entity.setInputType(inputType);
         entity.setInputPath(inputPath);
         entity.setStrategyId(request.getStrategyId());
@@ -98,14 +100,46 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    public List<TaskVO> listTasks(int page, int size, String taskId) {
+    public List<TaskVO> listTasks(ListTasksRequest req) {
+        int page = req.getPage() != null && req.getPage() > 0 ? req.getPage() : 1;
+        int size = req.getSize() != null && req.getSize() > 0 ? req.getSize() : 20;
         com.baomidou.mybatisplus.extension.plugins.pagination.Page<TranscodeTask> p =
                 new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(page, size);
+
+        String sortBy = req.getSortBy() != null && !req.getSortBy().isBlank() ? req.getSortBy() : "createdAt";
+        String sortOrder = "asc".equalsIgnoreCase(req.getSortOrder()) ? "asc" : "desc";
+        String sortCol = "completedAt".equalsIgnoreCase(sortBy) ? TranscodeTask.Fields.completedAt : TranscodeTask.Fields.createdAt;
         p.setOrders(java.util.Collections.singletonList(
-                com.baomidou.mybatisplus.core.metadata.OrderItem.desc(StrUtil.toUnderlineCase(TranscodeTask.Fields.createdAt))));
+                "asc".equals(sortOrder)
+                        ? com.baomidou.mybatisplus.core.metadata.OrderItem.asc(StrUtil.toUnderlineCase(sortCol))
+                        : com.baomidou.mybatisplus.core.metadata.OrderItem.desc(StrUtil.toUnderlineCase(sortCol))));
+
         LambdaQueryWrapper<TranscodeTask> q = new LambdaQueryWrapper<>();
-        if (taskId != null && !taskId.isBlank()) {
-            q.like(TranscodeTask::getId, taskId.trim());
+        if (StrUtil.isNotBlank(req.getTaskId())) {
+            q.like(TranscodeTask::getId, req.getTaskId().trim());
+        }
+        if (StrUtil.isNotBlank(req.getFilename())) {
+            q.like(TranscodeTask::getInputPath, req.getFilename().trim());
+        }
+        if (req.getTimeFrom() != null && req.getTimeFrom() > 0) {
+            q.ge(TranscodeTask::getCreatedAt, java.time.Instant.ofEpochMilli(req.getTimeFrom()).atZone(java.time.ZoneId.systemDefault()).toLocalDateTime());
+        }
+        if (req.getTimeTo() != null && req.getTimeTo() > 0) {
+            q.le(TranscodeTask::getCreatedAt, java.time.Instant.ofEpochMilli(req.getTimeTo()).atZone(java.time.ZoneId.systemDefault()).toLocalDateTime());
+        }
+        if (StrUtil.isNotBlank(req.getStrategyId())) {
+            String sid = req.getStrategyId().trim();
+            if ("__empty__".equals(sid)) {
+                q.and(w -> w.isNull(TranscodeTask::getStrategyId).or().eq(TranscodeTask::getStrategyId, ""));
+            } else {
+                q.eq(TranscodeTask::getStrategyId, sid);
+            }
+        }
+        if (StrUtil.isNotBlank(req.getStatus())) {
+            q.eq(TranscodeTask::getStatus, req.getStatus().trim());
+        }
+        if (StrUtil.isNotBlank(req.getTaskType())) {
+            q.eq(TranscodeTask::getTaskType, req.getTaskType().trim());
         }
         taskMapper.selectPage(p, q);
         return p.getRecords().stream().map(taskVoMapper::toVO).toList();
@@ -339,6 +373,35 @@ public class TaskServiceImpl implements TaskService {
     @Override
     public SseEmitter getProgressStream() {
         return progressBroadcaster.subscribe();
+    }
+
+    @Override
+    public void createMagicTaskRecord(String taskId, String taskType, String inputType, String inputPath) {
+        TranscodeTask entity = new TranscodeTask();
+        entity.setId(taskId);
+        entity.setTaskType(taskType);
+        entity.setInputType(inputType != null ? inputType : "DISK");
+        entity.setInputPath(inputPath);
+        entity.setStrategyId(null);
+        entity.setStatus("PROCESSING");
+        entity.setProgress(0);
+        entity.setCreatedAt(LocalDateTime.now());
+        taskMapper.insert(entity);
+    }
+
+    @Override
+    public void completeMagicTask(String taskId, String outputPath, String outputHttpUrl) {
+        LambdaUpdateWrapper<TranscodeTask> u = new LambdaUpdateWrapper<>();
+        u.eq(TranscodeTask::getId, taskId)
+                .set(TranscodeTask::getStatus, "COMPLETED")
+                .set(TranscodeTask::getProgress, 100)
+                .set(TranscodeTask::getOutputPath, outputPath)
+                .set(TranscodeTask::getOutputHttpUrl, outputHttpUrl)
+                .set(TranscodeTask::getCompletedAt, LocalDateTime.now())
+                .set(TranscodeTask::getErrorMessage, null);
+        taskMapper.update(null, u);
+        TranscodeTask entity = taskMapper.selectById(taskId);
+        if (entity != null) fireProgressNotification(taskId, entity, 100);
     }
 
 }

@@ -6,7 +6,7 @@ option java_multiple_files = true;
 option java_package = "icu.jiapeng.kitty.transcoder.grpc";
 option java_outer_classname = "TranscodeServiceProto";
 
-// 转码服务：任务、策略、进度
+// 转码服务：任务、策略、进度、魔法接口
 service TranscodeService {
   rpc CreateTask (CreateTaskReq) returns (CreateTaskResp);
   rpc GetTask (GetTaskReq) returns (TaskResp);
@@ -19,6 +19,11 @@ service TranscodeService {
   rpc CreateStrategy (CreateStrategyReq) returns (CreateStrategyResp);
   rpc UpdateStrategy (UpdateStrategyReq) returns (UpdateStrategyResp);
   rpc DeleteStrategy (DeleteStrategyReq) returns (DeleteStrategyResp);
+
+  // 魔法接口：同步执行，无策略不入队
+  rpc MagicExtractFrames (MagicExtractFramesReq) returns (TaskResp);
+  rpc MagicImageConvert (MagicImageConvertReq) returns (TaskResp);
+  rpc MagicTranscode (MagicTranscodeReq) returns (stream ProgressResp);
 }
 
 // 创建任务
@@ -58,12 +63,22 @@ message TaskResp {
   int64 started_at = 12;
   int64 completed_at = 13;
   string error_message = 14;
+  string task_type = 15;
 }
 
 // 列表
 message ListTasksReq {
   int32 page = 1;
   int32 size = 2;
+  string task_id = 3;
+  string filename = 4;
+  int64 time_from = 5;
+  int64 time_to = 6;
+  string strategy_id = 7;
+  string status = 8;
+  string task_type = 9;
+  string sort_by = 10;
+  string sort_order = 11;
 }
 message ListTasksResp {
   repeated TaskResp tasks = 1;
@@ -158,4 +173,28 @@ message DeleteStrategyReq {
 }
 message DeleteStrategyResp {
   bool success = 1;
+}
+
+// 魔法接口请求
+message MagicExtractFramesReq {
+  string input_type = 1;
+  string input_path = 2;
+  int32 frame_interval = 3;
+  int32 frame_count = 4;
+  string output_format = 5;
+}
+message MagicImageConvertReq {
+  string input_type = 1;
+  string input_path = 2;
+  string target_format = 3;
+  int32 quality = 4;
+  string resize = 5;
+}
+message MagicTranscodeReq {
+  string input_type = 1;
+  string input_path = 2;
+  string target_format = 3;
+  string resolution = 4;
+  int32 bitrate = 5;
+  int32 frame_rate = 6;
 }

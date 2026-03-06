@@ -15,6 +15,7 @@ import java.time.ZoneId;
 @Mapper(componentModel = "spring")
 public interface TaskVoMapper {
 
+    @Mapping(target = "taskType", source = "taskType")
     @Mapping(target = "createdAt", expression = "java(toEpochMilli(source.getCreatedAt()))")
     @Mapping(target = "startedAt", expression = "java(toEpochMilli(source.getStartedAt()))")
     @Mapping(target = "completedAt", expression = "java(toEpochMilli(source.getCompletedAt()))")

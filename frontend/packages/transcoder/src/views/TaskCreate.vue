@@ -3,6 +3,14 @@
     <a-page-header title="新建转码任务" @back="$router.push('/tasks')" />
     <a-card class="form-card">
       <a-form :model="form" layout="vertical" @finish="onSubmit">
+        <a-form-item label="任务类型" name="taskType" :rules="[{ required: true, message: '请选择任务类型' }]">
+          <a-select v-model:value="form.taskType" placeholder="选择任务类型" @change="onTaskTypeChange">
+            <a-select-option value="SCHEDULED_TRANSCODE">预定策略转码</a-select-option>
+            <a-select-option value="MAGIC_EXTRACT_FRAMES">同步抽帧</a-select-option>
+            <a-select-option value="MAGIC_IMAGE_CONVERT">同步图转</a-select-option>
+            <a-select-option value="MAGIC_SYNC_TRANSCODE">同步单目标转码</a-select-option>
+          </a-select>
+        </a-form-item>
         <a-form-item label="输入类型" name="inputType">
           <a-radio-group v-model:value="form.inputType">
             <a-radio value="DISK">磁盘路径</a-radio>
@@ -10,29 +18,86 @@
           </a-radio-group>
         </a-form-item>
         <a-form-item :label="form.inputType === 'HTTP' ? '输入 URL' : '输入路径'" name="inputPath" :rules="[{ required: true, message: '请输入' }]">
-          <a-input v-model:value="form.inputPath" :placeholder="form.inputType === 'HTTP' ? 'https://...' : '/path/to/video.mp4'" @blur="form.inputPath = (form.inputPath || '').trim()" />
+          <a-input v-model:value="form.inputPath" :placeholder="inputPathPlaceholder" @blur="form.inputPath = (form.inputPath || '').trim()" />
         </a-form-item>
-        <a-form-item label="策略" name="strategyId" :rules="[{ required: true }]">
-          <a-select v-model:value="form.strategyId" placeholder="选择策略" allow-clear show-search :options="strategyOptions" :field-names="{ label: 'name', value: 'id' }" />
-        </a-form-item>
-        <a-form-item label="水印（可选）">
-          <a-row :gutter="12">
-            <a-col :span="14">
-              <a-input v-model:value="form.watermarkUrl" :placeholder="form.inputType === 'HTTP' ? 'https://...watermark.png' : '本地路径或 HTTP URL'" allow-clear @blur="form.watermarkUrl = (form.watermarkUrl || '').trim()" />
-            </a-col>
-            <a-col :span="10">
-              <a-select v-model:value="form.watermarkPosition" placeholder="位置" style="width:100%">
-                <a-select-option value="bottom-right">右下</a-select-option>
-                <a-select-option value="bottom-left">左下</a-select-option>
-                <a-select-option value="top-right">右上</a-select-option>
-                <a-select-option value="top-left">左上</a-select-option>
-              </a-select>
-            </a-col>
-          </a-row>
-        </a-form-item>
-        <a-form-item label="优先级" name="priority">
-          <a-input-number v-model:value="form.priority" :min="1" :max="10" />
-        </a-form-item>
+
+        <!-- 预定策略转码：策略、水印、优先级 -->
+        <template v-if="form.taskType === 'SCHEDULED_TRANSCODE'">
+          <a-form-item label="策略" name="strategyId" :rules="[{ required: true, message: '请选择策略' }]">
+            <a-select v-model:value="form.strategyId" placeholder="选择策略" allow-clear show-search :options="strategyOptions" :field-names="{ label: 'name', value: 'id' }" />
+          </a-form-item>
+          <a-form-item label="水印（可选）">
+            <a-row :gutter="12">
+              <a-col :span="14">
+                <a-input v-model:value="form.watermarkUrl" :placeholder="form.inputType === 'HTTP' ? 'https://...watermark.png' : '本地路径或 HTTP URL'" allow-clear @blur="form.watermarkUrl = (form.watermarkUrl || '').trim()" />
+              </a-col>
+              <a-col :span="10">
+                <a-select v-model:value="form.watermarkPosition" placeholder="位置" style="width:100%">
+                  <a-select-option value="bottom-right">右下</a-select-option>
+                  <a-select-option value="bottom-left">左下</a-select-option>
+                  <a-select-option value="top-right">右上</a-select-option>
+                  <a-select-option value="top-left">左上</a-select-option>
+                </a-select>
+              </a-col>
+            </a-row>
+          </a-form-item>
+          <a-form-item label="优先级" name="priority">
+            <a-input-number v-model:value="form.priority" :min="1" :max="10" />
+          </a-form-item>
+        </template>
+
+        <!-- 同步抽帧 -->
+        <template v-else-if="form.taskType === 'MAGIC_EXTRACT_FRAMES'">
+          <a-form-item label="抽帧间隔" name="frameInterval">
+            <a-input-number v-model:value="form.frameInterval" :min="1" placeholder="每隔多少帧取一帧" style="width:100%" />
+          </a-form-item>
+          <a-form-item label="抽帧数量" name="frameCount">
+            <a-input-number v-model:value="form.frameCount" :min="1" placeholder="抽取帧数" style="width:100%" />
+          </a-form-item>
+          <a-form-item label="输出格式" name="outputFormat">
+            <a-select v-model:value="form.outputFormat" placeholder="选择格式" style="width:100%">
+              <a-select-option value="jpg">JPG</a-select-option>
+              <a-select-option value="png">PNG</a-select-option>
+            </a-select>
+          </a-form-item>
+        </template>
+
+        <!-- 同步图转 -->
+        <template v-else-if="form.taskType === 'MAGIC_IMAGE_CONVERT'">
+          <a-form-item label="目标格式" name="targetFormat">
+            <a-select v-model:value="form.targetFormat" placeholder="选择格式" style="width:100%">
+              <a-select-option value="webp">WebP</a-select-option>
+              <a-select-option value="jpg">JPG</a-select-option>
+              <a-select-option value="png">PNG</a-select-option>
+            </a-select>
+          </a-form-item>
+          <a-form-item label="质量 (1-100)" name="quality">
+            <a-input-number v-model:value="form.quality" :min="1" :max="100" style="width:100%" />
+          </a-form-item>
+          <a-form-item label="缩放（可选）" name="resize">
+            <a-input v-model:value="form.resize" placeholder="如 800x600、800x、x600" allow-clear />
+          </a-form-item>
+        </template>
+
+        <!-- 同步单目标转码 -->
+        <template v-else-if="form.taskType === 'MAGIC_SYNC_TRANSCODE'">
+          <a-form-item label="目标格式" name="targetFormat">
+            <a-select v-model:value="form.targetFormat" placeholder="选择格式" style="width:100%">
+              <a-select-option value="mp4">MP4</a-select-option>
+              <a-select-option value="webm">WebM</a-select-option>
+            </a-select>
+          </a-form-item>
+          <a-form-item label="分辨率" name="resolution">
+            <a-input v-model:value="form.resolution" placeholder="如 1920x1080" />
+          </a-form-item>
+          <a-form-item label="码率 (kbps)" name="bitrate">
+            <a-input-number v-model:value="form.bitrate" :min="100" style="width:100%" />
+          </a-form-item>
+          <a-form-item label="帧率" name="frameRate">
+            <a-input-number v-model:value="form.frameRate" :min="1" style="width:100%" />
+          </a-form-item>
+        </template>
+
         <a-form-item>
           <a-space>
             <a-button type="primary" html-type="submit" :loading="loading">提交</a-button>
@@ -45,20 +110,64 @@
 </template>
 
 <script setup>
-import { reactive, ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { reactive, ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { useForkTaskStore } from '../stores/forkTask'
 import { listStrategies } from '../api/strategy_api'
-import { createTask } from '../api/transcoder_api'
+import { createTask, magicExtractFrames, magicImageConvert, magicTranscode } from '../api/transcoder_api'
 
 const router = useRouter()
 const loading = ref(false)
 const strategyOptions = ref([])
-const form = reactive({ inputType: 'DISK', inputPath: '', strategyId: undefined, watermarkUrl: '', watermarkPosition: 'bottom-right', priority: 5 })
+const form = reactive({
+  taskType: 'SCHEDULED_TRANSCODE',
+  inputType: 'DISK',
+  inputPath: '',
+  strategyId: undefined,
+  watermarkUrl: '',
+  watermarkPosition: 'bottom-right',
+  priority: 5,
+  // 抽帧
+  frameInterval: 30,
+  frameCount: 1,
+  outputFormat: 'jpg',
+  // 图转
+  targetFormat: 'webp',
+  quality: 85,
+  resize: undefined,
+  // 单目标转码
+  resolution: '1920x1080',
+  bitrate: 5000,
+  frameRate: 30
+})
+
+const inputPathPlaceholder = computed(() => {
+  if (form.taskType === 'MAGIC_IMAGE_CONVERT') return form.inputType === 'HTTP' ? 'https://...' : '/path/to/image.jpg'
+  return form.inputType === 'HTTP' ? 'https://...' : '/path/to/video.mp4'
+})
+
+function onTaskTypeChange() {
+  form.strategyId = undefined
+  if (form.taskType === 'MAGIC_EXTRACT_FRAMES') {
+    form.frameInterval = 30
+    form.frameCount = 1
+    form.outputFormat = 'jpg'
+  } else if (form.taskType === 'MAGIC_IMAGE_CONVERT') {
+    form.targetFormat = 'webp'
+    form.quality = 85
+    form.resize = undefined
+  } else if (form.taskType === 'MAGIC_SYNC_TRANSCODE') {
+    form.targetFormat = 'mp4'
+    form.resolution = '1920x1080'
+    form.bitrate = 5000
+    form.frameRate = 30
+  }
+}
 
 function applyForkTask(t) {
   if (!t) return
+  form.taskType = t.taskType || 'SCHEDULED_TRANSCODE'
   form.inputType = t.inputType || 'DISK'
   form.inputPath = t.inputPath || t.inputFile || ''
   form.strategyId = t.strategyId
@@ -76,7 +185,6 @@ onMounted(async () => {
     strategyOptions.value = []
   }
   await nextTick()
-  // options 渲染完成后再填充，避免 a-select 清空 value
   applyForkTask(forkTask)
 })
 
@@ -87,14 +195,57 @@ onBeforeUnmount(() => {
 async function onSubmit() {
   try {
     loading.value = true
-    const body = { inputType: form.inputType, inputPath: (form.inputPath || form.inputFile || '').trim(), strategyId: form.strategyId, priority: form.priority }
-    if (form.watermarkUrl?.trim()) {
-      body.watermarkUrl = form.watermarkUrl.trim()
-      body.watermarkPosition = form.watermarkPosition || undefined
+    const inputPath = (form.inputPath || '').trim()
+    if (!inputPath) {
+      message.error('请输入输入路径')
+      return
     }
-    const id = await createTask(body)
-    message.success('任务已创建：' + id)
-    router.push('/tasks/' + id)
+
+    let taskId = null
+
+    if (form.taskType === 'SCHEDULED_TRANSCODE') {
+      const body = { inputType: form.inputType, inputPath, strategyId: form.strategyId, priority: form.priority }
+      if (form.watermarkUrl?.trim()) {
+        body.watermarkUrl = form.watermarkUrl.trim()
+        body.watermarkPosition = form.watermarkPosition || undefined
+      }
+      taskId = await createTask(body)
+    } else if (form.taskType === 'MAGIC_EXTRACT_FRAMES') {
+      const res = await magicExtractFrames({
+        inputType: form.inputType,
+        inputPath,
+        frameInterval: form.frameInterval,
+        frameCount: form.frameCount,
+        outputFormat: form.outputFormat
+      })
+      taskId = res?.id
+    } else if (form.taskType === 'MAGIC_IMAGE_CONVERT') {
+      const res = await magicImageConvert({
+        inputType: form.inputType,
+        inputPath,
+        targetFormat: form.targetFormat,
+        quality: form.quality,
+        resize: form.resize || undefined
+      })
+      taskId = res?.id
+    } else if (form.taskType === 'MAGIC_SYNC_TRANSCODE') {
+      const res = await magicTranscode({
+        inputType: form.inputType,
+        inputPath,
+        targetFormat: form.targetFormat,
+        resolution: form.resolution,
+        bitrate: form.bitrate,
+        frameRate: form.frameRate
+      })
+      taskId = res?.id
+    }
+
+    if (taskId) {
+      message.success('任务已创建：' + taskId)
+      router.push('/tasks/' + taskId)
+    } else {
+      message.error('创建失败')
+    }
   } catch (e) {
     message.error(e?.message || '创建失败')
   } finally {
