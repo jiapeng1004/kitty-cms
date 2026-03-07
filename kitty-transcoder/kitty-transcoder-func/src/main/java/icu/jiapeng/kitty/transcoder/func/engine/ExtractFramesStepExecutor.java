@@ -21,6 +21,6 @@ public class ExtractFramesStepExecutor implements StepExecutor {
     public String execute(String inputPath, StrategyStepVO step, String stepSuffix, StepContext context) throws Exception {
         String outputPath = context != null ? context.getResolvedOutputPath() : null;
         String stepWorkDir = context != null ? context.getWorkDir() : null;
-        return mediaStepOps.doExtractFrames(inputPath, step, stepSuffix, outputPath, stepWorkDir);
+        return mediaStepOps.doExtractFrames(inputPath, step, stepSuffix, outputPath, stepWorkDir, context);
     }
 }

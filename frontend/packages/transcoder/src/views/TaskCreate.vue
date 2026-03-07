@@ -44,6 +44,28 @@
           <a-form-item label="优先级" name="priority">
             <a-input-number v-model:value="form.priority" :min="1" :max="10" />
           </a-form-item>
+          <a-form-item label="回调通知（可选）">
+            <a-collapse v-if="form.notifications?.length" ghost>
+              <a-collapse-panel v-for="(n, i) in form.notifications" :key="i" :header="`${n.method || 'HTTP'} → ${n.target || '(未填)'}`">
+                <a-row :gutter="12">
+                  <a-col :span="6">
+                    <a-select v-model:value="n.method" placeholder="方式" style="width:100%">
+                      <a-select-option value="HTTP">HTTP</a-select-option>
+                      <a-select-option value="GRPC">GRPC</a-select-option>
+                    </a-select>
+                  </a-col>
+                  <a-col :span="16">
+                    <a-input v-model:value="n.target" :placeholder="n.method === 'GRPC' ? 'host:port 如 192.168.1.100:9901' : 'http://localhost:9703/api/transcode/introspection/notification'" allow-clear />
+                  </a-col>
+                  <a-col :span="2">
+                    <a-button type="text" danger size="small" @click="form.notifications.splice(i, 1)">删除</a-button>
+                  </a-col>
+                </a-row>
+              </a-collapse-panel>
+            </a-collapse>
+            <a-button type="dashed" size="small" @click="addNotification">+ 添加回调</a-button>
+            <div class="form-hint">与 gRPC/HTTP 调用一致，支持 HTTP（URL）或 GRPC（host:port），完成后推送 TranscodeProgressNotifyVO</div>
+          </a-form-item>
         </template>
 
         <!-- 同步抽帧 -->
@@ -128,6 +150,7 @@ const form = reactive({
   watermarkUrl: '',
   watermarkPosition: 'bottom-right',
   priority: 5,
+  notifications: [],
   // 抽帧
   frameInterval: 30,
   frameCount: 1,
@@ -165,6 +188,11 @@ function onTaskTypeChange() {
   }
 }
 
+function addNotification() {
+  if (!form.notifications) form.notifications = []
+  form.notifications.push({ method: 'HTTP', target: '' })
+}
+
 function applyForkTask(t) {
   if (!t) return
   form.taskType = t.taskType || 'SCHEDULED_TRANSCODE'
@@ -174,6 +202,8 @@ function applyForkTask(t) {
   form.watermarkUrl = t.watermarkUrl || ''
   form.watermarkPosition = t.watermarkPosition || 'bottom-right'
   form.priority = t.priority ?? 5
+  const notifs = t.notifications && Array.isArray(t.notifications) ? t.notifications : []
+  if (notifs.length) form.notifications = notifs.map((n) => ({ method: n.method || 'HTTP', target: n.target || '' }))
 }
 
 onMounted(async () => {
@@ -208,6 +238,10 @@ async function onSubmit() {
       if (form.watermarkUrl?.trim()) {
         body.watermarkUrl = form.watermarkUrl.trim()
         body.watermarkPosition = form.watermarkPosition || undefined
+      }
+      const validNotifs = (form.notifications || []).filter((n) => n?.method && (n?.target || '').trim())
+      if (validNotifs.length) {
+        body.notifications = validNotifs.map((n) => ({ method: n.method, target: (n.target || '').trim() }))
       }
       taskId = await createTask(body)
     } else if (form.taskType === 'MAGIC_EXTRACT_FRAMES') {
@@ -256,4 +290,5 @@ async function onSubmit() {
 
 <style scoped>
 .form-card { max-width: 600px; margin-top: 16px; }
+.form-hint { font-size: 12px; color: #888; margin-top: 6px; }
 </style>

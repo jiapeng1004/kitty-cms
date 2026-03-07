@@ -1,4 +1,5 @@
 -- 转码任务表
+-- 若表已存在但缺少 notification_config，请执行: ALTER TABLE transcode_task ADD COLUMN notification_config TEXT;
 CREATE TABLE IF NOT EXISTS transcode_task (
     id VARCHAR(64) PRIMARY KEY,
     task_type VARCHAR(32) NOT NULL DEFAULT 'SCHEDULED_TRANSCODE',

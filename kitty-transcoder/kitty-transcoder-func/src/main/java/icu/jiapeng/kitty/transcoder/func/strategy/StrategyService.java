@@ -41,4 +41,11 @@ public interface StrategyService {
      * @return 是否删除成功
      */
     boolean deleteStrategy(String strategyId);
+
+    /**
+     * 修改策略ID。若新ID已被占用则抛出 IllegalArgumentException。
+     * @param oldId 当前策略ID
+     * @param newId 新策略ID
+     */
+    void updateStrategyId(String oldId, String newId);
 }

@@ -3,6 +3,8 @@ package icu.jiapeng.kitty.transcoder.api;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
+import java.util.List;
+
 @Data
 public class TaskVO {
 
@@ -43,6 +45,9 @@ public class TaskVO {
     private String watermarkUrl;
     @Schema(description = "水印位置")
     private String watermarkPosition;
+
+    @Schema(description = "回调通知配置（创建时传入，解析后）")
+    private List<NotificationConfig> notifications;
 
     @Schema(description = "创建时间", example = "1739457045000")
     private Long createdAt;

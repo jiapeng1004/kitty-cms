@@ -5,6 +5,7 @@ import icu.jiapeng.kitty.transcoder.api.StrategyStepVO;
 import icu.jiapeng.kitty.transcoder.api.StrategyVO;
 import icu.jiapeng.kitty.transcoder.func.config.TranscodeConfig;
 import icu.jiapeng.kitty.transcoder.func.strategy.StrategyService;
+import icu.jiapeng.kitty.transcoder.func.task.TaskCancellationRegistry;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -27,6 +28,9 @@ public class TranscodeEngine {
 
     @Resource
     private TranscodeConfig transcodeConfig;
+
+    @Resource
+    private TaskCancellationRegistry taskCancellationRegistry;
 
     private final ExecutorService stepExecutor = Executors.newVirtualThreadPerTaskExecutor();
 
@@ -70,6 +74,7 @@ public class TranscodeEngine {
                 throw new UnsupportedOperationException();
             });
             ctx.setTaskId(taskId);
+            ctx.setCancellationChecker(() -> taskCancellationRegistry.isCancelled(taskId));
             ctx.setWatermarkUrl(watermarkUrl);
             ctx.setWatermarkPosition(watermarkPosition);
             ctx.setWorkDir(transcodeConfig.getWorkDir());
@@ -101,6 +106,7 @@ public class TranscodeEngine {
         };
         StepContextImpl ctx = new StepContextImpl(runStrategyCallback);
         ctx.setTaskId(taskId);
+        ctx.setCancellationChecker(() -> taskCancellationRegistry.isCancelled(taskId));
         ctx.setWatermarkUrl(watermarkUrl);
         ctx.setWatermarkPosition(watermarkPosition);
         String workDir = (strategy.getWorkDir() != null && !strategy.getWorkDir().isBlank())
@@ -172,6 +178,8 @@ public class TranscodeEngine {
                     } catch (Exception e) {
                         log.error("步骤 {} 执行失败", sid, e);
                         throw new RuntimeException("STEP_FAILED:" + sid + ":" + e.getMessage(), e);
+                    } finally {
+                        StepContextImpl.clearCurrentStepIndexForThread();
                     }
                 }, stepExecutor);
                 futures.add(f);
@@ -195,7 +203,7 @@ public class TranscodeEngine {
             }
         }
 
-        int lastStep = findLastStepByTopology(stepIds, depsMap);
+        int lastStep = findLastStepByTopology(stepIds, depsMap, stepByStepId);
         String lastOutput = stepOutputs.get(lastStep);
         if (lastOutput == null) throw new IllegalStateException("无最终输出");
         return lastOutput;
@@ -263,17 +271,31 @@ public class TranscodeEngine {
         return out;
     }
 
-    private static int findLastStepByTopology(List<Integer> stepIds, Map<Integer, int[]> depsMap) {
+    /**
+     * 在无依赖的叶子步骤中选取「主输出」步骤。
+     * 多输出时优先选 transcode（转码视频），其次 sprite/extract_frames，避免雪碧图等图片被当作主输出。
+     */
+    private static int findLastStepByTopology(List<Integer> stepIds, Map<Integer, int[]> depsMap,
+                                              Map<Integer, StrategyStepVO> stepByStepId) {
         Set<Integer> hasDependent = new HashSet<>();
         for (int sid : stepIds) {
             int[] deps = depsMap.get(sid);
             if (deps != null) for (int d : deps) hasDependent.add(d);
         }
-        int last = -1;
+        List<Integer> leaves = new ArrayList<>();
         for (int sid : stepIds) {
-            if (!hasDependent.contains(sid)) last = Math.max(last, sid);
+            if (!hasDependent.contains(sid)) leaves.add(sid);
         }
-        return last >= 0 ? last : stepIds.get(stepIds.size() - 1);
+        if (leaves.isEmpty()) return stepIds.get(stepIds.size() - 1);
+        // 优先选 transcode 作为主输出（视频文件更符合「主输出」预期），取 stepId 最小的（通常为 1080p 等主规格）
+        int transcodeFirst = Integer.MAX_VALUE;
+        for (int sid : leaves) {
+            StrategyStepVO step = stepByStepId.get(sid);
+            String type = step != null && step.getType() != null ? step.getType() : "";
+            if ("transcode".equals(type)) transcodeFirst = Math.min(transcodeFirst, sid);
+        }
+        if (transcodeFirst < Integer.MAX_VALUE) return transcodeFirst;
+        return leaves.stream().max(Integer::compareTo).orElse(stepIds.get(stepIds.size() - 1));
     }
 
     private static List<StepProgressItem> buildStepProgressList(Map<Integer, StrategyStepVO> stepByStepId,

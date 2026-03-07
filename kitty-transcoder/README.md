@@ -157,6 +157,45 @@ java -jar kitty-transcoder-server/target/app.jar
 
 ---
 
+## 策略导出/导入 | Strategy Export/Import
+
+策略支持导出为 YAML 文件，格式与数据库解耦，便于版本管理、迁移与字段扩展。
+
+**格式特点**：
+- 语义化字段名（snake_case）：`work_dir`、`input_template`、`output_template` 等
+- `format_version: 1` 便于未来兼容
+- `strategy_id` 导出时写入，导入时保持 ID 不变（存在则更新，不存在则创建后设置）
+- 未知字段导入时忽略，缺失字段使用默认值
+
+**YAML 示例**：
+
+```yaml
+format_version: 1
+strategy_id: "20"
+name: 多档位转码
+work_dir: /mnt/transcoder
+
+steps:
+  - step_id: 1
+    type: transcode
+    depends: ""
+    output_template: transcoder/$DATE/$TASK_ID_1080p.mp4
+    target_format: mp4
+    resolution: 1920x1080
+    bitrate: 5000
+    frame_rate: 30
+    encoder: h264
+  - step_id: 2
+    type: transcode
+    depends: "1"
+    input_template: $STEP_OUTPUT_1
+    output_template: transcoder/$DATE/$TASK_ID_480p.mp4
+    resolution: 854x480
+    bitrate: 1500
+```
+
+---
+
 ## 主要 API | REST API
 
 | 方法 | 路径 | 说明 |
@@ -168,6 +207,9 @@ java -jar kitty-transcoder-server/target/app.jar
 | GET | `/sse/{id}` | SSE 进度流 |
 | POST | `/strategy` | 创建策略 |
 | GET | `/strategy` | 策略列表 |
+| GET | `/strategy/{id}/export` | 导出策略（YAML） |
+| POST | `/strategy/import` | 导入策略（body: `{ "content": "YAML 内容" }`） |
+| PUT | `/strategy/{id}/id` | 修改策略ID（body: `{ "newId": "..." }`） |
 | GET | `/preview` | 视频帧预览 |
 | POST | `/login` | 登录 |
 | POST | `/access-key` | 创建 AccessKey |

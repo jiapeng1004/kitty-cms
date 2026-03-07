@@ -3,6 +3,14 @@ import api from '../utils/api'
 const PREFIX = '/api/auth'
 
 /**
+ * 获取当前登录的 Access Key 信息
+ * @returns {Promise<{ accessKeyId: string, name?: string, status: string, description?: string }>}
+ */
+export function getCurrentAccessKey() {
+  return api.get(`${PREFIX}/me`)
+}
+
+/**
  * 使用 AK/SK 登录，返回 token 与 accessKeyId
  * @param {{ accessKeyId: string, secretKey: string }} body
  * @returns {Promise<{ token: string, accessKeyId: string }>}

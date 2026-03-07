@@ -2,17 +2,34 @@
   <div>
     <a-space class="mb">
       <a-button type="primary" @click="openCreate">新建策略</a-button>
+      <a-button @click="showImportModal = true">导入</a-button>
     </a-space>
     <a-table :columns="columns" :data-source="list" :loading="loading" row-key="id">
       <template #bodyCell="{ column, record }">
-        <template v-if="column.key === 'action'">
+        <template v-if="column.key === 'id'">
+          <span v-if="editingIdRow !== record.id" class="id-cell" title="双击修改" @dblclick="startEditId(record)">{{ record.id }}</span>
+          <a-input
+            v-else
+            ref="idInputRef"
+            :default-value="record.id"
+            size="small"
+            class="id-edit-input"
+            @blur="(e) => finishEditId(record, e.target.value)"
+            @keydown.enter="(e) => { e.preventDefault(); finishEditId(record, e.target.value) }"
+          />
+        </template>
+        <template v-else-if="column.key === 'action'">
           <a-space>
             <a @click="openEdit(record)">编辑</a>
             <a @click="onCopy(record)">复制</a>
+            <a @click="onExport(record)">导出</a>
             <a-popconfirm title="确定删除该策略？删除后无法恢复。" ok-text="删除" cancel-text="取消" @confirm="onDelete(record.id)">
               <a class="danger">删除</a>
             </a-popconfirm>
           </a-space>
+        </template>
+        <template v-else>
+          {{ record[column.dataIndex] }}
         </template>
       </template>
     </a-table>
@@ -28,8 +45,9 @@
             @blur="stratForm.workDir = (stratForm.workDir || '').trim()"
           />
         </a-form-item>
-        <a-form-item label="步骤（依赖留空=无依赖、用任务输入可并行；填 1 或 1,2 等=依赖该步骤输出）">
+        <a-form-item label="步骤（依赖留空=无依赖、可并行；填 1 或 1,2 等=等待该步骤完成后再执行，输入来源由输入模板指定：$TASK_INPUT=任务整体输入，$STEP_OUTPUT_N=步骤 N 的输出）">
           <div v-for="(step, index) in stratForm.steps" :key="step._key ?? index" class="step-card">
+            <a-button type="link" size="small" class="insert-step-above" @click="insertStepAt(index)">+ 在此后插入</a-button>
             <a-card size="small" :title="`步骤 ${step.stepId ?? index + 1}：${stepTypeLabel(step.type)}`" class="step-item">
               <template #extra>
                 <a-button type="text" danger size="small" :disabled="stratForm.steps.length <= 1" @click="removeStep(index)">删除</a-button>
@@ -45,27 +63,27 @@
               <a-form-item :name="['steps', index, 'depends']" :label="'依赖步骤（步骤 ' + (step.stepId ?? index + 1) + '）'" :rules="dependsRules">
                 <a-input
                   v-model:value="step.depends"
-                  placeholder="留空=无依赖；或填 1、1,2 等指定依赖的步骤"
+                  placeholder="留空=无依赖；填 1 或 1,2 等=等待该步骤完成"
                   size="small"
                   allow-clear
                   @blur="step.depends = (step.depends || '').trim()"
                 />
               </a-form-item>
               <a-form-item label="输入模板（可选）">
-                <a-input
-                  v-model:value="step.inputTemplate"
+                <TemplateVariableInput
+                  v-model="step.inputTemplate"
                   placeholder="$TASK_INPUT 或 $STEP_OUTPUT_1、$STEP_OUTPUT_2…"
                   size="small"
-                  allow-clear
+                  :step-count="stratForm.steps.length"
                   @blur="step.inputTemplate = (step.inputTemplate || '').trim()"
                 />
               </a-form-item>
               <a-form-item label="输出模板（可选）">
-                <a-input
-                  v-model:value="step.outputTemplate"
+                <TemplateVariableInput
+                  v-model="step.outputTemplate"
                   placeholder="$WORK_DIR/$DATE/$TASK_ID、$DATE_TIME=年/月/日/时分秒"
                   size="small"
-                  allow-clear
+                  :step-count="stratForm.steps.length"
                   @blur="step.outputTemplate = (step.outputTemplate || '').trim()"
                 />
               </a-form-item>
@@ -196,13 +214,30 @@
         </a-form-item>
       </a-form>
     </a-modal>
+    <a-modal v-model:open="showImportModal" title="导入策略" :footer="null" @cancel="importContent = ''">
+      <a-upload
+        :before-upload="beforeImportUpload"
+        :show-upload-list="false"
+        accept=".yaml,.yml"
+      >
+        <a-button>选择文件 (.yaml)</a-button>
+      </a-upload>
+      <a-textarea
+        v-model:value="importContent"
+        placeholder="或粘贴 YAML 内容"
+        :rows="8"
+        class="import-textarea"
+      />
+      <a-button type="primary" block :loading="importing" :disabled="!importContent?.trim()" @click="doImport">导入</a-button>
+    </a-modal>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, nextTick } from 'vue'
 import { message } from 'ant-design-vue'
-import { listStrategies, getStrategy, createStrategy, updateStrategy, deleteStrategy } from '../api/strategy_api'
+import { listStrategies, getStrategy, createStrategy, updateStrategy, deleteStrategy, exportStrategy, importStrategy, updateStrategyId } from '../api/strategy_api'
+import TemplateVariableInput from '../components/TemplateVariableInput.vue'
 
 function stepTypeLabel(type) {
   const map = { transcode: '转码', extract_frames: '抽帧', sprite: '雪碧图', image_convert: '图片转换' }
@@ -238,7 +273,12 @@ function defaultStep() {
 const loading = ref(false)
 const list = ref([])
 const showModal = ref(false)
+const showImportModal = ref(false)
+const importContent = ref('')
+const importing = ref(false)
 const submitting = ref(false)
+const editingIdRow = ref(null)
+const idInputRef = ref(null)
 const editingId = ref(null)
 const formRef = ref(null)
 const stratForm = reactive({
@@ -312,13 +352,59 @@ const columns = [
 function addStep() {
   const newIdx = stratForm.steps.length
   const s = defaultStep()
+  s.stepId = newIdx + 1
   if (newIdx >= 1) s.depends = String(newIdx) // 新步骤默认依赖前一步
   stratForm.steps.push(s)
+}
+
+/** 在 index 之后插入新步骤，其后步骤号及依赖自动递增 */
+function insertStepAt(index) {
+  const insertPos = index + 1
+  const s = defaultStep()
+  s.stepId = insertPos + 1
+  s.depends = insertPos >= 1 ? String(insertPos) : ''
+  stratForm.steps.splice(insertPos, 0, s)
+  for (let i = 0; i < stratForm.steps.length; i++) {
+    stratForm.steps[i].stepId = i + 1
+  }
+  shiftDependsAfterInsert(insertPos)
+}
+
+function shiftDependsAfterInsert(insertPos) {
+  const before = insertPos + 1
+  for (const step of stratForm.steps) {
+    const d = (step.depends || '').trim()
+    if (!d) continue
+    const parts = d.split(',').map((x) => parseInt(x.trim(), 10)).filter((n) => !isNaN(n))
+    const shifted = parts.map((n) => (n >= before ? n + 1 : n))
+    step.depends = shifted.join(',')
+  }
 }
 
 function removeStep(index) {
   if (stratForm.steps.length <= 1) return
   stratForm.steps.splice(index, 1)
+  for (let i = 0; i < stratForm.steps.length; i++) {
+    stratForm.steps[i].stepId = i + 1
+  }
+  shiftDependsAfterRemove(index)
+}
+
+function shiftDependsAfterRemove(removedIndex) {
+  const before = removedIndex + 1
+  for (const step of stratForm.steps) {
+    const d = (step.depends || '').trim()
+    if (!d) continue
+    const parts = d.split(',').map((x) => parseInt(x.trim(), 10)).filter((n) => !isNaN(n))
+    const shifted = parts
+      .map((n) => {
+        if (n > before) return n - 1
+        if (n === before) return null
+        return n
+      })
+      .filter((n) => n != null)
+    step.depends = shifted.join(',')
+  }
 }
 
 function resetForm() {
@@ -445,6 +531,70 @@ async function onDelete(id) {
   }
 }
 
+function startEditId(record) {
+  editingIdRow.value = record.id
+  nextTick(() => {
+    const el = idInputRef.value?.$el?.querySelector?.('input') || idInputRef.value?.$el
+    el?.focus?.()
+  })
+}
+
+function finishEditId(record, newVal) {
+  editingIdRow.value = null
+  const v = (newVal || '').trim()
+  if (!v || v === String(record.id)) return
+  updateStrategyId(record.id, v).then(() => {
+    message.success('策略ID已修改')
+    load()
+  }).catch((e) => {
+    const msg = typeof e === 'string' ? e : (e?.message || e?.error || '修改失败')
+    message.error(msg)
+  })
+}
+
+function beforeImportUpload(file) {
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    importContent.value = e.target?.result || ''
+  }
+  reader.readAsText(file, 'UTF-8')
+  return false
+}
+
+async function doImport() {
+  if (!importContent.value?.trim()) return
+  importing.value = true
+  try {
+    const id = await importStrategy(importContent.value.trim())
+    message.success('导入成功，策略ID: ' + id)
+    showImportModal.value = false
+    importContent.value = ''
+    load()
+  } catch (e) {
+    message.error(e?.message || '导入失败')
+  } finally {
+    importing.value = false
+  }
+}
+
+async function onExport(record) {
+  try {
+    const content = await exportStrategy(record.id)
+    const baseName = (record.name || 'strategy').replace(/[^\w\u4e00-\u9fa5-]/g, '_')
+    const name = (record.id || '') + '_' + baseName + '.yaml'
+    const blob = new Blob([content], { type: 'text/yaml' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = name
+    a.click()
+    URL.revokeObjectURL(url)
+    message.success('导出成功')
+  } catch (e) {
+    message.error(e?.message || '导出失败')
+  }
+}
+
 async function onCopy(record) {
   try {
     const data = await getStrategy(record.id)
@@ -507,9 +657,18 @@ onMounted(load)
 
 <style scoped>
 .mb { margin-bottom: 16px; }
-.step-card { margin-bottom: 12px; }
+.step-card { margin-bottom: 12px; position: relative; }
+.insert-step-above {
+  margin-bottom: 4px;
+  padding: 0 4px;
+  height: 24px;
+  font-size: 12px;
+}
 .step-item { margin-bottom: 8px; }
 .add-step-btn { margin-top: 8px; }
 .danger { color: var(--ant-color-error); }
 .sprite-count-hint { padding: 4px 0; font-size: 12px; color: var(--ant-color-text-secondary); }
+.import-textarea { margin: 12px 0; }
+.id-cell { cursor: pointer; }
+.id-edit-input { width: 80px; }
 </style>

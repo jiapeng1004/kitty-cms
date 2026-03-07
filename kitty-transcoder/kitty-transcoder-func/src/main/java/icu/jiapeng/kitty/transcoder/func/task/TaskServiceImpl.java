@@ -27,7 +27,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.nio.file.Paths;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -58,6 +61,8 @@ public class TaskServiceImpl implements TaskService {
     private ProgressBroadcaster progressBroadcaster;
     @Autowired
     private NotificationDispatcher notificationDispatcher;
+    @Autowired
+    private TaskCancellationRegistry cancellationRegistry;
 
     @Override
     public String createTask(CreateTaskRequest request, String createdByAk) {
@@ -96,7 +101,25 @@ public class TaskServiceImpl implements TaskService {
     @Override
     public TaskVO getTask(String taskId) {
         TranscodeTask entity = taskMapper.selectById(taskId);
-        return entity == null ? null : taskVoMapper.toVO(entity);
+        if (entity == null) return null;
+        TaskVO vo = taskVoMapper.toVO(entity);
+        ensureNotifications(vo, entity);
+        return vo;
+    }
+
+    /** 确保 notifications 从 notification_config 解析填充 */
+    private void ensureNotifications(TaskVO vo, TranscodeTask entity) {
+        if (vo == null || entity == null) return;
+        if (vo.getNotifications() != null && !vo.getNotifications().isEmpty()) return;
+        String raw = entity.getNotificationConfig();
+        if (raw == null || raw.isBlank()) return;
+        try {
+            List<NotificationConfig> list = JSON.parseArray(raw, NotificationConfig.class);
+            if (list != null && !list.isEmpty()) {
+                vo.setNotifications(list);
+            }
+        } catch (Exception ignored) {
+        }
     }
 
     @Override
@@ -142,11 +165,16 @@ public class TaskServiceImpl implements TaskService {
             q.eq(TranscodeTask::getTaskType, req.getTaskType().trim());
         }
         taskMapper.selectPage(p, q);
-        return p.getRecords().stream().map(taskVoMapper::toVO).toList();
+        List<TaskVO> list = p.getRecords().stream().map(taskVoMapper::toVO).toList();
+        for (int i = 0; i < list.size(); i++) {
+            ensureNotifications(list.get(i), p.getRecords().get(i));
+        }
+        return list;
     }
 
     @Override
     public boolean cancelTask(String taskId) {
+        cancellationRegistry.markCancelled(taskId);
         TranscodeTask entity = taskMapper.selectById(taskId);
         LambdaUpdateWrapper<TranscodeTask> u = new LambdaUpdateWrapper<>();
         u.eq(TranscodeTask::getId, taskId).set(TranscodeTask::getStatus, "CANCELLED");
@@ -160,6 +188,7 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public boolean deleteTask(String taskId) {
+        cancellationRegistry.markCancelled(taskId);
         return taskMapper.deleteById(taskId) > 0;
     }
 
@@ -176,6 +205,8 @@ public class TaskServiceImpl implements TaskService {
             }
             entity.setStatus("PROCESSING");
             entity.setStartedAt(LocalDateTime.now());
+            String outputBaseDir = computeOutputBaseDir(taskId, entity.getStrategyId());
+            if (outputBaseDir != null) entity.setOutputPath(outputBaseDir);
             taskMapper.updateById(entity);
             fireProgressNotification(taskId, entity, 0);
 
@@ -202,22 +233,50 @@ public class TaskServiceImpl implements TaskService {
                 cause = cause.getCause();
             }
             String msg = cause != null ? cause.getMessage() : e.getMessage();
-            if (msg != null && msg.startsWith("STEP_FAILED:")) {
-                int idx = msg.indexOf(':', 11);
-                msg = idx > 0 ? msg.substring(idx + 1) : msg;
-            }
-            updateTaskError(taskId, "转码失败：" + (msg != null ? msg : e.getClass().getSimpleName()));
-            TranscodeTask entity = taskMapper.selectById(taskId);
-            if (entity != null) {
-                entity.setStatus("FAILED");
-                taskMapper.updateById(entity);
-                fireProgressNotification(taskId, entity, entity.getProgress() != null ? entity.getProgress() : 0);
+            boolean cancelled = msg != null && msg.contains("任务已取消");
+            if (cancelled) {
+                LambdaUpdateWrapper<TranscodeTask> u = new LambdaUpdateWrapper<>();
+                u.eq(TranscodeTask::getId, taskId).set(TranscodeTask::getStatus, "CANCELLED");
+                taskMapper.update(null, u);
+                TranscodeTask entity = taskMapper.selectById(taskId);
+                if (entity != null) fireProgressNotification(taskId, entity, entity.getProgress() != null ? entity.getProgress() : 0);
+            } else {
+                if (msg != null && msg.startsWith("STEP_FAILED:")) {
+                    int idx = msg.indexOf(':', 11);
+                    msg = idx > 0 ? msg.substring(idx + 1) : msg;
+                }
+                updateTaskError(taskId, "转码失败：" + (msg != null ? msg : e.getClass().getSimpleName()));
+                TranscodeTask entity = taskMapper.selectById(taskId);
+                if (entity != null) {
+                    entity.setStatus("FAILED");
+                    taskMapper.updateById(entity);
+                    fireProgressNotification(taskId, entity, entity.getProgress() != null ? entity.getProgress() : 0);
+                }
             }
         } finally {
+            cancellationRegistry.clear(taskId);
             if (lock.isHeldByCurrentThread()) {
                 lock.unlock();
             }
         }
+    }
+
+    /**
+     * 计算输出基目录（transcoder/yyyy/MM/dd/），任务开始处理时即设置，便于执行中即可预览已完成步骤的输出。
+     */
+    private String computeOutputBaseDir(String taskId, String strategyId) {
+        String workDir = transcodeConfig != null ? transcodeConfig.getWorkDir() : null;
+        if (workDir == null || workDir.isBlank()) return null;
+        if (strategyId != null && !strategyId.isBlank()) {
+            var strategy = strategyService.getStrategy(strategyId);
+            if (strategy != null && strategy.getWorkDir() != null && !strategy.getWorkDir().isBlank()) {
+                workDir = strategy.getWorkDir();
+            }
+        }
+        String datePath = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd"));
+        String[] parts = datePath.split("/");
+        if (parts.length < 3) return null;
+        return Paths.get(workDir, "transcoder", parts[0], parts[1], parts[2]).normalize().toAbsolutePath().toString();
     }
 
     private String resolveHttpInput(String url, String taskId, String strategyId) {
@@ -284,6 +343,17 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public void updateTaskStatus(String taskId, String status, int progress, List<StepProgressItem> stepProgressList) {
+        // 与 SSE 一致：每次进度更新也触发 HTTP/gRPC 回调，实现持续通知
+        TranscodeTask entity = taskMapper.selectById(taskId);
+        if (entity != null) {
+            Thread.startVirtualThread(() -> {
+                try {
+                    sendProgressNotification(entity, progress);
+                } catch (Throwable t) {
+                    // 静默忽略
+                }
+            });
+        }
         LambdaUpdateWrapper<TranscodeTask> u = new LambdaUpdateWrapper<>();
         u.eq(TranscodeTask::getId, taskId)
                 .set(TranscodeTask::getStatus, status)

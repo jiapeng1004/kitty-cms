@@ -135,6 +135,21 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    public AccessKeyVO getAccessKey(String accessKeyId) {
+        if (accessKeyId == null || accessKeyId.isBlank()) return null;
+        TranscodeAccessKey entity = accessKeyMapper.selectOne(
+                new LambdaQueryWrapper<TranscodeAccessKey>()
+                        .eq(TranscodeAccessKey::getAccessKeyId, accessKeyId));
+        if (entity == null) return null;
+        return new AccessKeyVO(
+                entity.getAccessKeyId(),
+                entity.getName(),
+                entity.getStatus(),
+                entity.getDescription(),
+                entity.getCreatedAt() != null ? entity.getCreatedAt().toString() : null);
+    }
+
+    @Override
     public boolean deleteAccessKey(String accessKeyId) {
         if (accessKeyId == null || accessKeyId.isBlank()) return false;
         return accessKeyMapper.delete(

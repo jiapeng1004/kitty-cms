@@ -7,7 +7,9 @@ import icu.jiapeng.kitty.transcoder.api.StrategyStepDTO;
 import icu.jiapeng.kitty.transcoder.api.StrategyStepVO;
 import icu.jiapeng.kitty.transcoder.api.StrategyVO;
 import icu.jiapeng.kitty.transcoder.func.entity.TranscodeStrategyStep;
+import icu.jiapeng.kitty.transcoder.func.entity.TranscodeTask;
 import icu.jiapeng.kitty.transcoder.func.mapper.TranscodeStrategyStepMapper;
+import icu.jiapeng.kitty.transcoder.func.mapper.TranscodeTaskMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -21,6 +23,9 @@ public class StrategyServiceImpl implements StrategyService {
 
     @Autowired
     private TranscodeStrategyStepMapper stepMapper;
+
+    @Autowired
+    private TranscodeTaskMapper taskMapper;
 
     @Override
     public String createStrategy(CreateStrategyRequest request) {
@@ -118,6 +123,24 @@ public class StrategyServiceImpl implements StrategyService {
         Long rootId = parseId(strategyId);
         if (rootId == null) return false;
         return stepMapper.delete(new LambdaQueryWrapper<TranscodeStrategyStep>().eq(TranscodeStrategyStep::getRootId, rootId)) > 0;
+    }
+
+    @Override
+    public void updateStrategyId(String oldId, String newId) {
+        Long oldRoot = parseId(oldId);
+        Long newRoot = parseId(newId);
+        if (oldRoot == null) throw new IllegalArgumentException("策略ID无效");
+        if (newRoot == null) throw new IllegalArgumentException("新策略ID无效");
+        if (oldRoot.equals(newRoot)) return;
+        long conflict = stepMapper.selectCount(
+                new LambdaQueryWrapper<TranscodeStrategyStep>().eq(TranscodeStrategyStep::getRootId, newRoot));
+        if (conflict > 0) throw new IllegalArgumentException("策略ID重复");
+        stepMapper.update(null, new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<TranscodeStrategyStep>()
+                .eq(TranscodeStrategyStep::getRootId, oldRoot)
+                .set(TranscodeStrategyStep::getRootId, newRoot));
+        taskMapper.update(null, new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<TranscodeTask>()
+                .eq(TranscodeTask::getStrategyId, String.valueOf(oldRoot))
+                .set(TranscodeTask::getStrategyId, String.valueOf(newRoot)));
     }
 
     private static Long parseId(String strategyId) {

@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class GrpcNotificationClient implements NotificationClient {
 
-    private static final int DEADLINE_SECONDS = 5;
+    private static final int DEADLINE_SECONDS = 10;
 
     private final GrpcChannelFactory channelFactory;
 
@@ -35,10 +35,10 @@ public class GrpcNotificationClient implements NotificationClient {
     public void notifyAsync(NotificationConfig config, TranscodeProgressNotifyVO vo) {
         if (config == null || config.getTarget() == null || config.getTarget().isBlank()) return;
         String target = config.getTarget().trim();
-        TranscodeProgressNotifyVO voCopy = vo; // for lambda
+        // for lambda
         Thread.startVirtualThread(() -> {
             try {
-                doNotify(target, voCopy);
+                doNotify(target, vo);
             } catch (Throwable e) {
                 if (log.isDebugEnabled()) {
                     log.debug("gRPC notification failed: {} - {}", target, e.getMessage());

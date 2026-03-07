@@ -41,4 +41,9 @@ public interface StepContext {
      * 若未设置回调则忽略。
      */
     void reportStepProgress(int percent);
+
+    /**
+     * 任务是否已被取消（用户点击取消或删除后），转码循环中轮询此方法可及时中断。
+     */
+    boolean isCancelled();
 }

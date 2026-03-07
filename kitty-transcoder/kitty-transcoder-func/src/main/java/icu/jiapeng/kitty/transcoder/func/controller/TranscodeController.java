@@ -1,7 +1,9 @@
 package icu.jiapeng.kitty.transcoder.func.controller;
 
 import icu.jiapeng.kitty.transcoder.api.*;
+import jakarta.validation.Valid;
 import icu.jiapeng.kitty.transcoder.func.auth.TokenAuthFilter;
+import icu.jiapeng.kitty.transcoder.func.strategy.StrategyExportService;
 import icu.jiapeng.kitty.transcoder.func.strategy.StrategyService;
 import icu.jiapeng.kitty.transcoder.func.task.TaskService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -29,6 +31,9 @@ public class TranscodeController implements TranscodeApi {
 
     @Resource
     private StrategyService strategyService;
+
+    @Resource
+    private StrategyExportService strategyExportService;
 
     @Operation(summary = "创建转码任务")
     @PostMapping("/task")
@@ -115,6 +120,27 @@ public class TranscodeController implements TranscodeApi {
     @DeleteMapping("/strategy/{id}")
     public Boolean deleteStrategy(@PathVariable String id) {
         return strategyService.deleteStrategy(id);
+    }
+
+    @Operation(summary = "导出策略为 YAML 文件")
+    @GetMapping("/strategy/{id}/export")
+    public String exportStrategy(@PathVariable String id) {
+        StrategyVO vo = strategyService.getStrategy(id);
+        if (vo == null) throw new IllegalArgumentException("策略不存在");
+        return strategyExportService.exportToYaml(vo);
+    }
+
+    @Operation(summary = "从 YAML 文件导入策略")
+    @PostMapping("/strategy/import")
+    public String importStrategy(@Valid @RequestBody ImportStrategyRequest request) {
+        return strategyExportService.importFromString(request.getContent());
+    }
+
+    @Operation(summary = "修改策略ID")
+    @PutMapping("/strategy/{id}/id")
+    public Boolean updateStrategyId(@PathVariable String id, @Valid @RequestBody UpdateStrategyIdRequest request) {
+        strategyService.updateStrategyId(id, request.getNewId());
+        return true;
     }
 
     @GetMapping("/sse/{id}")

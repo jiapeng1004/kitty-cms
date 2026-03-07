@@ -5,8 +5,12 @@ import icu.jiapeng.kitty.transcoder.api.ProbeResult;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
+import java.util.function.BooleanSupplier;
 
 public class StepContextImpl implements StepContext {
+
+    /** 并行步骤时，各线程通过 ThreadLocal 持有自己的 stepId，避免 reportStepProgress 读到被其他线程覆盖的值 */
+    private static final ThreadLocal<Integer> currentStepIndexForThread = new ThreadLocal<>();
 
     private int currentStepIndex;
     private int inputStepIndex = -1;
@@ -18,6 +22,7 @@ public class StepContextImpl implements StepContext {
     private final Map<Integer, ProbeResult> probeResults = new ConcurrentHashMap<>();
     private final RunStrategyCallback runStrategyCallback;
     private volatile BiConsumer<Integer, Integer> stepProgressReporter;
+    private volatile BooleanSupplier cancellationChecker;
 
     public StepContextImpl(RunStrategyCallback runStrategyCallback) {
         this.runStrategyCallback = runStrategyCallback;
@@ -27,16 +32,35 @@ public class StepContextImpl implements StepContext {
         this.stepProgressReporter = reporter;
     }
 
+    public void setCancellationChecker(BooleanSupplier checker) {
+        this.cancellationChecker = checker;
+    }
+
+    @Override
+    public boolean isCancelled() {
+        return cancellationChecker != null && cancellationChecker.getAsBoolean();
+    }
+
     @Override
     public void reportStepProgress(int percent) {
         BiConsumer<Integer, Integer> r = stepProgressReporter;
         if (r != null && percent >= 0 && percent <= 100) {
-            r.accept(currentStepIndex, percent);
+            Integer sid = currentStepIndexForThread.get();
+            if (sid == null) sid = currentStepIndex;
+            r.accept(sid, percent);
         }
     }
 
     @Override
-    public void setCurrentStepIndex(int stepIndex) { this.currentStepIndex = stepIndex; }
+    public void setCurrentStepIndex(int stepIndex) {
+        this.currentStepIndex = stepIndex;
+        currentStepIndexForThread.set(stepIndex);
+    }
+
+    /** 步骤结束时调用，清理当前线程的 ThreadLocal，避免线程复用后读到旧值 */
+    public static void clearCurrentStepIndexForThread() {
+        currentStepIndexForThread.remove();
+    }
     @Override
     public int getCurrentStepIndex() { return currentStepIndex; }
     @Override

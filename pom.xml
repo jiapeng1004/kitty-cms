@@ -62,7 +62,7 @@
         <devh.grpc.version>3.1.0.RELEASE</devh.grpc.version>
         <xolstice-protobuf-maven-plugin.version>0.6.1</xolstice-protobuf-maven-plugin.version>
         <protobuf-java.version>4.33.4</protobuf-java.version>
-        <grpc.version>1.79.0</grpc.version>
+        <grpc.version>1.77.1</grpc.version>
         <guava.version>33.5.0-jre</guava.version>
         <os-maven-plugin.version>1.7.1</os-maven-plugin.version>
         <just-auth.version>1.4.0</just-auth.version>

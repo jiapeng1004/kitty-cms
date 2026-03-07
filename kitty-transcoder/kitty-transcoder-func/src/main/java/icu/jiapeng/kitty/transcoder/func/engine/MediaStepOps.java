@@ -4,6 +4,7 @@ import cn.hutool.core.img.ImgUtil;
 import icu.jiapeng.kitty.transcoder.api.StrategyStepVO;
 import icu.jiapeng.kitty.transcoder.func.config.TranscodeConfig;
 import icu.jiapeng.kitty.transcoder.func.file.HttpFileHandler;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.bytedeco.javacv.FFmpegFrameFilter;
 import org.bytedeco.javacv.FFmpegFrameGrabber;
@@ -88,6 +89,9 @@ public class MediaStepOps {
             recorder.start();
             Frame frame;
             while ((frame = grabber.grab()) != null) {
+                if (context != null && context.isCancelled()) {
+                    throw new IOException("任务已取消");
+                }
                 recorder.record(frame);
                 if (context != null && totalMicros > 0) {
                     long now = System.currentTimeMillis();
@@ -122,7 +126,12 @@ public class MediaStepOps {
         return outputFile;
     }
 
-    public String doExtractFrames(String inputPath, StrategyStepVO step, String stepSuffix, String resolvedOutputPath, String stepWorkDir) throws Exception {
+    @SneakyThrows
+    public String doExtractFrames(String inputPath, StrategyStepVO step, String stepSuffix, String resolvedOutputPath, String stepWorkDir) {
+        return doExtractFrames(inputPath, step, stepSuffix, resolvedOutputPath, stepWorkDir, null);
+    }
+
+    public String doExtractFrames(String inputPath, StrategyStepVO step, String stepSuffix, String resolvedOutputPath, String stepWorkDir, StepContext context) throws Exception {
         String workDir = (stepWorkDir != null && !stepWorkDir.isBlank()) ? stepWorkDir : (transcodeConfig != null ? transcodeConfig.getWorkDir() : null);
         String outDir = resolvedOutputPath != null && !resolvedOutputPath.isBlank()
                 ? toLocalFilePath(resolvedOutputPath, workDir)
@@ -133,7 +142,8 @@ public class MediaStepOps {
         int frameCount = step.getExtractFrameCount() != null && step.getExtractFrameCount() > 0 ? step.getExtractFrameCount() : 1;
         String fmt = "jpg";
         if (step.getExtractOutputFormat() != null && step.getExtractOutputFormat().equalsIgnoreCase("png")) fmt = "png";
-        List<BufferedImage> frames = extractFramesByInterval(inputPath, interval, frameCount);
+        java.util.function.BooleanSupplier isCancelled = context != null ? context::isCancelled : () -> false;
+        List<BufferedImage> frames = extractFramesByInterval(inputPath, interval, frameCount, isCancelled);
         for (int i = 0; i < frames.size(); i++) {
             BufferedImage img = frames.get(i);
             if (img != null) {
@@ -146,25 +156,34 @@ public class MediaStepOps {
 
     public String doSpriteSheet(String inputPath, StrategyStepVO step, String stepSuffix, String resolvedOutputPath, String stepWorkDir) throws Exception {
         File input = new File(inputPath);
-        if (input.isDirectory()) throw new IOException("雪碧图步骤需要文件输入，当前为目录");
         int cols = step.getSpriteColumns() != null && step.getSpriteColumns() > 0 ? step.getSpriteColumns() : 4;
         int rows = step.getSpriteRows() != null && step.getSpriteRows() > 0 ? step.getSpriteRows() : 3;
         int count = cols * rows;
         int scale = step.getSpriteScale() != null && step.getSpriteScale() > 0 ? step.getSpriteScale() : 4;
         String fmt = "jpg";
         if (step.getExtractOutputFormat() != null && step.getExtractOutputFormat().equalsIgnoreCase("png")) fmt = "png";
-        BufferedImage sprite = buildSpriteWithFilter(inputPath, cols, rows, count, scale);
+        BufferedImage sprite = null;
+        if (input.isDirectory()) {
+            List<BufferedImage> images = loadFramesFromDirectory(inputPath, count);
+            if (!images.isEmpty()) sprite = buildSpriteFromImages(images, cols, rows, scale);
+        } else {
+            sprite = buildSpriteWithFilter(inputPath, cols, rows, count, scale);
+            if (sprite == null) {
+                List<BufferedImage> images = extractFramesByTimestamp(inputPath, count);
+                if (images.isEmpty()) images = extractFramesByInterval(inputPath, 30, count, null);
+                if (!images.isEmpty()) sprite = buildSpriteFromImages(images, cols, rows, scale);
+            }
+        }
         if (sprite == null) {
-            List<BufferedImage> images = extractFramesByTimestamp(inputPath, count);
-            if (images.isEmpty()) images = extractFramesByInterval(inputPath, 30, count);
-            if (images.isEmpty()) throw new IOException("未抽到帧");
-            sprite = buildSpriteFromImages(images, cols, rows, scale);
+            throw new IOException("未抽到帧或雪碧图生成失败");
         }
         String baseName = baseName(inputPath);
         String workDir = (stepWorkDir != null && !stepWorkDir.isBlank()) ? stepWorkDir : (transcodeConfig != null ? transcodeConfig.getWorkDir() : null);
         String outPath = resolvedOutputPath != null && !resolvedOutputPath.isBlank()
                 ? toLocalFilePath(resolvedOutputPath, workDir)
                 : parentPath(inputPath) + File.separator + baseName + stepSuffix + "_sprite." + fmt;
+        // 雪碧图本质是静态图片，若 output_template 误填 .mp4 等视频扩展名，强制改为图片格式
+        outPath = ensureImageExtension(outPath, fmt);
         File outFile = new File(outPath);
         if (outFile.getParent() != null) {
             File parent = new File(outFile.getParent());
@@ -238,6 +257,32 @@ public class MediaStepOps {
         }
         g.dispose();
         return sprite;
+    }
+
+    /**
+     * 从抽帧目录加载图片（支持 extract_frames 步骤输出），用于雪碧图。
+     * 匹配 frame_0001.png / frame_0001.jpg 等命名，按文件名排序取前 count 张。
+     */
+    private List<BufferedImage> loadFramesFromDirectory(String dirPath, int count) throws IOException {
+        List<BufferedImage> list = new ArrayList<>();
+        File dir = new File(dirPath);
+        if (!dir.isDirectory()) return list;
+        File[] files = dir.listFiles((d, name) -> {
+            String lower = name.toLowerCase();
+            return lower.matches("frame_\\d+\\.(png|jpg|jpeg|webp|bmp)");
+        });
+        if (files == null || files.length == 0) return list;
+        java.util.Arrays.sort(files, java.util.Comparator.comparing(File::getName));
+        int n = Math.min(count, files.length);
+        for (int i = 0; i < n; i++) {
+            try {
+                BufferedImage img = ImageIO.read(files[i]);
+                if (img != null) list.add(img);
+            } catch (IOException e) {
+                log.warn("加载帧失败: {}", files[i].getAbsolutePath(), e);
+            }
+        }
+        return list;
     }
 
     /**
@@ -343,7 +388,7 @@ public class MediaStepOps {
      * 使用 JavaCV 从视频中按间隔抽帧，返回 BufferedImage 列表。
      * 抽帧步骤使用此方法，顺序 grab 兼容性最好。
      */
-    private List<BufferedImage> extractFramesByInterval(String inputPath, int interval, int maxFrames) throws Exception {
+    private List<BufferedImage> extractFramesByInterval(String inputPath, int interval, int maxFrames, java.util.function.BooleanSupplier isCancelled) throws Exception {
         List<BufferedImage> list = new ArrayList<>();
         try (FFmpegFrameGrabber grabber = new FFmpegFrameGrabber(inputPath);
              Java2DFrameConverter converter = new Java2DFrameConverter()) {
@@ -351,6 +396,9 @@ public class MediaStepOps {
             Frame frame;
             int videoFrameIndex = 0;
             while (list.size() < maxFrames && (frame = grabber.grab()) != null) {
+                if (isCancelled != null && isCancelled.getAsBoolean()) {
+                    throw new IOException("任务已取消");
+                }
                 if (frame.image != null) {
                     if (videoFrameIndex % interval == 0) {
                         BufferedImage img = converter.convert(frame);
@@ -400,6 +448,21 @@ public class MediaStepOps {
 
     public static String parentPath(String path) {
         return new File(path).getParent();
+    }
+
+    /**
+     * 若路径以视频扩展名结尾（mp4/mpg/avi/mov 等），替换为图片扩展名，供雪碧图等图片输出使用
+     */
+    private static String ensureImageExtension(String path, String imageFmt) {
+        if (path == null || path.isBlank()) return path;
+        String lower = path.toLowerCase();
+        if (lower.endsWith(".mp4") || lower.endsWith(".mpg") || lower.endsWith(".mpeg")
+                || lower.endsWith(".avi") || lower.endsWith(".mov") || lower.endsWith(".mkv")
+                || lower.endsWith(".webm") || lower.endsWith(".flv")) {
+            int lastDot = path.lastIndexOf('.');
+            return (lastDot > 0 ? path.substring(0, lastDot) : path) + "." + imageFmt;
+        }
+        return path;
     }
 
     /**

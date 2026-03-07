@@ -27,7 +27,18 @@
       <a-descriptions-item label="输入类型">{{ task.inputType }}</a-descriptions-item>
       <a-descriptions-item label="输入">{{ task.inputPath || task.inputFile }}</a-descriptions-item>
       <a-descriptions-item label="策略ID">{{ task.strategyId }}</a-descriptions-item>
-      <a-descriptions-item label="输出路径">{{ task.outputPath || task.outputFile || '-' }}</a-descriptions-item>
+      <a-descriptions-item v-if="task.taskType === 'SCHEDULED_TRANSCODE'" label="回调通知">
+        <template v-if="displayNotifications.length">
+          <div v-for="(n, i) in displayNotifications" :key="i" class="notification-item">
+            <a-tag>{{ n.method || 'HTTP' }}</a-tag>
+            <span class="notification-target">{{ n.target }}</span>
+          </div>
+        </template>
+        <span v-else style="color:#888">未配置</span>
+      </a-descriptions-item>
+      <a-descriptions-item label="输出路径">
+        {{ task.outputPath || task.outputFile || (['PROCESSING', 'PENDING'].includes(task.status) ? '执行中，完成后显示' : '-') }}
+      </a-descriptions-item>
       <a-descriptions-item v-if="previewFiles.length" label="预览">
         <div class="preview-list">
           <div v-for="f in previewFiles" :key="f.path" class="preview-item">
@@ -59,7 +70,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { useForkTaskStore } from '../stores/forkTask'
@@ -73,6 +84,12 @@ const task = ref(null)
 const progressData = ref({ progress: 0, stepProgressList: [] })
 const previewFiles = ref([])
 let unsubscribe = null
+
+const displayNotifications = computed(() => {
+  const t = task.value
+  if (!t?.notifications || !Array.isArray(t.notifications)) return []
+  return t.notifications
+})
 
 function isImage(path) {
   return /\.(jpg|jpeg|png|gif|webp)$/i.test(path || '')
@@ -128,7 +145,7 @@ async function load() {
     if (task.value?.id) {
       const p = await getProgress(task.value.id)
       progressData.value = { progress: p.progress ?? 0, stepProgressList: p.stepProgressList ?? [] }
-      if (['COMPLETED', 'FAILED'].includes(task.value?.status) && task.value?.outputPath) {
+      if (task.value?.outputPath) {
         try {
           const info = await getPreviewInfo(task.value.id)
           const token = localStorage.getItem('transcoder_token')
@@ -197,4 +214,6 @@ onBeforeUnmount(() => {
 .preview-video-wrap { aspect-ratio: 16/9; max-width: 400px; min-height: 180px; background: #000; }
 .preview-video { width: 100%; height: 100%; display: block; object-fit: contain; }
 .preview-audio { max-width: 400px; }
+.notification-item { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.notification-target { font-family: monospace; font-size: 12px; word-break: break-all; }
 </style>

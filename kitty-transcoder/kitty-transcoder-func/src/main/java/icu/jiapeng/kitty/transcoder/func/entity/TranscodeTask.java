@@ -1,5 +1,6 @@
 package icu.jiapeng.kitty.transcoder.func.entity;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -28,6 +29,7 @@ public class TranscodeTask {
     private String watermarkPosition;
     private Integer priority;
     private Integer retryCount;
+    @TableField("notification_config")
     private String notificationConfig;
     private LocalDateTime createdAt;
     private LocalDateTime startedAt;

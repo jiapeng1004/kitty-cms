@@ -75,6 +75,11 @@ public interface AuthService {
     List<AccessKeyVO> listAccessKeys();
 
     /**
+     * 按 accessKeyId 查询单个 Access Key（不含 secretKey）
+     */
+    AccessKeyVO getAccessKey(String accessKeyId);
+
+    /**
      * 删除 Access Key（按 accessKeyId）
      * @param accessKeyId Access Key ID
      * @return 是否删除成功
