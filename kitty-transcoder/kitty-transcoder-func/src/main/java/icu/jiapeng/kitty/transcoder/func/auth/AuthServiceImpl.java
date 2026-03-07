@@ -74,7 +74,9 @@ public class AuthServiceImpl implements AuthService {
         params.put("Timestamp", String.valueOf(timestamp));
         params.remove("Signature");
         String canonical = SignatureVerifier.buildCanonicalizedQueryString(params);
-        String stringToSign = SignatureVerifier.buildStringToSign("GET", canonical);
+        String method = params.get("Method");
+        if (method == null || method.isBlank()) method = "GET";
+        String stringToSign = SignatureVerifier.buildStringToSign(method, canonical);
         try {
             return SignatureVerifier.computeSignature(stringToSign, secretKey);
         } catch (NoSuchAlgorithmException | InvalidKeyException e) {
