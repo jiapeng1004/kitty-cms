@@ -1,5 +1,6 @@
 package icu.jiapeng.kitty.transcoder.func.engine;
 
+import cn.hutool.core.util.NumberUtil;
 import icu.jiapeng.kitty.transcoder.api.StepProgressItem;
 import icu.jiapeng.kitty.transcoder.api.StrategyStepVO;
 import icu.jiapeng.kitty.transcoder.api.StrategyVO;
@@ -18,6 +19,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -43,7 +46,7 @@ public class TranscodeEngine {
      */
     public String transcodeSingleTarget(String taskId, String inputFile,
                                         String targetFormat, String resolution, Integer bitrate, Integer frameRate,
-                                        ProgressCallback progressCallback) throws Exception {
+                                        ProgressCallback progressCallback) {
         StrategyStepVO step = new StrategyStepVO();
         step.setStepId(1);
         step.setType(StepExecutorType.TRANSCODE.getCode());
@@ -70,7 +73,7 @@ public class TranscodeEngine {
             defaultStep.setBitrate(5000);
             defaultStep.setFrameRate(30);
             defaultStep.setEncoder("h264");
-            StepContextImpl ctx = new StepContextImpl((sid, p) -> {
+            StepContextImpl ctx = new StepContextImpl((_, _) -> {
                 throw new UnsupportedOperationException();
             });
             ctx.setTaskId(taskId);
@@ -85,20 +88,14 @@ public class TranscodeEngine {
     }
 
     private String runWithDependencies(String taskId, String taskInputPath, StrategyVO strategy,
-                                       String watermarkUrl, String watermarkPosition, ProgressCallback progressCallback) throws Exception {
+                                       String watermarkUrl, String watermarkPosition, ProgressCallback progressCallback) {
         List<StrategyStepVO> steps = strategy.getSteps();
-        Map<Integer, StrategyStepVO> stepByStepId = new HashMap<>();
-        List<Integer> stepIds = new ArrayList<>();
-        for (StrategyStepVO s : steps) {
-            int sid = s.getStepId() != null ? s.getStepId() : (stepIds.size() + 1);
-            stepByStepId.put(sid, s);
-            stepIds.add(sid);
-        }
-        Map<Integer, int[]> depsMap = new HashMap<>();
+        Map<Integer, StrategyStepVO> stepByStepId = steps.stream().collect(Collectors.toMap(StrategyStepVO::getStepId, Function.identity(), (o1, _)->o1));
+        List<Integer> stepIds = stepByStepId.keySet().stream().toList();
+        Map<Integer, Integer[]> depsMap = new HashMap<>();
         for (Map.Entry<Integer, StrategyStepVO> e : stepByStepId.entrySet()) {
-            depsMap.put(e.getKey(), parseDepends(e.getValue().getDepends()));
+            depsMap.put(e.getKey(), Arrays.stream(e.getValue().getDepends().split( ",")).filter(NumberUtil::isInteger).map(Integer::valueOf).toArray(Integer[]::new));
         }
-
         StepContextImpl.RunStrategyCallback runStrategyCallback = (strategyId, inputPath) -> {
             StrategyVO sub = strategyService.getStrategy(strategyId);
             if (sub == null) throw new IllegalArgumentException("策略不存在：" + strategyId);
@@ -137,16 +134,16 @@ public class TranscodeEngine {
                 int overall = n > 0 ? Math.min(100, sum / n) : 0;
                 progressCallback.updateProgress(taskId, "PROCESSING", overall, merged);
             };
-            ((StepContextImpl) ctx).setStepProgressReporter(reporter);
+            ctx.setStepProgressReporter(reporter);
             List<StepProgressItem> stepList = buildStepProgressList(stepByStepId, stepIds, completed, level, false);
             if (progressCallback != null && !stepList.isEmpty()) {
                 progressCallback.updateProgress(taskId, "PROCESSING", (completed * 100) / n, stepList);
             }
             List<CompletableFuture<Void>> futures = new ArrayList<>();
-            for (int sid : level) {
+            for (Integer sid : level) {
                 StrategyStepVO step = stepByStepId.get(sid);
                 if (step == null) continue;
-                int[] deps = depsMap.get(sid);
+                Integer[] deps = depsMap.get(sid);
                 String inputPath;
                 if (step.getInputTemplate() != null && !step.getInputTemplate().isBlank()) {
                     inputPath = StepTemplateResolver.resolve(step.getInputTemplate(), taskId, taskInputPath, stepOutputs, sid, workDir);
@@ -209,9 +206,9 @@ public class TranscodeEngine {
         return lastOutput;
     }
 
-    private static int maxOf(int[] a) {
+    private static Integer maxOf(Integer[] a) {
         if (a.length == 0) return -1;
-        int m = a[0];
+        Integer m = a[0];
         for (int i = 1; i < a.length; i++) if (a[i] > m) m = a[i];
         return m;
     }
@@ -261,32 +258,22 @@ public class TranscodeEngine {
         return list;
     }
 
-    /** 解析依赖步骤序号：逗号分隔，从 1 开始，如 "1" 或 "1,2"；空表示无依赖。 */
-    private static int[] parseDepends(String depends) {
-        if (depends == null || depends.isBlank()) return new int[0];
-        String s = depends.trim();
-        String[] parts = s.split(",");
-        int[] out = new int[parts.length];
-        for (int i = 0; i < parts.length; i++) out[i] = Integer.parseInt(parts[i].trim());
-        return out;
-    }
-
     /**
      * 在无依赖的叶子步骤中选取「主输出」步骤。
      * 多输出时优先选 transcode（转码视频），其次 sprite/extract_frames，避免雪碧图等图片被当作主输出。
      */
-    private static int findLastStepByTopology(List<Integer> stepIds, Map<Integer, int[]> depsMap,
+    private static int findLastStepByTopology(List<Integer> stepIds, Map<Integer, Integer[]> depsMap,
                                               Map<Integer, StrategyStepVO> stepByStepId) {
         Set<Integer> hasDependent = new HashSet<>();
-        for (int sid : stepIds) {
-            int[] deps = depsMap.get(sid);
-            if (deps != null) for (int d : deps) hasDependent.add(d);
+        for (Integer sid : stepIds) {
+            Integer[] deps = depsMap.get(sid);
+            if (deps != null) hasDependent.addAll(Arrays.asList(deps));
         }
         List<Integer> leaves = new ArrayList<>();
-        for (int sid : stepIds) {
+        for (Integer sid : stepIds) {
             if (!hasDependent.contains(sid)) leaves.add(sid);
         }
-        if (leaves.isEmpty()) return stepIds.get(stepIds.size() - 1);
+        if (leaves.isEmpty()) return stepIds.getLast();
         // 优先选 transcode 作为主输出（视频文件更符合「主输出」预期），取 stepId 最小的（通常为 1080p 等主规格）
         int transcodeFirst = Integer.MAX_VALUE;
         for (int sid : leaves) {
@@ -295,7 +282,7 @@ public class TranscodeEngine {
             if ("transcode".equals(type)) transcodeFirst = Math.min(transcodeFirst, sid);
         }
         if (transcodeFirst < Integer.MAX_VALUE) return transcodeFirst;
-        return leaves.stream().max(Integer::compareTo).orElse(stepIds.get(stepIds.size() - 1));
+        return leaves.stream().max(Integer::compareTo).orElse(stepIds.getLast());
     }
 
     private static List<StepProgressItem> buildStepProgressList(Map<Integer, StrategyStepVO> stepByStepId,
@@ -357,16 +344,16 @@ public class TranscodeEngine {
         };
     }
 
-    private static List<List<Integer>> buildLevels(List<Integer> stepIds, Map<Integer, int[]> depsMap) {
+    private static List<List<Integer>> buildLevels(List<Integer> stepIds, Map<Integer, Integer[]> depsMap) {
         Set<Integer> done = new HashSet<>();
         List<List<Integer>> levels = new ArrayList<>();
         int n = stepIds.size();
         while (done.size() < n) {
             List<Integer> level = new ArrayList<>();
-            for (int sid : stepIds) {
+            for (Integer sid : stepIds) {
                 if (done.contains(sid)) continue;
-                int[] deps = depsMap.get(sid);
-                if (deps == null) deps = new int[0];
+                Integer[] deps = depsMap.get(sid);
+                if (deps == null) deps = new Integer[0];
                 boolean allDone = true;
                 for (int d : deps) {
                     if (!done.contains(d)) {

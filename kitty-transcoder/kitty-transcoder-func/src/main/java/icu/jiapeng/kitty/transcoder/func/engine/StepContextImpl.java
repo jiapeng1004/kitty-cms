@@ -1,6 +1,7 @@
 package icu.jiapeng.kitty.transcoder.func.engine;
 
 import icu.jiapeng.kitty.transcoder.api.ProbeResult;
+import lombok.Setter;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -21,19 +22,13 @@ public class StepContextImpl implements StepContext {
     private String workDir;
     private final Map<Integer, ProbeResult> probeResults = new ConcurrentHashMap<>();
     private final RunStrategyCallback runStrategyCallback;
+    @Setter
     private volatile BiConsumer<Integer, Integer> stepProgressReporter;
+    @Setter
     private volatile BooleanSupplier cancellationChecker;
 
     public StepContextImpl(RunStrategyCallback runStrategyCallback) {
         this.runStrategyCallback = runStrategyCallback;
-    }
-
-    public void setStepProgressReporter(BiConsumer<Integer, Integer> reporter) {
-        this.stepProgressReporter = reporter;
-    }
-
-    public void setCancellationChecker(BooleanSupplier checker) {
-        this.cancellationChecker = checker;
     }
 
     @Override
