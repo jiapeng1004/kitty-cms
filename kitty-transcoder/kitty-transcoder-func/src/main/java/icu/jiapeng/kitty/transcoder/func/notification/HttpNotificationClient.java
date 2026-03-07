@@ -3,10 +3,9 @@ package icu.jiapeng.kitty.transcoder.func.notification;
 import com.alibaba.fastjson.JSON;
 import icu.jiapeng.kitty.transcoder.api.NotificationConfig;
 import icu.jiapeng.kitty.transcoder.api.TranscodeProgressNotifyVO;
+import lombok.extern.slf4j.Slf4j;
 import okhttp3.*;
 import org.jspecify.annotations.NonNull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -17,9 +16,9 @@ import java.util.concurrent.TimeUnit;
  * 与 gRPC 共用 TranscodeProgressNotifyVO，格式一致。
  */
 @Component
+@Slf4j
 public class HttpNotificationClient implements NotificationClient {
 
-    private static final Logger log = LoggerFactory.getLogger(HttpNotificationClient.class);
     private static final MediaType JSON_MEDIA = MediaType.parse("application/json; charset=utf-8");
 
     private final OkHttpClient client = new OkHttpClient.Builder()

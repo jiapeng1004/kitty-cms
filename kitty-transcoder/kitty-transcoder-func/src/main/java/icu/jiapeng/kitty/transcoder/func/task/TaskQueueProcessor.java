@@ -1,5 +1,6 @@
 package icu.jiapeng.kitty.transcoder.func.task;
 
+import icu.jiapeng.kitty.transcoder.func.constants.TranscodeConstants.RedisKeys;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
@@ -11,8 +12,6 @@ import org.springframework.stereotype.Component;
 @Component
 @Slf4j
 public class TaskQueueProcessor implements CommandLineRunner {
-
-    private static final String TASK_QUEUE_KEY = "transcode:task:queue";
 
     @Resource
     private RedissonClient redissonClient;
@@ -29,7 +28,7 @@ public class TaskQueueProcessor implements CommandLineRunner {
      * 处理任务队列
      */
     private void processTasks() {
-        RBlockingQueue<String> taskQueue = redissonClient.getBlockingQueue(TASK_QUEUE_KEY);
+        RBlockingQueue<String> taskQueue = redissonClient.getBlockingQueue(RedisKeys.TASK_QUEUE_KEY);
         while (true) {
             try {
                 // 从队列中取出任务
@@ -38,7 +37,6 @@ public class TaskQueueProcessor implements CommandLineRunner {
                     try {
                         taskService.processTask(taskId);
                     } catch (Exception e) {
-                        // 记录错误
                         log.error("处理任务失败: {}", taskId, e);
                     }
                 }).start();

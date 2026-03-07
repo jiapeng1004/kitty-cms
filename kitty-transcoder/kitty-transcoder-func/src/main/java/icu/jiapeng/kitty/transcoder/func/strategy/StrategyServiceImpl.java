@@ -10,8 +10,9 @@ import icu.jiapeng.kitty.transcoder.func.entity.TranscodeStrategyStep;
 import icu.jiapeng.kitty.transcoder.func.entity.TranscodeTask;
 import icu.jiapeng.kitty.transcoder.func.mapper.TranscodeStrategyStepMapper;
 import icu.jiapeng.kitty.transcoder.func.mapper.TranscodeTaskMapper;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import jakarta.annotation.Resource;
 
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -21,10 +22,10 @@ import java.util.stream.Collectors;
 @Service
 public class StrategyServiceImpl implements StrategyService {
 
-    @Autowired
+    @Resource
     private TranscodeStrategyStepMapper stepMapper;
 
-    @Autowired
+    @Resource
     private TranscodeTaskMapper taskMapper;
 
     @Override

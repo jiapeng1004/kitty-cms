@@ -127,7 +127,7 @@ public class PreviewService {
         try {
             return Path.of(path).toRealPath().normalize().toString().toLowerCase().replace('\\', '/');
         } catch (Exception e) {
-            return path.toLowerCase().replace('\\', '/');
+            return path == null ? null : path.toLowerCase().replace('\\', '/');
         }
     }
 

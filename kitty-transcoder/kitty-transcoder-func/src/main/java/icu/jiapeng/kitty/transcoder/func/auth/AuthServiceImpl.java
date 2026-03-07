@@ -10,8 +10,11 @@ import org.redisson.api.RBucket;
 import org.redisson.api.RMap;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.redisson.api.RedissonClient;
-import org.springframework.beans.factory.annotation.Autowired;
+import icu.jiapeng.kitty.transcoder.func.constants.TranscodeConstants.AccessKeyStatus;
+import icu.jiapeng.kitty.transcoder.func.constants.TranscodeConstants.RedisKeys;
 import org.springframework.stereotype.Service;
+
+import jakarta.annotation.Resource;
 
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -26,14 +29,11 @@ import java.util.stream.Collectors;
 @Service
 public class AuthServiceImpl implements AuthService {
 
-    private static final String SESSION_KEY_PREFIX = "transcode:session:token:";
-    private static final String NONCE_KEY_PREFIX = "transcode:signature:nonce:";
-
-    @Autowired
+    @Resource
     private RedissonClient redissonClient;
-    @Autowired
+    @Resource
     private TranscodeAccessKeyMapper accessKeyMapper;
-    @Autowired
+    @Resource
     private AuthConfig authConfig;
 
     @Override
@@ -56,7 +56,7 @@ public class AuthServiceImpl implements AuthService {
         return accessKeyMapper.selectOne(
                 new LambdaQueryWrapper<TranscodeAccessKey>()
                         .eq(TranscodeAccessKey::getAccessKeyId, accessKey)
-                        .eq(TranscodeAccessKey::getStatus, "ACTIVE")) != null;
+                        .eq(TranscodeAccessKey::getStatus, AccessKeyStatus.ACTIVE)) != null;
     }
 
     @Override
@@ -98,7 +98,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public String generateLoginToken(String accessKey) {
         String token = "TOKEN" + UUID.randomUUID().toString().replace("-", "");
-        RMap<String, Object> session = redissonClient.getMap(SESSION_KEY_PREFIX + token);
+        RMap<String, Object> session = redissonClient.getMap(RedisKeys.SESSION_KEY_PREFIX + token);
         session.put("accessKeyId", accessKey);
         session.put("createdAt", System.currentTimeMillis());
         long ttl = authConfig.getSession().getTtlSeconds();
@@ -108,7 +108,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public boolean validateLoginToken(String token) {
-        RMap<String, Object> session = redissonClient.getMap(SESSION_KEY_PREFIX + token);
+        RMap<String, Object> session = redissonClient.getMap(RedisKeys.SESSION_KEY_PREFIX + token);
         return session.isExists();
     }
 
@@ -116,7 +116,7 @@ public class AuthServiceImpl implements AuthService {
      * 校验签名并消费 Nonce（防重放）。若通过则将 nonce 写入 Redis 并设置 TTL。
      */
     public boolean validateSignatureAndConsumeNonce(String accessKeyId, String signature, String signatureNonce, long timestampSec, Map<String, String> allParams) {
-        String nonceKey = NONCE_KEY_PREFIX + signatureNonce;
+        String nonceKey = RedisKeys.NONCE_KEY_PREFIX + signatureNonce;
         RBucket<String> bucket = redissonClient.getBucket(nonceKey);
         if (bucket.isExists()) return false;
         if (!validateSignature(accessKeyId, signature, allParams, timestampSec)) return false;

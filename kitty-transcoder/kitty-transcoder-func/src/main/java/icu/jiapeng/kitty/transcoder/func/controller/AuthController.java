@@ -2,7 +2,7 @@ package icu.jiapeng.kitty.transcoder.func.controller;
 
 import icu.jiapeng.kitty.transcoder.api.*;
 import icu.jiapeng.kitty.transcoder.func.auth.AuthService;
-import icu.jiapeng.kitty.transcoder.func.auth.TokenAuthFilter;
+import icu.jiapeng.kitty.transcoder.func.constants.TranscodeConstants;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
@@ -26,7 +26,7 @@ public class AuthController {
     public AccessKeyVO getCurrentAccessKey() {
         String accessKeyId = null;
         if (RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes attrs) {
-            accessKeyId = (String) attrs.getRequest().getAttribute(TokenAuthFilter.ATTR_ACCESS_KEY_ID);
+            accessKeyId = (String) attrs.getRequest().getAttribute(TranscodeConstants.ATTR_ACCESS_KEY_ID);
         }
         if (accessKeyId == null || accessKeyId.isBlank()) {
             throw new RuntimeException("未登录或 Token 已失效");

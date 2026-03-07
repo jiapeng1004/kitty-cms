@@ -1,5 +1,7 @@
 package icu.jiapeng.kitty.transcoder.func.grpc;
 
+import icu.jiapeng.kitty.transcoder.func.constants.TranscodeConstants;
+import icu.jiapeng.kitty.transcoder.func.constants.TranscodeConstants.RedisKeys;
 import io.grpc.*;
 import org.redisson.api.RMap;
 import org.redisson.api.RedissonClient;
@@ -16,8 +18,7 @@ import java.util.Map;
 //@GlobalServerInterceptor
 public class TranscoderGrpcAuthInterceptor implements ServerInterceptor {
 
-    private static final String SESSION_KEY_PREFIX = "transcode:session:token:";
-    public static final Context.Key<String> ACCESS_KEY_ID_CTX = Context.key("transcode.accessKeyId");
+    public static final Context.Key<String> ACCESS_KEY_ID_CTX = Context.key(TranscodeConstants.ATTR_ACCESS_KEY_ID);
 
 //    @Autowired
     private RedissonClient redissonClient;
@@ -37,7 +38,7 @@ public class TranscoderGrpcAuthInterceptor implements ServerInterceptor {
         if (auth != null && auth.startsWith("Bearer ")) {
             String token = auth.substring(7).trim();
             if (!token.isEmpty() && authService.validateLoginToken(token)) {
-                RMap<String, Object> session = redissonClient.getMap(SESSION_KEY_PREFIX + token);
+                RMap<String, Object> session = redissonClient.getMap(RedisKeys.SESSION_KEY_PREFIX + token);
                 Object ak = session.get("accessKeyId");
                 if (ak != null) accessKeyId = ak.toString();
             }

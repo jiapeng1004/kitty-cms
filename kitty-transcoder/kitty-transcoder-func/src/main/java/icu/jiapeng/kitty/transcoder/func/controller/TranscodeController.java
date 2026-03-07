@@ -1,8 +1,8 @@
 package icu.jiapeng.kitty.transcoder.func.controller;
 
 import icu.jiapeng.kitty.transcoder.api.*;
+import icu.jiapeng.kitty.transcoder.func.constants.TranscodeConstants;
 import jakarta.validation.Valid;
-import icu.jiapeng.kitty.transcoder.func.auth.TokenAuthFilter;
 import icu.jiapeng.kitty.transcoder.func.strategy.StrategyExportService;
 import icu.jiapeng.kitty.transcoder.func.strategy.StrategyService;
 import icu.jiapeng.kitty.transcoder.func.task.TaskService;
@@ -10,8 +10,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -22,9 +21,8 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/transcode")
 @Tag(name = "转码任务与策略", description = "任务 CRUD、进度、策略管理、SSE 实时推送")
+@Slf4j
 public class TranscodeController implements TranscodeApi {
-
-    private static final Logger log = LoggerFactory.getLogger(TranscodeController.class);
 
     @Resource
     private TaskService taskService;
@@ -40,7 +38,7 @@ public class TranscodeController implements TranscodeApi {
     public String createTask(@RequestBody CreateTaskRequest request) {
         String accessKeyId = null;
         if (RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes attrs) {
-            accessKeyId = (String) attrs.getRequest().getAttribute(TokenAuthFilter.ATTR_ACCESS_KEY_ID);
+            accessKeyId = (String) attrs.getRequest().getAttribute(TranscodeConstants.ATTR_ACCESS_KEY_ID);
         }
         return taskService.createTask(request, accessKeyId);
     }

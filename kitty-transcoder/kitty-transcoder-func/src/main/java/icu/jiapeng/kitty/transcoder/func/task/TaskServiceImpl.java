@@ -19,12 +19,18 @@ import icu.jiapeng.kitty.transcoder.api.TranscodeProgressNotifyVO;
 import icu.jiapeng.kitty.transcoder.func.notification.NotificationDispatcher;
 import icu.jiapeng.kitty.transcoder.api.StrategyStepVO;
 import icu.jiapeng.kitty.transcoder.api.StrategyVO;
+import icu.jiapeng.kitty.transcoder.func.constants.TranscodeConstants;
+import icu.jiapeng.kitty.transcoder.func.constants.TranscodeConstants.RedisKeys;
+import icu.jiapeng.kitty.transcoder.func.constants.TranscodeConstants.TaskStatus;
+import icu.jiapeng.kitty.transcoder.func.constants.TranscodeConstants.InputType;
+import icu.jiapeng.kitty.transcoder.func.constants.TranscodeConstants.TaskType;
 import icu.jiapeng.kitty.transcoder.func.strategy.StrategyService;
 import org.redisson.api.RBlockingQueue;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import jakarta.annotation.Resource;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.nio.file.Paths;
@@ -42,26 +48,23 @@ import java.util.concurrent.locks.LockSupport;
 @Service
 public class TaskServiceImpl implements TaskService {
 
-    private static final String TASK_QUEUE_KEY = "transcode:task:queue";
-    private static final String TASK_LOCK_PREFIX = "transcode:task:lock:";
-
-    @Autowired
+    @Resource
     private RedissonClient redissonClient;
-    @Autowired
+    @Resource
     private TranscodeTaskMapper taskMapper;
-    @Autowired
+    @Resource
     private TranscodeEngine transcodeEngine;
-    @Autowired
+    @Resource
     private TranscodeConfig transcodeConfig;
-    @Autowired
+    @Resource
     private TaskVoMapper taskVoMapper;
-    @Autowired
+    @Resource
     private StrategyService strategyService;
-    @Autowired
+    @Resource
     private ProgressBroadcaster progressBroadcaster;
-    @Autowired
+    @Resource
     private NotificationDispatcher notificationDispatcher;
-    @Autowired
+    @Resource
     private TaskCancellationRegistry cancellationRegistry;
 
     @Override
@@ -71,12 +74,12 @@ public class TaskServiceImpl implements TaskService {
         if (inputPath == null || inputPath.isBlank()) {
             throw new IllegalArgumentException("输入不能为空");
         }
-        String inputType = request.getInputType() != null ? request.getInputType() : "DISK";
+        String inputType = request.getInputType() != null ? request.getInputType() : InputType.DISK;
         Integer priority = request.getPriority() != null ? request.getPriority() : 5;
 
         TranscodeTask entity = new TranscodeTask();
         entity.setId(taskId);
-        entity.setTaskType("SCHEDULED_TRANSCODE");
+        entity.setTaskType(TaskType.SCHEDULED_TRANSCODE);
         entity.setInputType(inputType);
         entity.setInputPath(inputPath);
         entity.setStrategyId(request.getStrategyId());
@@ -85,7 +88,7 @@ public class TaskServiceImpl implements TaskService {
         if (request.getNotifications() != null && !request.getNotifications().isEmpty()) {
             entity.setNotificationConfig(JSON.toJSONString(request.getNotifications()));
         }
-        entity.setStatus("PENDING");
+        entity.setStatus(TaskStatus.PENDING);
         entity.setProgress(0);
         entity.setPriority(priority);
         entity.setRetryCount(0);
@@ -93,7 +96,7 @@ public class TaskServiceImpl implements TaskService {
         entity.setCreatedByAk(createdByAk);
         taskMapper.insert(entity);
 
-        RBlockingQueue<String> queue = redissonClient.getBlockingQueue(TASK_QUEUE_KEY);
+        RBlockingQueue<String> queue = redissonClient.getBlockingQueue(RedisKeys.TASK_QUEUE_KEY);
         queue.offer(taskId);
         return taskId;
     }
@@ -177,10 +180,10 @@ public class TaskServiceImpl implements TaskService {
         cancellationRegistry.markCancelled(taskId);
         TranscodeTask entity = taskMapper.selectById(taskId);
         LambdaUpdateWrapper<TranscodeTask> u = new LambdaUpdateWrapper<>();
-        u.eq(TranscodeTask::getId, taskId).set(TranscodeTask::getStatus, "CANCELLED");
+        u.eq(TranscodeTask::getId, taskId).set(TranscodeTask::getStatus, TaskStatus.CANCELLED);
         boolean ok = taskMapper.update(null, u) > 0;
         if (ok && entity != null) {
-            entity.setStatus("CANCELLED");
+            entity.setStatus(TaskStatus.CANCELLED);
             fireProgressNotification(taskId, entity, entity.getProgress() != null ? entity.getProgress() : 0);
         }
         return ok;
@@ -194,24 +197,25 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public void processTask(String taskId) {
-        RLock lock = redissonClient.getLock(TASK_LOCK_PREFIX + taskId);
+        RLock lock = redissonClient.getLock(RedisKeys.TASK_LOCK_PREFIX + taskId);
         try {
             if (!lock.tryLock(2, 300, TimeUnit.SECONDS)) {
                 return;
             }
             TranscodeTask entity = taskMapper.selectById(taskId);
-            if (entity == null || "CANCELLED".equals(entity.getStatus())) {
+            if (entity == null || TaskStatus.CANCELLED.equals(entity.getStatus())) {
                 return;
             }
-            entity.setStatus("PROCESSING");
+            entity.setStatus(TaskStatus.PROCESSING);
             entity.setStartedAt(LocalDateTime.now());
             String outputBaseDir = computeOutputBaseDir(taskId, entity.getStrategyId());
-            if (outputBaseDir != null) entity.setOutputPath(outputBaseDir);
+            if (outputBaseDir != null)             entity.setOutputPath(outputBaseDir);
             taskMapper.updateById(entity);
             fireProgressNotification(taskId, entity, 0);
+            cancellationRegistry.registerRunning(taskId);
 
             String localPath = entity.getInputPath();
-            if ("HTTP".equalsIgnoreCase(entity.getInputType())) {
+            if (InputType.HTTP.equalsIgnoreCase(entity.getInputType())) {
                 localPath = resolveHttpInput(localPath, taskId, entity.getStrategyId());
             }
             String outputPath = transcodeEngine.transcode(taskId, localPath, entity.getStrategyId(),
@@ -219,7 +223,7 @@ public class TaskServiceImpl implements TaskService {
                     this::updateTaskStatus);
             String outputHttpUrl = buildOutputHttpUrl(outputPath);
 
-            entity.setStatus("COMPLETED");
+            entity.setStatus(TaskStatus.COMPLETED);
             entity.setProgress(100);
             entity.setOutputPath(outputPath);
             entity.setOutputHttpUrl(outputHttpUrl);
@@ -236,19 +240,19 @@ public class TaskServiceImpl implements TaskService {
             boolean cancelled = msg != null && msg.contains("任务已取消");
             if (cancelled) {
                 LambdaUpdateWrapper<TranscodeTask> u = new LambdaUpdateWrapper<>();
-                u.eq(TranscodeTask::getId, taskId).set(TranscodeTask::getStatus, "CANCELLED");
+                u.eq(TranscodeTask::getId, taskId).set(TranscodeTask::getStatus, TaskStatus.CANCELLED);
                 taskMapper.update(null, u);
                 TranscodeTask entity = taskMapper.selectById(taskId);
                 if (entity != null) fireProgressNotification(taskId, entity, entity.getProgress() != null ? entity.getProgress() : 0);
             } else {
-                if (msg != null && msg.startsWith("STEP_FAILED:")) {
-                    int idx = msg.indexOf(':', 11);
+                if (msg != null && msg.startsWith(TranscodeConstants.STEP_FAILED_PREFIX)) {
+                    int idx = msg.indexOf(':', TranscodeConstants.STEP_FAILED_PREFIX.length());
                     msg = idx > 0 ? msg.substring(idx + 1) : msg;
                 }
                 updateTaskError(taskId, "转码失败：" + (msg != null ? msg : e.getClass().getSimpleName()));
                 TranscodeTask entity = taskMapper.selectById(taskId);
                 if (entity != null) {
-                    entity.setStatus("FAILED");
+                    entity.setStatus(TaskStatus.FAILED);
                     taskMapper.updateById(entity);
                     fireProgressNotification(taskId, entity, entity.getProgress() != null ? entity.getProgress() : 0);
                 }
@@ -379,7 +383,7 @@ public class TaskServiceImpl implements TaskService {
         ProgressVO vo = new ProgressVO();
         vo.setTaskId(taskId);
         vo.setProgress(entity != null ? entity.getProgress() : 0);
-        vo.setStatus(entity != null ? entity.getStatus() : "PENDING");
+        vo.setStatus(entity != null ? entity.getStatus() : TaskStatus.PENDING);
         if (entity != null && entity.getProgressDetail() != null && !entity.getProgressDetail().isBlank()) {
             try {
                 List<StepProgressItem> list = JSON.parseArray(entity.getProgressDetail(), StepProgressItem.class);
@@ -427,7 +431,7 @@ public class TaskServiceImpl implements TaskService {
                 while (true) {
                     ProgressVO progress = getProgress(taskId);
                     emitter.send(SseEmitter.event().id(String.valueOf(System.currentTimeMillis())).name("progress").data(progress));
-                    if ("COMPLETED".equals(progress.getStatus()) || "FAILED".equals(progress.getStatus()) || "CANCELLED".equals(progress.getStatus())) {
+                    if (TaskStatus.COMPLETED.equals(progress.getStatus()) || TaskStatus.FAILED.equals(progress.getStatus()) || TaskStatus.CANCELLED.equals(progress.getStatus())) {
                         emitter.complete();
                         break;
                     }
@@ -450,10 +454,10 @@ public class TaskServiceImpl implements TaskService {
         TranscodeTask entity = new TranscodeTask();
         entity.setId(taskId);
         entity.setTaskType(taskType);
-        entity.setInputType(inputType != null ? inputType : "DISK");
+        entity.setInputType(inputType != null ? inputType : InputType.DISK);
         entity.setInputPath(inputPath);
         entity.setStrategyId(null);
-        entity.setStatus("PROCESSING");
+        entity.setStatus(TaskStatus.PROCESSING);
         entity.setProgress(0);
         entity.setCreatedAt(LocalDateTime.now());
         taskMapper.insert(entity);
@@ -463,7 +467,7 @@ public class TaskServiceImpl implements TaskService {
     public void completeMagicTask(String taskId, String outputPath, String outputHttpUrl) {
         LambdaUpdateWrapper<TranscodeTask> u = new LambdaUpdateWrapper<>();
         u.eq(TranscodeTask::getId, taskId)
-                .set(TranscodeTask::getStatus, "COMPLETED")
+                .set(TranscodeTask::getStatus, TaskStatus.COMPLETED)
                 .set(TranscodeTask::getProgress, 100)
                 .set(TranscodeTask::getOutputPath, outputPath)
                 .set(TranscodeTask::getOutputHttpUrl, outputHttpUrl)

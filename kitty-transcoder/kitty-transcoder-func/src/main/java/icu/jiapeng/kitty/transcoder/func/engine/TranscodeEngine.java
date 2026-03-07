@@ -5,6 +5,8 @@ import icu.jiapeng.kitty.transcoder.api.StepProgressItem;
 import icu.jiapeng.kitty.transcoder.api.StrategyStepVO;
 import icu.jiapeng.kitty.transcoder.api.StrategyVO;
 import icu.jiapeng.kitty.transcoder.func.config.TranscodeConfig;
+import icu.jiapeng.kitty.transcoder.func.constants.TranscodeConstants;
+import icu.jiapeng.kitty.transcoder.func.constants.TranscodeConstants.TaskStatus;
 import icu.jiapeng.kitty.transcoder.func.strategy.StrategyService;
 import icu.jiapeng.kitty.transcoder.func.task.TaskCancellationRegistry;
 import jakarta.annotation.Resource;
@@ -132,12 +134,12 @@ public class TranscodeEngine {
                     sum += (p != null ? p.get() : 0);
                 }
                 int overall = n > 0 ? Math.min(100, sum / n) : 0;
-                progressCallback.updateProgress(taskId, "PROCESSING", overall, merged);
+                progressCallback.updateProgress(taskId, TaskStatus.PROCESSING, overall, merged);
             };
             ctx.setStepProgressReporter(reporter);
             List<StepProgressItem> stepList = buildStepProgressList(stepByStepId, stepIds, completed, level, false);
             if (progressCallback != null && !stepList.isEmpty()) {
-                progressCallback.updateProgress(taskId, "PROCESSING", (completed * 100) / n, stepList);
+                progressCallback.updateProgress(taskId, TaskStatus.PROCESSING, (completed * 100) / n, stepList);
             }
             List<CompletableFuture<Void>> futures = new ArrayList<>();
             for (Integer sid : level) {
@@ -174,7 +176,7 @@ public class TranscodeEngine {
                         stepOutputs.put(stepIdForPut, out);
                     } catch (Exception e) {
                         log.error("步骤 {} 执行失败", sid, e);
-                        throw new RuntimeException("STEP_FAILED:" + sid + ":" + e.getMessage(), e);
+                        throw new RuntimeException(TranscodeConstants.STEP_FAILED_PREFIX + sid + ":" + e.getMessage(), e);
                     } finally {
                         StepContextImpl.clearCurrentStepIndexForThread();
                     }
@@ -188,7 +190,7 @@ public class TranscodeEngine {
                 if (progressCallback != null && failedStepId > 0) {
                     List<StepProgressItem> failedList = buildStepProgressListWithFailure(
                             stepByStepId, stepIds, completedBeforeLevel, levelSteps, failedStepId);
-                    progressCallback.updateProgress(taskId, "FAILED",
+                    progressCallback.updateProgress(taskId, TaskStatus.FAILED,
                             Math.min(100, (completedBeforeLevel + levelSteps.size()) * 100 / n), failedList);
                 }
                 throw e;
@@ -216,11 +218,12 @@ public class TranscodeEngine {
     private static int extractFailedStepId(Throwable cause) {
         if (cause == null || cause.getMessage() == null) return -1;
         String msg = cause.getMessage();
-        if (!msg.startsWith("STEP_FAILED:")) return -1;
-        int colon = msg.indexOf(':', 11);
-        if (colon <= 11) return -1;
+        if (!msg.startsWith(TranscodeConstants.STEP_FAILED_PREFIX)) return -1;
+        int prefixLen = TranscodeConstants.STEP_FAILED_PREFIX.length();
+        int colon = msg.indexOf(':', prefixLen);
+        if (colon <= prefixLen) return -1;
         try {
-            return Integer.parseInt(msg.substring(11, colon));
+            return Integer.parseInt(msg.substring(prefixLen, colon));
         } catch (NumberFormatException e) {
             return -1;
         }

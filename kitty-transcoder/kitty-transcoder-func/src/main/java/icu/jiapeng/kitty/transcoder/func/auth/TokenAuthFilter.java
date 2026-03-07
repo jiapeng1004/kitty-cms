@@ -11,6 +11,8 @@ import org.redisson.api.RedissonClient;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
+import icu.jiapeng.kitty.transcoder.func.constants.TranscodeConstants;
+import icu.jiapeng.kitty.transcoder.func.constants.TranscodeConstants.RedisKeys;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -20,14 +22,11 @@ import java.util.Map;
 /**
  * 认证过滤器：除白名单（如登录）外，所有请求必须通过认证。
  * 认证方式二选一：登录会话（Bearer / X-Api-Token）或 AK/SK 签名（X-Access-Key-Id + X-Signature + X-Timestamp + X-Signature-Nonce）。
- * 认证通过后将 accessKeyId 写入 request.setAttribute(ATTR_ACCESS_KEY_ID)。
+ * 认证通过后将 accessKeyId 写入 request.setAttribute(TranscodeConstants.ATTR_ACCESS_KEY_ID)。
  */
 @Component
 @Order(1)
 public class TokenAuthFilter extends OncePerRequestFilter {
-
-    private static final String SESSION_KEY_PREFIX = "transcode:session:token:";
-    public static final String ATTR_ACCESS_KEY_ID = "transcode.accessKeyId";
 
     /**
      * 不需要认证的路径：方法 + 路径（小写），例如 "POST /api/auth/login"
@@ -62,7 +61,7 @@ public class TokenAuthFilter extends OncePerRequestFilter {
             response.getWriter().write("{\"error\":\"未认证：请使用登录 Token（Authorization: Bearer 或 X-Api-Token）或 AK/SK 签名（X-Access-Key-Id / X-Signature / X-Timestamp / X-Signature-Nonce）\"}");
             return;
         }
-        request.setAttribute(ATTR_ACCESS_KEY_ID, accessKeyId);
+        request.setAttribute(TranscodeConstants.ATTR_ACCESS_KEY_ID, accessKeyId);
         filterChain.doFilter(request, response);
     }
 
@@ -84,7 +83,7 @@ public class TokenAuthFilter extends OncePerRequestFilter {
         if (token == null || token.isEmpty() || !authService.validateLoginToken(token)) {
             return null;
         }
-        RMap<String, Object> session = redissonClient.getMap(SESSION_KEY_PREFIX + token);
+        RMap<String, Object> session = redissonClient.getMap(RedisKeys.SESSION_KEY_PREFIX + token);
         Object ak = session.get("accessKeyId");
         return ak != null ? ak.toString() : null;
     }

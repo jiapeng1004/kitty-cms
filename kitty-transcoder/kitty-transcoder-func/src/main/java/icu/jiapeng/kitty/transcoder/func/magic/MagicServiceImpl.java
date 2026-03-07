@@ -6,6 +6,8 @@ import icu.jiapeng.kitty.transcoder.func.config.TranscodeConfig;
 import icu.jiapeng.kitty.transcoder.func.engine.MediaStepOps;
 import icu.jiapeng.kitty.transcoder.func.engine.TranscodeEngine;
 import icu.jiapeng.kitty.transcoder.func.file.HttpFileHandler;
+import icu.jiapeng.kitty.transcoder.func.constants.TranscodeConstants.InputType;
+import icu.jiapeng.kitty.transcoder.func.constants.TranscodeConstants.TaskStatus;
 import icu.jiapeng.kitty.transcoder.func.task.TaskService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -37,12 +39,12 @@ public class MagicServiceImpl implements MagicService {
         String taskId = UUID.randomUUID().toString().replace("-", "");
         String inputPath = request.getInputPath();
         if (inputPath == null || inputPath.isBlank()) throw new IllegalArgumentException("输入不能为空");
-        String inputType = StrUtil.isNotBlank(request.getInputType()) ? request.getInputType() : "DISK";
+        String inputType = StrUtil.isNotBlank(request.getInputType()) ? request.getInputType() : InputType.DISK;
 
         // JavaCV/FFmpeg 原生支持 HTTP/HTTPS URL，无需预下载
         String effectiveInput = inputPath;
         String resolvedOutputDir = null;
-        if ("HTTP".equalsIgnoreCase(inputType) && (inputPath.startsWith("http://") || inputPath.startsWith("https://"))) {
+        if (InputType.HTTP.equalsIgnoreCase(inputType) && (inputPath.startsWith("http://") || inputPath.startsWith("https://"))) {
             resolvedOutputDir = java.nio.file.Paths.get(transcodeConfig.getWorkDir(), taskId, "frames").toAbsolutePath().toString();
         } else {
             File f = new File(inputPath);
@@ -64,7 +66,7 @@ public class MagicServiceImpl implements MagicService {
         } catch (Exception e) {
             log.error("魔法抽帧失败 taskId={}", taskId, e);
             taskService.updateTaskError(taskId, "抽帧失败：" + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName()));
-            taskService.updateTaskStatus(taskId, "FAILED", 0);
+            taskService.updateTaskStatus(taskId, TaskStatus.FAILED, 0);
             throw new RuntimeException(e);
         }
     }
@@ -74,7 +76,7 @@ public class MagicServiceImpl implements MagicService {
         String taskId = UUID.randomUUID().toString().replace("-", "");
         String inputPath = request.getInputPath();
         if (inputPath == null || inputPath.isBlank()) throw new IllegalArgumentException("输入不能为空");
-        String inputType = StrUtil.isNotBlank(request.getInputType()) ? request.getInputType() : "DISK";
+        String inputType = StrUtil.isNotBlank(request.getInputType()) ? request.getInputType() : InputType.DISK;
 
         String localPath = resolveInput(inputPath, inputType, taskId);
         taskService.createMagicTaskRecord(taskId, TASK_TYPE_IMAGE, inputType, inputPath);
@@ -93,7 +95,7 @@ public class MagicServiceImpl implements MagicService {
         } catch (Exception e) {
             log.error("魔法图转失败 taskId={}", taskId, e);
             taskService.updateTaskError(taskId, "图转失败：" + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName()));
-            taskService.updateTaskStatus(taskId, "FAILED", 0);
+            taskService.updateTaskStatus(taskId, TaskStatus.FAILED, 0);
             throw new RuntimeException(e);
         }
     }
@@ -103,7 +105,7 @@ public class MagicServiceImpl implements MagicService {
         String taskId = UUID.randomUUID().toString().replace("-", "");
         String inputPath = request.getInputPath();
         if (inputPath == null || inputPath.isBlank()) throw new IllegalArgumentException("输入不能为空");
-        String inputType = StrUtil.isNotBlank(request.getInputType()) ? request.getInputType() : "DISK";
+        String inputType = StrUtil.isNotBlank(request.getInputType()) ? request.getInputType() : InputType.DISK;
 
         String localPath = resolveInput(inputPath, inputType, taskId);
         taskService.createMagicTaskRecord(taskId, TASK_TYPE_TRANSCODE, inputType, inputPath);
@@ -130,13 +132,13 @@ public class MagicServiceImpl implements MagicService {
         } catch (Exception e) {
             log.error("魔法转码失败 taskId={}", taskId, e);
             taskService.updateTaskError(taskId, "转码失败：" + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName()));
-            taskService.updateTaskStatus(taskId, "FAILED", 0);
+            taskService.updateTaskStatus(taskId, TaskStatus.FAILED, 0);
             throw new RuntimeException(e);
         }
     }
 
     private String resolveInput(String inputPath, String inputType, String taskId) {
-        if ("HTTP".equalsIgnoreCase(inputType) && (inputPath.startsWith("http://") || inputPath.startsWith("https://"))) {
+        if (InputType.HTTP.equalsIgnoreCase(inputType) && (inputPath.startsWith("http://") || inputPath.startsWith("https://"))) {
             return HttpFileHandler.downloadToTemp(inputPath, taskId, transcodeConfig.getWorkDir());
         }
         File f = new File(inputPath);
