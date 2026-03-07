@@ -29,6 +29,7 @@ import { useRouter } from 'vue-router'
 import KittyLogo from '../components/KittyLogo.vue'
 import { message } from 'ant-design-vue'
 import { login } from '../api/auth_api'
+import { showApiErrorDialog } from '../utils/errorDialog'
 
 const router = useRouter()
 const loading = ref(false)
@@ -42,7 +43,7 @@ async function onSubmit() {
     message.success('登录成功')
     router.push('/')
   } catch (e) {
-    message.error(e?.message || '登录失败')
+    showApiErrorDialog(e)
   } finally {
     loading.value = false
   }

@@ -14,7 +14,13 @@ instance.interceptors.request.use((config) => {
 
 instance.interceptors.response.use(
   (res) => res.data,
-  (err) => Promise.reject(err.response?.data?.message || err.message || '请求失败')
+  (err) => {
+    const data = err.response?.data
+    const msg = (data && typeof data === 'object' && (data.error ?? data.message)) ?? err.message ?? '请求失败'
+    const error = new Error(typeof msg === 'string' ? msg : String(msg))
+    error.response = err.response
+    return Promise.reject(error)
+  }
 )
 
 export default instance
