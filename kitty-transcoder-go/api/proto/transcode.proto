@@ -1,0 +1,97 @@
+syntax = "proto3";
+
+package transcoder;
+
+option go_package = "kitty-transcoder-go/internal/grpcpb";
+
+// 转码服务：任务、策略、进度（与 Java TranscodeService 对齐）
+service TranscodeService {
+  rpc CreateTask (CreateTaskReq) returns (CreateTaskResp);
+  rpc GetTask (GetTaskReq) returns (TaskResp);
+  rpc ListTasks (ListTasksReq) returns (ListTasksResp);
+  rpc CancelTask (CancelTaskReq) returns (CancelTaskResp);
+  rpc GetProgress (GetProgressReq) returns (ProgressResp);
+  rpc GetStrategies (GetStrategiesReq) returns (GetStrategiesResp);
+  rpc GetStrategy (GetStrategyReq) returns (StrategyResp);
+  rpc CreateStrategy (CreateStrategyReq) returns (CreateStrategyResp);
+  rpc DeleteStrategy (DeleteStrategyReq) returns (DeleteStrategyResp);
+}
+
+message CreateTaskReq {
+  string input_type = 1;
+  string input_path = 2;
+  string strategy_id = 3;
+  int32 priority = 4;
+  string watermark_url = 5;
+  string watermark_position = 6;
+  repeated NotificationConfig notifications = 7;
+}
+message NotificationConfig {
+  string method = 1;
+  string target = 2;
+}
+message CreateTaskResp {
+  string task_id = 1;
+}
+
+message GetTaskReq { string task_id = 1; }
+message TaskResp {
+  string id = 1;
+  string status = 2;
+  int32 progress = 3;
+  string input_type = 4;
+  string input_path = 5;
+  string output_path = 6;
+  string output_http_url = 7;
+  string strategy_id = 8;
+  string error_message = 9;
+  int64 created_at = 10;
+  int64 started_at = 11;
+  int64 completed_at = 12;
+}
+
+message ListTasksReq {
+  int32 page = 1;
+  int32 size = 2;
+  string status = 3;
+  string task_type = 4;
+}
+message ListTasksResp {
+  repeated TaskResp tasks = 1;
+  int64 total = 2;
+}
+
+message CancelTaskReq { string task_id = 1; }
+message CancelTaskResp { bool success = 1; }
+
+message GetProgressReq { string task_id = 1; }
+message ProgressResp {
+  string task_id = 1;
+  int32 progress = 2;
+  string status = 3;
+}
+
+message GetStrategiesReq {}
+message GetStrategiesResp {
+  repeated string strategy_names = 1;
+}
+message GetStrategyReq { string strategy_id = 1; }
+message StrategyResp {
+  string name = 1;
+  repeated StrategyStepDto steps = 2;
+}
+message StrategyStepDto {
+  int32 step_id = 1;
+  string type = 2;
+  string depends = 3;
+  string param = 4;
+}
+message CreateStrategyReq {
+  string name = 1;
+  repeated StrategyStepDto steps = 2;
+}
+message CreateStrategyResp {
+  string id = 1;
+}
+message DeleteStrategyReq { string strategy_id = 1; }
+message DeleteStrategyResp { bool success = 1; }
