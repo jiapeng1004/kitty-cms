@@ -1,39 +1,33 @@
 package icu.jiapeng.kitty.transcoder.func.task;
 
 import cn.hutool.core.util.StrUtil;
+import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import com.alibaba.fastjson.JSON;
-import icu.jiapeng.kitty.transcoder.api.CreateTaskRequest;
-import icu.jiapeng.kitty.transcoder.api.ListTasksRequest;
-import icu.jiapeng.kitty.transcoder.api.ProgressVO;
-import icu.jiapeng.kitty.transcoder.api.NotificationConfig;
-import icu.jiapeng.kitty.transcoder.api.StepProgressItem;
-import icu.jiapeng.kitty.transcoder.api.TaskVO;
+import icu.jiapeng.kitty.transcoder.api.*;
 import icu.jiapeng.kitty.transcoder.func.config.TranscodeConfig;
-import icu.jiapeng.kitty.transcoder.func.entity.TranscodeTask;
-import icu.jiapeng.kitty.transcoder.func.engine.TranscodeEngine;
-import icu.jiapeng.kitty.transcoder.func.mapper.TranscodeTaskMapper;
-import icu.jiapeng.kitty.transcoder.func.mapping.TaskVoMapper;
-import icu.jiapeng.kitty.transcoder.api.TranscodeProgressNotifyVO;
-import icu.jiapeng.kitty.transcoder.func.notification.NotificationDispatcher;
-import icu.jiapeng.kitty.transcoder.api.StrategyStepVO;
-import icu.jiapeng.kitty.transcoder.api.StrategyVO;
 import icu.jiapeng.kitty.transcoder.func.constants.TranscodeConstants;
+import icu.jiapeng.kitty.transcoder.func.constants.TranscodeConstants.InputType;
 import icu.jiapeng.kitty.transcoder.func.constants.TranscodeConstants.RedisKeys;
 import icu.jiapeng.kitty.transcoder.func.constants.TranscodeConstants.TaskStatus;
-import icu.jiapeng.kitty.transcoder.func.constants.TranscodeConstants.InputType;
 import icu.jiapeng.kitty.transcoder.func.constants.TranscodeConstants.TaskType;
+import icu.jiapeng.kitty.transcoder.func.engine.TranscodeEngine;
+import icu.jiapeng.kitty.transcoder.func.entity.TranscodeTask;
+import icu.jiapeng.kitty.transcoder.func.mapper.TranscodeTaskMapper;
+import icu.jiapeng.kitty.transcoder.func.mapping.TaskVoMapper;
+import icu.jiapeng.kitty.transcoder.func.notification.NotificationDispatcher;
 import icu.jiapeng.kitty.transcoder.func.strategy.StrategyService;
+import jakarta.annotation.Resource;
 import org.redisson.api.RBlockingQueue;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
+import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.stereotype.Service;
-
-import jakarta.annotation.Resource;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import reactor.core.publisher.Flux;
+import reactor.core.scheduler.Schedulers;
 
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -42,8 +36,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.LockSupport;
 
 @Service
 public class TaskServiceImpl implements TaskService {
@@ -110,7 +104,9 @@ public class TaskServiceImpl implements TaskService {
         return vo;
     }
 
-    /** 确保 notifications 从 notification_config 解析填充 */
+    /**
+     * 确保 notifications 从 notification_config 解析填充
+     */
     private void ensureNotifications(TaskVO vo, TranscodeTask entity) {
         if (vo == null || entity == null) return;
         if (vo.getNotifications() != null && !vo.getNotifications().isEmpty()) return;
@@ -209,7 +205,7 @@ public class TaskServiceImpl implements TaskService {
             entity.setStatus(TaskStatus.PROCESSING);
             entity.setStartedAt(LocalDateTime.now());
             String outputBaseDir = computeOutputBaseDir(taskId, entity.getStrategyId());
-            if (outputBaseDir != null)             entity.setOutputPath(outputBaseDir);
+            if (outputBaseDir != null) entity.setOutputPath(outputBaseDir);
             taskMapper.updateById(entity);
             fireProgressNotification(taskId, entity, 0);
             cancellationRegistry.registerRunning(taskId);
@@ -243,7 +239,8 @@ public class TaskServiceImpl implements TaskService {
                 u.eq(TranscodeTask::getId, taskId).set(TranscodeTask::getStatus, TaskStatus.CANCELLED);
                 taskMapper.update(null, u);
                 TranscodeTask entity = taskMapper.selectById(taskId);
-                if (entity != null) fireProgressNotification(taskId, entity, entity.getProgress() != null ? entity.getProgress() : 0);
+                if (entity != null)
+                    fireProgressNotification(taskId, entity, entity.getProgress() != null ? entity.getProgress() : 0);
             } else {
                 if (msg != null && msg.startsWith(TranscodeConstants.STEP_FAILED_PREFIX)) {
                     int idx = msg.indexOf(':', TranscodeConstants.STEP_FAILED_PREFIX.length());
@@ -309,9 +306,12 @@ public class TaskServiceImpl implements TaskService {
         });
     }
 
-    /** 任务进度/完成/失败时发送回调（HTTP 或 gRPC），统一使用 TranscodeProgressNotifyVO */
+    /**
+     * 任务进度/完成/失败时发送回调（HTTP 或 gRPC），统一使用 TranscodeProgressNotifyVO
+     */
     private void sendProgressNotification(TranscodeTask entity, int progress) {
-        if (entity == null || entity.getNotificationConfig() == null || entity.getNotificationConfig().isBlank()) return;
+        if (entity == null || entity.getNotificationConfig() == null || entity.getNotificationConfig().isBlank())
+            return;
         try {
             List<NotificationConfig> configs = JSON.parseArray(entity.getNotificationConfig(), NotificationConfig.class);
             if (configs == null || configs.isEmpty()) return;
@@ -401,7 +401,9 @@ public class TaskServiceImpl implements TaskService {
         return vo;
     }
 
-    /** 从策略补充步骤依赖信息，确保前端能正确展示依赖关系 */
+    /**
+     * 从策略补充步骤依赖信息，确保前端能正确展示依赖关系
+     */
     private void enrichStepDepends(List<StepProgressItem> list, String strategyId) {
         if (list == null || list.isEmpty() || strategyId == null || strategyId.isBlank()) return;
         try {
@@ -424,29 +426,28 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    public SseEmitter getProgressSSE(String taskId) {
-        SseEmitter emitter = new SseEmitter();
-        Thread.startVirtualThread(() -> {
-            try {
-                while (true) {
+    public Flux<ServerSentEvent<ProgressVO>> getProgressSSE(String taskId) {
+        return Flux.interval(Duration.ofSeconds(1))
+                .publishOn(Schedulers.fromExecutor(Executors.newVirtualThreadPerTaskExecutor()))
+                .map(_ -> {
                     ProgressVO progress = getProgress(taskId);
-                    emitter.send(SseEmitter.event().id(String.valueOf(System.currentTimeMillis())).name("progress").data(progress));
-                    if (TaskStatus.COMPLETED.equals(progress.getStatus()) || TaskStatus.FAILED.equals(progress.getStatus()) || TaskStatus.CANCELLED.equals(progress.getStatus())) {
-                        emitter.complete();
-                        break;
-                    }
-                    LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(1000));
-                }
-            } catch (Exception e) {
-                emitter.completeWithError(e);
-            }
-        });
-        return emitter;
+                    return ServerSentEvent.<ProgressVO>builder()
+                            .id(String.valueOf(System.currentTimeMillis()))
+                            .event("progress")
+                            .data(progress)
+                            .build();
+                }).takeUntil(event -> {
+                    ProgressVO p = event.data();
+                    return p == null || TaskStatus.COMPLETED.equals(p.getStatus())
+                            || TaskStatus.FAILED.equals(p.getStatus())
+                            || TaskStatus.CANCELLED.equals(p.getStatus());
+                })
+                .doOnError(e -> System.err.println("SSE Stream Error: " + e.getMessage()));
     }
 
     @Override
-    public SseEmitter getProgressStream() {
-        return progressBroadcaster.subscribe();
+    public Flux<ServerSentEvent<ProgressVO>> getProgressStream() {
+        return progressBroadcaster.subscribeAsFlux();
     }
 
     @Override

@@ -2,7 +2,6 @@ package icu.jiapeng.kitty.transcoder.func.controller;
 
 import icu.jiapeng.kitty.transcoder.api.*;
 import icu.jiapeng.kitty.transcoder.func.constants.TranscodeConstants;
-import jakarta.validation.Valid;
 import icu.jiapeng.kitty.transcoder.func.strategy.StrategyExportService;
 import icu.jiapeng.kitty.transcoder.func.strategy.StrategyService;
 import icu.jiapeng.kitty.transcoder.func.task.TaskService;
@@ -10,11 +9,13 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import reactor.core.publisher.Flux;
 
 import java.util.List;
 
@@ -35,6 +36,7 @@ public class TranscodeController implements TranscodeApi {
 
     @Operation(summary = "创建转码任务")
     @PostMapping("/task")
+    @Override
     public String createTask(@RequestBody CreateTaskRequest request) {
         String accessKeyId = null;
         if (RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes attrs) {
@@ -45,83 +47,71 @@ public class TranscodeController implements TranscodeApi {
 
     @Operation(summary = "查询任务详情")
     @GetMapping("/task/{id}")
+    @Override
     public TaskVO getTask(@PathVariable @Parameter(description = "任务 ID") String id) {
         return taskService.getTask(id);
     }
 
     @Operation(summary = "分页查询任务列表")
     @GetMapping("/tasks")
-    public List<TaskVO> listTasks(
-            @RequestParam(defaultValue = "1") Integer page,
-            @RequestParam(defaultValue = "20") Integer size,
-            @RequestParam(required = false) String taskId,
-            @RequestParam(required = false) String filename,
-            @RequestParam(required = false) Long timeFrom,
-            @RequestParam(required = false) Long timeTo,
-            @RequestParam(required = false) String strategyId,
-            @RequestParam(required = false) String status,
-            @RequestParam(required = false) String taskType,
-            @RequestParam(defaultValue = "createdAt") String sortBy,
-            @RequestParam(defaultValue = "desc") String sortOrder) {
-        ListTasksRequest req = new ListTasksRequest();
-        req.setPage(page);
-        req.setSize(size);
-        req.setTaskId(taskId);
-        req.setFilename(filename);
-        req.setTimeFrom(timeFrom);
-        req.setTimeTo(timeTo);
-        req.setStrategyId(strategyId);
-        req.setStatus(status);
-        req.setTaskType(taskType);
-        req.setSortBy(sortBy);
-        req.setSortOrder(sortOrder);
-        return taskService.listTasks(req);
+    @Override
+    public List<TaskVO> listTasks(@ModelAttribute ListTasksRequest request) {
+        return taskService.listTasks(request);
     }
 
     @DeleteMapping("/task/{id}")
+    @Override
     public Boolean cancelTask(@PathVariable String id) {
         return taskService.cancelTask(id);
     }
 
     @DeleteMapping("/task/{id}/record")
+    @Override
     public Boolean deleteTask(@PathVariable String id) {
         return taskService.deleteTask(id);
     }
 
     @Operation(summary = "查询任务进度")
     @GetMapping("/progress/{id}")
+    @Override
     public ProgressVO getProgress(@PathVariable @Parameter(description = "任务 ID") String id) {
         return taskService.getProgress(id);
     }
 
 
     @PostMapping("/strategy")
+    @Override
     public String createStrategy(@RequestBody CreateStrategyRequest request) {
         return strategyService.createStrategy(request);
     }
 
     @GetMapping("/strategy")
+    @Override
     public List<StrategyVO> getStrategies() {
         return strategyService.getStrategies();
     }
 
     @GetMapping("/strategy/{id}")
+    @Override
     public StrategyVO getStrategy(@PathVariable String id) {
         return strategyService.getStrategy(id);
     }
 
     @PutMapping("/strategy/{id}")
+    @Override
     public Boolean updateStrategy(@PathVariable String id, @RequestBody CreateStrategyRequest request) {
         return strategyService.updateStrategy(id, request);
     }
 
     @DeleteMapping("/strategy/{id}")
+    @Override
     public Boolean deleteStrategy(@PathVariable String id) {
         return strategyService.deleteStrategy(id);
     }
 
     @Operation(summary = "导出策略为 YAML 文件")
     @GetMapping("/strategy/{id}/export")
+    @Override
     public String exportStrategy(@PathVariable String id) {
         StrategyVO vo = strategyService.getStrategy(id);
         if (vo == null) throw new IllegalArgumentException("策略不存在");
@@ -130,29 +120,34 @@ public class TranscodeController implements TranscodeApi {
 
     @Operation(summary = "从 YAML 文件导入策略")
     @PostMapping("/strategy/import")
+    @Override
     public String importStrategy(@Valid @RequestBody ImportStrategyRequest request) {
         return strategyExportService.importFromString(request.getContent());
     }
 
     @Operation(summary = "修改策略ID")
     @PutMapping("/strategy/{id}/id")
+    @Override
     public Boolean updateStrategyId(@PathVariable String id, @Valid @RequestBody UpdateStrategyIdRequest request) {
         strategyService.updateStrategyId(id, request.getNewId());
         return true;
     }
 
     @GetMapping("/sse/{id}")
-    public SseEmitter getProgressSSE(@PathVariable String id) {
+    @Override
+    public Flux<ServerSentEvent<ProgressVO>> getProgressSSE(@PathVariable String id) {
         return taskService.getProgressSSE(id);
     }
 
     @GetMapping("/progress/stream")
-    public SseEmitter getProgressStream() {
+    @Override
+    public Flux<ServerSentEvent<ProgressVO>> getProgressStream() {
         return taskService.getProgressStream();
     }
 
     @Operation(summary = "自省观察员", description = "HTTP 通知回调端点，开发阶段可将 notifications.target 指向本接口，仅记录日志")
     @PostMapping("/introspection/notification")
+    @Override
     public void introspectionNotification(@RequestBody TranscodeProgressNotifyVO body) {
         log.info("[Introspection] HTTP notification: {}", body);
     }

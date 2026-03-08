@@ -3,7 +3,8 @@ package icu.jiapeng.kitty.transcoder.func.task;
 import icu.jiapeng.kitty.transcoder.api.CreateTaskRequest;
 import icu.jiapeng.kitty.transcoder.api.ProgressVO;
 import icu.jiapeng.kitty.transcoder.api.TaskVO;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import org.springframework.http.codec.ServerSentEvent;
+import reactor.core.publisher.Flux;
 
 import java.util.List;
 
@@ -80,16 +81,17 @@ public interface TaskService {
 
     /**
      * 获取SSE实时进度（单任务）
+     *
      * @param taskId 任务ID
      * @return SSE事件流
      */
-    SseEmitter getProgressSSE(String taskId);
+    Flux<ServerSentEvent<ProgressVO>> getProgressSSE(String taskId);
 
     /**
-     * 获取全任务进度 SSE 流，任意任务进度更新时广播
-     * @return SSE事件流
+     * 获取全任务进度 SSE 流，任意任务进度更新时广播。返回 Flux 以适配 HttpExchange 声明式客户端。
+     * @return SSE 事件流
      */
-    SseEmitter getProgressStream();
+    Flux<ServerSentEvent<ProgressVO>> getProgressStream();
 
     /**
      * 创建魔法任务记录（不入队，无策略，仅用于列表展示）
