@@ -64,7 +64,7 @@ public class TranscodeEngine {
         return runWithDependencies(taskId, inputFile, strategy, null, null, progressCallback).mainOutput();
     }
 
-    public TranscodeResult transcode(String taskId, String inputFile, String strategyId,
+    public TranscodeResult transcode(String taskId, String inputFile, Long strategyId,
                             String watermarkUrl, String watermarkPosition, ProgressCallback progressCallback) throws Exception {
         StrategyVO strategy = strategyService.getStrategy(strategyId);
         if (strategy == null || strategy.getSteps() == null || strategy.getSteps().isEmpty()) {
@@ -100,7 +100,9 @@ public class TranscodeEngine {
             depsMap.put(e.getKey(), Arrays.stream(e.getValue().getDepends().split( ",")).filter(NumberUtil::isInteger).map(Integer::valueOf).toArray(Integer[]::new));
         }
         StepContextImpl.RunStrategyCallback runStrategyCallback = (stratId, inputPath) -> {
-            StrategyVO sub = strategyService.getStrategy(stratId);
+            Long id = (stratId != null && !stratId.isBlank()) ? Long.parseLong(stratId.trim()) : null;
+            if (id == null) throw new IllegalArgumentException("策略ID为空");
+            StrategyVO sub = strategyService.getStrategy(id);
             if (sub == null) throw new IllegalArgumentException("策略不存在：" + stratId);
             return runWithDependencies(taskId, inputPath, sub, watermarkUrl, watermarkPosition, progressCallback).mainOutput();
         };
@@ -224,7 +226,7 @@ public class TranscodeEngine {
      * @param workDir 工作目录
      * @return 本步骤输出路径
      */
-    public String runSingleStep(String taskId, String taskInputPath, String strategyId, int stepId,
+    public String runSingleStep(String taskId, String taskInputPath, Long strategyId, int stepId,
                                 Map<Integer, String> stepOutputs, String watermarkUrl, String watermarkPosition, String workDir) throws Exception {
         StrategyVO strategy = strategyService.getStrategy(strategyId);
         if (strategy == null || strategy.getSteps() == null) throw new IllegalArgumentException("策略不存在或无步骤");
@@ -317,7 +319,7 @@ public class TranscodeEngine {
     /**
      * 返回策略的「主输出」步骤 ID（用于步骤重试后更新任务主输出）。
      */
-    public int getMainOutputStepId(String strategyId) {
+    public int getMainOutputStepId(Long strategyId) {
         StrategyVO strategy = strategyService.getStrategy(strategyId);
         if (strategy == null || strategy.getSteps() == null || strategy.getSteps().isEmpty()) return 1;
         List<Integer> stepIds = strategy.getSteps().stream().map(StrategyStepVO::getStepId).toList();

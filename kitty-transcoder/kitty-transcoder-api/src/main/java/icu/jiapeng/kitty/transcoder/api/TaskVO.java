@@ -38,8 +38,8 @@ public class TaskVO {
     @Schema(description = "输出 HTTP 地址")
     private String outputHttpUrl;
 
-    @Schema(description = "策略ID", example = "strategy_001")
-    private String strategyId;
+    @Schema(description = "策略ID（root_id）", example = "22")
+    private Long strategyId;
 
     @Schema(description = "水印地址（创建时传入）")
     private String watermarkUrl;

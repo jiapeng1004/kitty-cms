@@ -30,7 +30,7 @@ public interface TranscodeApi {
 
     @Operation(summary = "分页查询任务列表")
     @GetExchange("/api/transcode/tasks")
-    List<TaskVO> listTasks(ListTasksRequest request);
+    ListTasksResponse listTasks(ListTasksRequest request);
 
     @Operation(summary = "取消转码任务", description = "取消指定的转码任务")
     @Parameter(name = "id", description = "任务ID", required = true, example = "task_123456")
@@ -43,7 +43,7 @@ public interface TranscodeApi {
 
     @Operation(summary = "创建转码策略", description = "创建一个新的转码策略")
     @PostExchange("/api/transcode/strategy")
-    String createStrategy(CreateStrategyRequest request);
+    Long createStrategy(CreateStrategyRequest request);
 
     @DeleteMapping("/task/{id}/record")
     Boolean deleteTask(@PathVariable String id);
@@ -62,17 +62,17 @@ public interface TranscodeApi {
     ProgressVO getProgress(@PathVariable String id);
 
     @GetMapping("/strategy/{id}")
-    StrategyVO getStrategy(@PathVariable String id);
+    StrategyVO getStrategy(@PathVariable Long id);
 
     @PutMapping("/strategy/{id}")
-    Boolean updateStrategy(@PathVariable String id, @RequestBody CreateStrategyRequest request);
+    Boolean updateStrategy(@PathVariable Long id, @RequestBody CreateStrategyRequest request);
 
     @DeleteMapping("/strategy/{id}")
-    Boolean deleteStrategy(@PathVariable String id);
+    Boolean deleteStrategy(@PathVariable Long id);
 
     @Operation(summary = "导出策略为 YAML 文件")
     @GetMapping("/strategy/{id}/export")
-    String exportStrategy(@PathVariable String id);
+    String exportStrategy(@PathVariable Long id);
 
     @Operation(summary = "从 YAML 文件导入策略")
     @PostMapping("/strategy/import")
@@ -80,7 +80,7 @@ public interface TranscodeApi {
 
     @Operation(summary = "修改策略ID")
     @PutMapping("/strategy/{id}/id")
-    Boolean updateStrategyId(@PathVariable String id, @Valid @RequestBody UpdateStrategyIdRequest request);
+    Boolean updateStrategyId(@PathVariable Long id, @Valid @RequestBody UpdateStrategyIdRequest request);
 
     @Operation(summary = "获取SSE实时进度", description = "通过SSE获取转码任务的实时进度")
     @Parameter(name = "id", description = "任务ID", required = true, example = "task_123456")

@@ -28,8 +28,8 @@ public class ListTasksRequest {
     @Schema(description = "创建时间止（毫秒时间戳）")
     private Long timeTo;
 
-    @Schema(description = "策略 ID 过滤")
-    private String strategyId;
+    @Schema(description = "策略 ID 过滤（root_id）")
+    private Long strategyId;
 
     @Schema(description = "任务状态过滤：PENDING, PROCESSING, COMPLETED, FAILED, CANCELLED")
     private String status;

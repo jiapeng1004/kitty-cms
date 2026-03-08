@@ -32,10 +32,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -123,7 +120,7 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    public List<TaskVO> listTasks(ListTasksRequest req) {
+    public ListTasksResponse listTasks(ListTasksRequest req) {
         int page = req.getPage() != null && req.getPage() > 0 ? req.getPage() : 1;
         int size = req.getSize() != null && req.getSize() > 0 ? req.getSize() : 20;
         com.baomidou.mybatisplus.extension.plugins.pagination.Page<TranscodeTask> p =
@@ -150,9 +147,9 @@ public class TaskServiceImpl implements TaskService {
         if (req.getTimeTo() != null && req.getTimeTo() > 0) {
             q.le(TranscodeTask::getCreatedAt, java.time.Instant.ofEpochMilli(req.getTimeTo()).atZone(java.time.ZoneId.systemDefault()).toLocalDateTime());
         }
-        if (StrUtil.isNotBlank(req.getStrategyId())) {
-            String sid = req.getStrategyId().trim();
-            if ("__empty__".equals(sid)) {
+        if (Objects.nonNull(req.getStrategyId())) {
+            Long sid = req.getStrategyId();
+            if (Objects.equals(sid, -1L)) {
                 q.and(w -> w.isNull(TranscodeTask::getStrategyId).or().eq(TranscodeTask::getStrategyId, ""));
             } else {
                 q.eq(TranscodeTask::getStrategyId, sid);
@@ -169,7 +166,7 @@ public class TaskServiceImpl implements TaskService {
         for (int i = 0; i < list.size(); i++) {
             ensureNotifications(list.get(i), p.getRecords().get(i));
         }
-        return list;
+        return new ListTasksResponse(list, p.getTotal(), page, size);
     }
 
     @Override
@@ -268,10 +265,10 @@ public class TaskServiceImpl implements TaskService {
     /**
      * 计算输出基目录（transcoder/yyyy/MM/dd/），任务开始处理时即设置，便于执行中即可预览已完成步骤的输出。
      */
-    private String computeOutputBaseDir(String taskId, String strategyId) {
+    private String computeOutputBaseDir(String taskId, Long strategyId) {
         String workDir = transcodeConfig != null ? transcodeConfig.getWorkDir() : null;
         if (workDir == null || workDir.isBlank()) return null;
-        if (strategyId != null && !strategyId.isBlank()) {
+        if (strategyId != null) {
             var strategy = strategyService.getStrategy(strategyId);
             if (strategy != null && strategy.getWorkDir() != null && !strategy.getWorkDir().isBlank()) {
                 workDir = strategy.getWorkDir();
@@ -283,9 +280,9 @@ public class TaskServiceImpl implements TaskService {
         return Paths.get(workDir, "transcoder", parts[0], parts[1], parts[2]).normalize().toAbsolutePath().toString();
     }
 
-    private String resolveHttpInput(String url, String taskId, String strategyId) {
+    private String resolveHttpInput(String url, String taskId, Long strategyId) {
         String workDir = transcodeConfig.getWorkDir();
-        if (strategyId != null && !strategyId.isBlank()) {
+        if (strategyId != null) {
             var strategy = strategyService.getStrategy(strategyId);
             if (strategy != null && strategy.getWorkDir() != null && !strategy.getWorkDir().isBlank()) {
                 workDir = strategy.getWorkDir();
@@ -348,7 +345,7 @@ public class TaskServiceImpl implements TaskService {
         Map<Integer, String> stepOutputsMap = parseStepOutputs(entity.getStepOutputs());
         if (stepOutputsMap.isEmpty()) return List.of();
         Map<Integer, String> stepTypeByStepId = new HashMap<>();
-        if (entity.getStrategyId() != null && !entity.getStrategyId().isBlank()) {
+        if (entity.getStrategyId() != null) {
             StrategyVO strategy = strategyService.getStrategy(entity.getStrategyId());
             if (strategy != null && strategy.getSteps() != null) {
                 for (StrategyStepVO s : strategy.getSteps()) {
@@ -466,8 +463,8 @@ public class TaskServiceImpl implements TaskService {
     /**
      * 从策略补充步骤依赖信息，确保前端能正确展示依赖关系
      */
-    private void enrichStepDepends(List<StepProgressItem> list, String strategyId) {
-        if (list == null || list.isEmpty() || strategyId == null || strategyId.isBlank()) return;
+    private void enrichStepDepends(List<StepProgressItem> list, Long strategyId) {
+        if (list == null || list.isEmpty() || strategyId == null) return;
         try {
             StrategyVO strategy = strategyService.getStrategy(strategyId);
             if (strategy == null || strategy.getSteps() == null) return;
@@ -573,7 +570,7 @@ public class TaskServiceImpl implements TaskService {
     public String retryStep(String taskId, int stepId) throws Exception {
         TranscodeTask entity = taskMapper.selectById(taskId);
         if (entity == null) throw new IllegalArgumentException("任务不存在");
-        if (entity.getStrategyId() == null || entity.getStrategyId().isBlank()) {
+        if (entity.getStrategyId() == null) {
             throw new IllegalStateException("任务无策略，无法单步重试");
         }
         Map<Integer, String> stepOutputsMap = parseStepOutputs(entity.getStepOutputs() != null ? entity.getStepOutputs() : "");
@@ -593,7 +590,7 @@ public class TaskServiceImpl implements TaskService {
             taskInputPath = resolveHttpInput(taskInputPath, taskId, entity.getStrategyId());
         }
         String workDir = transcodeConfig != null ? transcodeConfig.getWorkDir() : null;
-        if (entity.getStrategyId() != null && !entity.getStrategyId().isBlank()) {
+        if (entity.getStrategyId() != null) {
             var strategy = strategyService.getStrategy(entity.getStrategyId());
             if (strategy != null && strategy.getWorkDir() != null && !strategy.getWorkDir().isBlank()) {
                 workDir = strategy.getWorkDir();

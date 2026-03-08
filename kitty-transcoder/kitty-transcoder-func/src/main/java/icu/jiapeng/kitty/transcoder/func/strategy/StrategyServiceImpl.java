@@ -29,7 +29,7 @@ public class StrategyServiceImpl implements StrategyService {
     private TranscodeTaskMapper taskMapper;
 
     @Override
-    public String createStrategy(CreateStrategyRequest request) {
+    public Long createStrategy(CreateStrategyRequest request) {
         List<StrategyStepDTO> stepDtos = request.getSteps();
         if (stepDtos == null || stepDtos.isEmpty()) {
             stepDtos = List.of(defaultStep());
@@ -54,24 +54,23 @@ public class StrategyServiceImpl implements StrategyService {
                 stepMapper.updateById(row);
             }
         }
-        return String.valueOf(rootId);
+        return rootId;
     }
 
     @Override
-    public StrategyVO getStrategy(String strategyId) {
-        Long id = parseId(strategyId);
-        if (id == null) return null;
+    public StrategyVO getStrategy(Long strategyId) {
+        if (strategyId == null) return null;
         List<TranscodeStrategyStep> rows = stepMapper.selectList(
-                new LambdaQueryWrapper<TranscodeStrategyStep>().eq(TranscodeStrategyStep::getRootId, id).orderByAsc(TranscodeStrategyStep::getStepId));
+                new LambdaQueryWrapper<TranscodeStrategyStep>().eq(TranscodeStrategyStep::getRootId, strategyId).orderByAsc(TranscodeStrategyStep::getStepId));
         if (rows.isEmpty()) return null;
         StrategyVO vo = new StrategyVO();
-        vo.setId(String.valueOf(id));
-        vo.setName(rows.get(0).getStrategyName());
-        vo.setWorkDir(rows.get(0).getWorkDir());
+        vo.setId(strategyId);
+        vo.setName(rows.getFirst().getStrategyName());
+        vo.setWorkDir(rows.getFirst().getWorkDir());
         vo.setStepCount(rows.size());
         vo.setSteps(rows.stream().map(this::stepToVO).collect(Collectors.toList()));
-        if (rows.get(0).getCreatedAt() != null)
-            vo.setCreatedAt(rows.get(0).getCreatedAt().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli());
+        if (rows.getFirst().getCreatedAt() != null)
+            vo.setCreatedAt(rows.getFirst().getCreatedAt().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli());
         return vo;
     }
 
@@ -84,7 +83,7 @@ public class StrategyServiceImpl implements StrategyService {
             Long rootId = root.getRootId() != null ? root.getRootId() : root.getId();
             int count = stepMapper.selectCount(new LambdaQueryWrapper<TranscodeStrategyStep>().eq(TranscodeStrategyStep::getRootId, rootId)).intValue();
             StrategyVO vo = new StrategyVO();
-            vo.setId(String.valueOf(rootId));
+            vo.setId(rootId);
             vo.setName(root.getStrategyName());
             vo.setWorkDir(root.getWorkDir());
             vo.setStepCount(count);
@@ -96,16 +95,15 @@ public class StrategyServiceImpl implements StrategyService {
     }
 
     @Override
-    public boolean updateStrategy(String strategyId, CreateStrategyRequest request) {
-        Long id = parseId(strategyId);
-        if (id == null) return false;
-        stepMapper.delete(new LambdaQueryWrapper<TranscodeStrategyStep>().eq(TranscodeStrategyStep::getRootId, id));
+    public boolean updateStrategy(Long strategyId, CreateStrategyRequest request) {
+        if (strategyId == null) return false;
+        stepMapper.delete(new LambdaQueryWrapper<TranscodeStrategyStep>().eq(TranscodeStrategyStep::getRootId, strategyId));
         List<StrategyStepDTO> stepDtos = request.getSteps();
         if (stepDtos == null || stepDtos.isEmpty()) stepDtos = List.of(defaultStep());
         for (int i = 0; i < stepDtos.size(); i++) {
             int stepId = i + 1;
             TranscodeStrategyStep row = new TranscodeStrategyStep();
-            row.setRootId(id);
+            row.setRootId(strategyId);
             row.setStrategyName(request.getName());
             if (stepId == 1) row.setWorkDir(request.getWorkDir());
             row.setStepId(stepId);
@@ -120,37 +118,25 @@ public class StrategyServiceImpl implements StrategyService {
     }
 
     @Override
-    public boolean deleteStrategy(String strategyId) {
-        Long rootId = parseId(strategyId);
-        if (rootId == null) return false;
-        return stepMapper.delete(new LambdaQueryWrapper<TranscodeStrategyStep>().eq(TranscodeStrategyStep::getRootId, rootId)) > 0;
+    public boolean deleteStrategy(Long strategyId) {
+        if (strategyId == null) return false;
+        return stepMapper.delete(new LambdaQueryWrapper<TranscodeStrategyStep>().eq(TranscodeStrategyStep::getRootId, strategyId)) > 0;
     }
 
     @Override
-    public void updateStrategyId(String oldId, String newId) {
-        Long oldRoot = parseId(oldId);
-        Long newRoot = parseId(newId);
-        if (oldRoot == null) throw new IllegalArgumentException("策略ID无效");
-        if (newRoot == null) throw new IllegalArgumentException("新策略ID无效");
-        if (oldRoot.equals(newRoot)) return;
+    public void updateStrategyId(Long oldId, Long newId) {
+        if (oldId == null) throw new IllegalArgumentException("策略ID无效");
+        if (newId == null) throw new IllegalArgumentException("新策略ID无效");
+        if (oldId.equals(newId)) return;
         long conflict = stepMapper.selectCount(
-                new LambdaQueryWrapper<TranscodeStrategyStep>().eq(TranscodeStrategyStep::getRootId, newRoot));
+                new LambdaQueryWrapper<TranscodeStrategyStep>().eq(TranscodeStrategyStep::getRootId, newId));
         if (conflict > 0) throw new IllegalArgumentException("策略ID重复");
         stepMapper.update(null, new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<TranscodeStrategyStep>()
-                .eq(TranscodeStrategyStep::getRootId, oldRoot)
-                .set(TranscodeStrategyStep::getRootId, newRoot));
+                .eq(TranscodeStrategyStep::getRootId, oldId)
+                .set(TranscodeStrategyStep::getRootId, newId));
         taskMapper.update(null, new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<TranscodeTask>()
-                .eq(TranscodeTask::getStrategyId, String.valueOf(oldRoot))
-                .set(TranscodeTask::getStrategyId, String.valueOf(newRoot)));
-    }
-
-    private static Long parseId(String strategyId) {
-        if (strategyId == null || strategyId.isBlank()) return null;
-        try {
-            return Long.parseLong(strategyId.trim());
-        } catch (NumberFormatException e) {
-            return null;
-        }
+                .eq(TranscodeTask::getStrategyId, oldId)
+                .set(TranscodeTask::getStrategyId, newId));
     }
 
     private static StrategyStepDTO defaultStep() {

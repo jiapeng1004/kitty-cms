@@ -7,7 +7,6 @@ import lombok.Data;
 @Data
 public class UpdateStrategyIdRequest {
 
-    @NotBlank(message = "新策略ID不能为空")
-    @Schema(description = "新策略ID", requiredMode = Schema.RequiredMode.REQUIRED)
-    private String newId;
+    @Schema(description = "新策略ID（root_id）", requiredMode = Schema.RequiredMode.REQUIRED)
+    private Long newId;
 }

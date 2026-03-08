@@ -55,18 +55,19 @@ public class StrategyExportService {
         try {
             StrategyExportFormat fmt = YAML_MAPPER.readValue(content, StrategyExportFormat.class);
             CreateStrategyRequest req = toCreateRequest(fmt);
-            String desiredId = fmt.getStrategyId() != null && !fmt.getStrategyId().isBlank() ? fmt.getStrategyId().trim() : null;
-            if (desiredId != null) {
+            String desiredIdStr = fmt.getStrategyId() != null && !fmt.getStrategyId().isBlank() ? fmt.getStrategyId().trim() : null;
+            if (desiredIdStr != null) {
+                Long desiredId = Long.parseLong(desiredIdStr);
                 StrategyVO existing = strategyService.getStrategy(desiredId);
                 if (existing != null) {
                     strategyService.updateStrategy(desiredId, req);
-                    return desiredId;
+                    return String.valueOf(desiredId);
                 }
-                String newId = strategyService.createStrategy(req);
+                Long newId = strategyService.createStrategy(req);
                 strategyService.updateStrategyId(newId, desiredId);
-                return desiredId;
+                return String.valueOf(desiredId);
             }
-            return strategyService.createStrategy(req);
+            return String.valueOf(strategyService.createStrategy(req));
         } catch (Exception e) {
             throw new IllegalArgumentException("导入解析失败: " + e.getMessage(), e);
         }
@@ -75,7 +76,7 @@ public class StrategyExportService {
     private StrategyExportFormat toExportFormat(StrategyVO vo) {
         StrategyExportFormat fmt = new StrategyExportFormat();
         fmt.setFormatVersion(1);
-        fmt.setStrategyId(vo.getId());
+        fmt.setStrategyId(vo.getId() != null ? String.valueOf(vo.getId()) : null);
         fmt.setName(vo.getName());
         fmt.setWorkDir(vo.getWorkDir());
         if (vo.getSteps() != null && !vo.getSteps().isEmpty()) {

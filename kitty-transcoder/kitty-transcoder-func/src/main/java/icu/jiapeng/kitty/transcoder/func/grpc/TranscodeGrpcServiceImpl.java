@@ -13,6 +13,7 @@ import jakarta.annotation.Resource;
 import org.springframework.grpc.server.service.GrpcService;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @GrpcService
@@ -69,7 +70,7 @@ public class TranscodeGrpcServiceImpl extends TranscodeServiceGrpc.TranscodeServ
                     .setProgress(vo.getProgress() != null ? vo.getProgress() : 0)
                     .setInputType(vo.getInputType() != null ? vo.getInputType() : "")
                     .setInputPath(vo.getInputPath() != null ? vo.getInputPath() : "")
-                    .setStrategyId(vo.getStrategyId() != null ? vo.getStrategyId() : "");
+                    .setStrategyId(Optional.ofNullable(vo.getStrategyId()).orElseThrow(IllegalStateException::new));
             if (vo.getOutputPath() != null) b.setOutputPath(vo.getOutputPath());
             if (vo.getOutputHttpUrl() != null) b.setOutputHttpUrl(vo.getOutputHttpUrl());
             if (vo.getWatermarkUrl() != null) b.setWatermarkUrl(vo.getWatermarkUrl());
@@ -96,12 +97,13 @@ public class TranscodeGrpcServiceImpl extends TranscodeServiceGrpc.TranscodeServ
             if (!request.getFilename().isEmpty()) req.setFilename(request.getFilename());
             if (request.getTimeFrom() > 0) req.setTimeFrom(request.getTimeFrom());
             if (request.getTimeTo() > 0) req.setTimeTo(request.getTimeTo());
-            if (!request.getStrategyId().isEmpty()) req.setStrategyId(request.getStrategyId());
+            if (request.getStrategyId() != 0L) req.setStrategyId(request.getStrategyId());
             if (!request.getStatus().isEmpty()) req.setStatus(request.getStatus());
             if (!request.getTaskType().isEmpty()) req.setTaskType(request.getTaskType());
             if (!request.getSortBy().isEmpty()) req.setSortBy(request.getSortBy());
             if (!request.getSortOrder().isEmpty()) req.setSortOrder(request.getSortOrder());
-            List<TaskVO> list = taskService.listTasks(req);
+            ListTasksResponse resp = taskService.listTasks(req);
+            List<TaskVO> list = resp != null ? resp.getList() : java.util.Collections.emptyList();
             icu.jiapeng.kitty.transcoder.grpc.ListTasksResp.Builder b = icu.jiapeng.kitty.transcoder.grpc.ListTasksResp.newBuilder();
             for (TaskVO vo : list) {
                 b.addTasks(toTaskResp(vo));
@@ -191,8 +193,8 @@ public class TranscodeGrpcServiceImpl extends TranscodeServiceGrpc.TranscodeServ
     public void createStrategy(icu.jiapeng.kitty.transcoder.grpc.CreateStrategyReq request, StreamObserver<icu.jiapeng.kitty.transcoder.grpc.CreateStrategyResp> responseObserver) {
         try {
             CreateStrategyRequest req = reqFromProto(request);
-            String id = strategyService.createStrategy(req);
-            responseObserver.onNext(icu.jiapeng.kitty.transcoder.grpc.CreateStrategyResp.newBuilder().setStrategyId(id).build());
+            Long id = strategyService.createStrategy(req);
+            responseObserver.onNext(icu.jiapeng.kitty.transcoder.grpc.CreateStrategyResp.newBuilder().setStrategyId(String.valueOf(id)).build());
         } catch (Exception e) {
             responseObserver.onError(io.grpc.Status.INTERNAL.withDescription(e.getMessage()).asException());
         } finally {
@@ -315,7 +317,7 @@ public class TranscodeGrpcServiceImpl extends TranscodeServiceGrpc.TranscodeServ
                 .setProgress(vo.getProgress() != null ? vo.getProgress() : 0)
                 .setInputType(vo.getInputType() != null ? vo.getInputType() : "")
                 .setInputPath(vo.getInputPath() != null ? vo.getInputPath() : "")
-                .setStrategyId(vo.getStrategyId() != null ? vo.getStrategyId() : "");
+                .setStrategyId(vo.getStrategyId() != null ? vo.getStrategyId() : 0L);
         if (vo.getOutputPath() != null) b.setOutputPath(vo.getOutputPath());
         if (vo.getOutputHttpUrl() != null) b.setOutputHttpUrl(vo.getOutputHttpUrl());
         if (vo.getCreatedAt() != null) b.setCreatedAt(vo.getCreatedAt());
@@ -328,7 +330,7 @@ public class TranscodeGrpcServiceImpl extends TranscodeServiceGrpc.TranscodeServ
 
     private static icu.jiapeng.kitty.transcoder.grpc.StrategyResp toStrategyResp(StrategyVO vo) {
         icu.jiapeng.kitty.transcoder.grpc.StrategyResp.Builder b = icu.jiapeng.kitty.transcoder.grpc.StrategyResp.newBuilder()
-                .setId(vo.getId())
+                .setId(vo.getId() != null ? vo.getId() : 0L)
                 .setName(vo.getName() != null ? vo.getName() : "")
                 .setStepCount(vo.getStepCount() != null ? vo.getStepCount() : 0);
         if (vo.getWorkDir() != null) b.setWorkDir(vo.getWorkDir());

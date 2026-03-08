@@ -23,10 +23,8 @@ public class CreateTaskRequest {
     @Schema(hidden = true)
     private String inputFile;
 
-    @NotBlank(message = "策略ID不能为空")
-    @Size(max = 100, message = "策略ID长度不能超过100")
-    @Schema(description = "转码策略ID", example = "strategy_001")
-    private String strategyId;
+    @Schema(description = "转码策略ID（root_id）", example = "22", requiredMode = Schema.RequiredMode.REQUIRED)
+    private Long strategyId;
 
     @Valid
     @Schema(description = "通知配置")

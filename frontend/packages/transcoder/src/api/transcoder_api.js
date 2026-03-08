@@ -13,8 +13,8 @@ export function getTask(taskId) {
 
 /**
  * 分页获取任务列表
- * @param {{ page?: number, size?: number, taskId?: string, filename?: string, timeFrom?: number, timeTo?: number, strategyId?: string, status?: string, taskType?: string, sortBy?: string, sortOrder?: string }} params
- * @returns {Promise<Array<object>>}
+ * @param {{ page?: number, size?: number, taskId?: string, filename?: string, timeFrom?: number, timeTo?: number, strategyId?: number, status?: string, taskType?: string, sortBy?: string, sortOrder?: string }} params
+ * @returns {Promise<{ list: Array<object>, total: number, page: number, pageSize: number }>}
  */
 export function listTasks(params = {}) {
   const { page = 1, size = 50, taskId, filename, timeFrom, timeTo, strategyId, status, taskType, sortBy = 'createdAt', sortOrder = 'desc' } = params
@@ -23,7 +23,7 @@ export function listTasks(params = {}) {
   if (filename != null && String(filename).trim()) p.filename = String(filename).trim()
   if (timeFrom != null && timeFrom > 0) p.timeFrom = timeFrom
   if (timeTo != null && timeTo > 0) p.timeTo = timeTo
-  if (strategyId != null && String(strategyId).trim()) p.strategyId = String(strategyId).trim()
+  if (strategyId != null && strategyId !== '') p.strategyId = typeof strategyId === 'number' ? strategyId : Number(strategyId)
   if (status != null && String(status).trim()) p.status = String(status).trim()
   if (taskType != null && String(taskType).trim()) p.taskType = String(taskType).trim()
   return api.get(`${PREFIX}/tasks`, { params: p })

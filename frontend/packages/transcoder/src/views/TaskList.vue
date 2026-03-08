@@ -2,8 +2,8 @@
   <div>
     <div class="toolbar mb">
       <a-button type="primary" @click="$router.push('/tasks/create')">新建任务</a-button>
-      <a-input-search v-model:value="filters.taskId" placeholder="按任务ID检索" allow-clear class="search-input" @search="load" />
-      <a-input-search v-model:value="filters.filename" placeholder="按文件名检索" allow-clear class="search-input" @search="load" />
+      <a-input-search v-model:value="filters.taskId" placeholder="按任务ID检索" allow-clear class="search-input" @search="() => { pagination.current = 1; load() }" />
+      <a-input-search v-model:value="filters.filename" placeholder="按文件名检索" allow-clear class="search-input" @search="() => { pagination.current = 1; load() }" />
       <a-range-picker
         v-model:value="timeRange"
         show-time
@@ -12,39 +12,46 @@
         class="range-picker"
         @change="onTimeRangeChange"
       />
-      <a-select v-model:value="filters.strategyId" placeholder="策略ID" allow-clear class="filter-select" @change="load">
-        <a-select-option value="__empty__">空不定策略</a-select-option>
+      <a-select v-model:value="filters.strategyId" placeholder="策略ID" allow-clear class="filter-select" @change="() => { pagination.current = 1; load() }">
+        <a-select-option value="-1">空不定策略</a-select-option>
         <a-select-option v-for="s in strategies" :key="s.id" :value="s.id">{{ s.name || s.id }}</a-select-option>
       </a-select>
-      <a-select v-model:value="filters.status" placeholder="任务状态" allow-clear class="filter-select" @change="load">
+      <a-select v-model:value="filters.status" placeholder="任务状态" allow-clear class="filter-select" @change="() => { pagination.current = 1; load() }">
         <a-select-option value="PENDING">PENDING</a-select-option>
         <a-select-option value="PROCESSING">PROCESSING</a-select-option>
         <a-select-option value="COMPLETED">COMPLETED</a-select-option>
         <a-select-option value="FAILED">FAILED</a-select-option>
         <a-select-option value="CANCELLED">CANCELLED</a-select-option>
       </a-select>
-      <a-select v-model:value="filters.taskType" placeholder="任务类型" allow-clear class="filter-select" @change="load">
+      <a-select v-model:value="filters.taskType" placeholder="任务类型" allow-clear class="filter-select" @change="() => { pagination.current = 1; load() }">
         <a-select-option value="SCHEDULED_TRANSCODE">预定策略转码</a-select-option>
         <a-select-option value="MAGIC_EXTRACT_FRAMES">同步抽帧</a-select-option>
         <a-select-option value="MAGIC_IMAGE_CONVERT">同步图转</a-select-option>
         <a-select-option value="MAGIC_SYNC_TRANSCODE">同步单目标转码</a-select-option>
       </a-select>
-      <a-select v-model:value="sortBy" placeholder="排序" class="filter-select" @change="load">
+      <a-select v-model:value="sortBy" placeholder="排序" class="filter-select" @change="() => { pagination.current = 1; load() }">
         <a-select-option value="createdAt">添加时间</a-select-option>
         <a-select-option value="completedAt">结束时间</a-select-option>
       </a-select>
-      <a-select v-model:value="sortOrder" placeholder="方向" class="filter-select sort-order" @change="load">
+      <a-select v-model:value="sortOrder" placeholder="方向" class="filter-select sort-order" @change="() => { pagination.current = 1; load() }">
         <a-select-option value="desc">倒序</a-select-option>
         <a-select-option value="asc">正序</a-select-option>
       </a-select>
-      <a-button @click="load">查询</a-button>
+      <a-button @click="() => { pagination.current = 1; load() }">查询</a-button>
     </div>
     <a-table
       :columns="columns"
       :data-source="list"
       :loading="loading"
       row-key="id"
-      :pagination="{ pageSize: 10 }"
+      :pagination="{
+        current: pagination.current,
+        pageSize: pagination.pageSize,
+        total: total,
+        showSizeChanger: true,
+        showTotal: (t) => `共 ${t} 条`,
+        onChange: (page, pageSize) => { pagination.current = page; pagination.pageSize = pageSize; load() }
+      }"
       :expandable="{ expandedRowKeys, onExpand: onRowExpand }"
     >
       <template #expandedRowRender="{ record }">
@@ -100,6 +107,8 @@ import StepProgressExpand from '../components/StepProgressExpand.vue'
 
 const loading = ref(false)
 const list = ref([])
+const total = ref(0)
+const pagination = reactive({ current: 1, pageSize: 50 })
 const filters = reactive({ taskId: '', filename: '', strategyId: undefined, status: undefined, taskType: undefined })
 const timeRange = ref(null)
 const sortBy = ref('createdAt')
@@ -110,12 +119,13 @@ const stepProgressByTaskId = ref({})
 
 function displayStrategyId(record) {
   const isMagic = record.taskType && MAGIC_TYPES.includes(record.taskType)
-  const empty = !record.strategyId || String(record.strategyId).trim() === ''
+  const empty = record.strategyId == null || record.strategyId === '' || (typeof record.strategyId === 'string' && record.strategyId.trim() === '')
   if (isMagic && empty) return '空不定策略'
-  return record.strategyId || '-'
+  return record.strategyId != null && record.strategyId !== '' ? record.strategyId : '-'
 }
 
 function onTimeRangeChange() {
+  pagination.current = 1
   load()
 }
 
@@ -199,8 +209,8 @@ async function load() {
   try {
     const [timeFrom, timeTo] = timeRange.value || []
     const data = await listTasks({
-      page: 1,
-      size: 100,
+      page: pagination.current || 1,
+      size: pagination.pageSize || 50,
       taskId: filters.taskId || undefined,
       filename: filters.filename || undefined,
       timeFrom: timeFrom || undefined,
@@ -211,7 +221,11 @@ async function load() {
       sortBy: sortBy.value,
       sortOrder: sortOrder.value
     })
-    list.value = Array.isArray(data) ? data : []
+    // 后端返回 { list, total, page, pageSize }
+    list.value = data?.list ?? []
+    total.value = data?.total ?? 0
+    pagination.current = data?.page ?? 1
+    pagination.pageSize = data?.pageSize ?? 50
   } catch {
     list.value = []
   } finally {

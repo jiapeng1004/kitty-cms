@@ -30,7 +30,7 @@ service TranscodeService {
 message CreateTaskReq {
   string input_type = 1;
   string input_path = 2;
-  string strategy_id = 3;
+  int64 strategy_id = 3;
   int32 priority = 4;
   string watermark_url = 5;
   string watermark_position = 6;
@@ -56,7 +56,7 @@ message TaskResp {
   string input_path = 5;
   string output_path = 6;
   string output_http_url = 7;
-  string strategy_id = 8;
+  int64 strategy_id = 8;
   string watermark_url = 9;
   string watermark_position = 10;
   int64 created_at = 11;
@@ -74,7 +74,7 @@ message ListTasksReq {
   string filename = 4;
   int64 time_from = 5;
   int64 time_to = 6;
-  string strategy_id = 7;
+  optional int64 strategy_id = 7;
   string status = 8;
   string task_type = 9;
   string sort_by = 10;
@@ -118,10 +118,10 @@ message GetStrategiesResp {
   repeated StrategyResp strategies = 1;
 }
 message GetStrategyReq {
-  string strategy_id = 1;
+  int64 strategy_id = 1;
 }
 message StrategyResp {
-  string id = 1;
+  int64 id = 1;
   string name = 2;
   string work_dir = 3;
   int32 step_count = 4;
@@ -160,7 +160,7 @@ message CreateStrategyResp {
   string strategy_id = 1;
 }
 message UpdateStrategyReq {
-  string strategy_id = 1;
+  int64 strategy_id = 1;
   string name = 2;
   string work_dir = 3;
   repeated StrategyStepDto steps = 4;
@@ -169,7 +169,7 @@ message UpdateStrategyResp {
   bool success = 1;
 }
 message DeleteStrategyReq {
-  string strategy_id = 1;
+  int64 strategy_id = 1;
 }
 message DeleteStrategyResp {
   bool success = 1;

@@ -55,7 +55,7 @@ public class TranscodeController implements TranscodeApi {
     @Operation(summary = "分页查询任务列表")
     @GetMapping("/tasks")
     @Override
-    public List<TaskVO> listTasks(@ModelAttribute ListTasksRequest request) {
+    public ListTasksResponse listTasks(@ModelAttribute ListTasksRequest request) {
         return taskService.listTasks(request);
     }
 
@@ -95,7 +95,7 @@ public class TranscodeController implements TranscodeApi {
 
     @PostMapping("/strategy")
     @Override
-    public String createStrategy(@RequestBody CreateStrategyRequest request) {
+    public Long createStrategy(@RequestBody CreateStrategyRequest request) {
         return strategyService.createStrategy(request);
     }
 
@@ -107,26 +107,26 @@ public class TranscodeController implements TranscodeApi {
 
     @GetMapping("/strategy/{id}")
     @Override
-    public StrategyVO getStrategy(@PathVariable String id) {
+    public StrategyVO getStrategy(@PathVariable Long id) {
         return strategyService.getStrategy(id);
     }
 
     @PutMapping("/strategy/{id}")
     @Override
-    public Boolean updateStrategy(@PathVariable String id, @RequestBody CreateStrategyRequest request) {
+    public Boolean updateStrategy(@PathVariable Long id, @RequestBody CreateStrategyRequest request) {
         return strategyService.updateStrategy(id, request);
     }
 
     @DeleteMapping("/strategy/{id}")
     @Override
-    public Boolean deleteStrategy(@PathVariable String id) {
+    public Boolean deleteStrategy(@PathVariable Long id) {
         return strategyService.deleteStrategy(id);
     }
 
     @Operation(summary = "导出策略为 YAML 文件")
     @GetMapping("/strategy/{id}/export")
     @Override
-    public String exportStrategy(@PathVariable String id) {
+    public String exportStrategy(@PathVariable Long id) {
         StrategyVO vo = strategyService.getStrategy(id);
         if (vo == null) throw new IllegalArgumentException("策略不存在");
         return strategyExportService.exportToYaml(vo);
@@ -142,7 +142,7 @@ public class TranscodeController implements TranscodeApi {
     @Operation(summary = "修改策略ID")
     @PutMapping("/strategy/{id}/id")
     @Override
-    public Boolean updateStrategyId(@PathVariable String id, @Valid @RequestBody UpdateStrategyIdRequest request) {
+    public Boolean updateStrategyId(@PathVariable Long id, @Valid @RequestBody UpdateStrategyIdRequest request) {
         strategyService.updateStrategyId(id, request.getNewId());
         return true;
     }

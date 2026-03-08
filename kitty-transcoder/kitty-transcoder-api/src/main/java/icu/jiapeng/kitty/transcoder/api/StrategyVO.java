@@ -10,8 +10,8 @@ import java.util.List;
 @FieldNameConstants
 public class StrategyVO {
 
-    @Schema(description = "策略ID")
-    private String id;
+    @Schema(description = "策略ID（root_id）")
+    private Long id;
 
     @Schema(description = "策略名称", example = "高清转码")
     private String name;

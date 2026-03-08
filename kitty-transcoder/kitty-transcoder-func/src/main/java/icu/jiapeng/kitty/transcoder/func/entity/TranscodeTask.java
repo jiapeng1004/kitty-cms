@@ -18,7 +18,7 @@ public class TranscodeTask {
     private String taskType;
     private String inputType;
     private String inputPath;
-    private String strategyId;
+    private Long strategyId;
     private String status;
     private Integer progress;
     private String progressDetail;
