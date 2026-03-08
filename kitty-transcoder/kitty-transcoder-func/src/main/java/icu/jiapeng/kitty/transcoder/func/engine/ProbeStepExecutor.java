@@ -2,13 +2,22 @@ package icu.jiapeng.kitty.transcoder.func.engine;
 
 import icu.jiapeng.kitty.transcoder.api.ProbeResult;
 import icu.jiapeng.kitty.transcoder.api.StrategyStepVO;
-import org.bytedeco.javacv.FFmpegFrameGrabber;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
+import java.util.Arrays;
+import java.util.List;
 
 @Component
 public class ProbeStepExecutor implements StepExecutor {
+
+    private final FFmpegCliExecutor cliExecutor;
+    private final FfprobeJsonParser ffprobeParser;
+
+    public ProbeStepExecutor(FFmpegCliExecutor cliExecutor, FfprobeJsonParser ffprobeParser) {
+        this.cliExecutor = cliExecutor;
+        this.ffprobeParser = ffprobeParser;
+    }
 
     @Override
     public String getType() {
@@ -23,25 +32,15 @@ public class ProbeStepExecutor implements StepExecutor {
             if (context != null) context.setProbeResult(context.getCurrentStepIndex(), new ProbeResult());
             return inputPath;
         }
-        ProbeResult result = new ProbeResult();
-        try (FFmpegFrameGrabber grabber = new FFmpegFrameGrabber(inputPath)) {
-            grabber.start();
-            int w = grabber.getImageWidth();
-            int h = grabber.getImageHeight();
-            result.setWidth(w > 0 ? w : null);
-            result.setHeight(h > 0 ? h : null);
-            double fr = grabber.getFrameRate();
-            result.setFrameRate(fr > 0 ? fr : null);
-            long lengthInTime = grabber.getLengthInTime();
-            if (lengthInTime > 0) result.setDurationMs(lengthInTime / 1000L);
-            int vc = grabber.getVideoCodec();
-            int ac = grabber.getAudioCodec();
-            result.setVideoCodec(vc > 0 ? vc : null);
-            result.setAudioCodec(ac > 0 ? ac : null);
-            result.setHasVideo(vc > 0);
-            result.setHasAudio(ac > 0);
-            grabber.stop();
-        }
+        List<String> args = Arrays.asList(
+                "-v", "quiet",
+                "-print_format", "json",
+                "-show_format", "-show_streams",
+                inputPath
+        );
+        File workDir = input.getParentFile();
+        String json = cliExecutor.runFfprobe(args, workDir);
+        ProbeResult result = ffprobeParser.parse(json);
         if (context != null) context.setProbeResult(context.getCurrentStepIndex(), result);
         return inputPath;
     }

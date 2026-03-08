@@ -1,11 +1,19 @@
-FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/eclipse-temurin:25-jdk-noble
+FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/bellsoft/liberica-openjdk-alpine-musl:25
 
 LABEL maintainer="jiapeng_aoa@163.com"
 LABEL version="1.0"
 LABEL description="kitty-transcoder"
 
-# 字体和imagemagick
-RUN apt update && apt install -y fontconfig imagemagick && ln -s /usr/bin/convert /usr/bin/magick
+RUN <<EOF
+# 换清华源
+sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories
+# 安装gcompat兼容层
+apk add gcompat
+# 安装ffmpeg
+apk add ffmpeg
+# 安装image magick
+apk add --no-cache ffmpeg imagemagick imagemagick-heic imagemagick-webp imagemagick-jpeg
+EOF
 
 # 后端 jar
 COPY kitty-transcoder/kitty-transcoder-server/target/app.jar /app/app.jar

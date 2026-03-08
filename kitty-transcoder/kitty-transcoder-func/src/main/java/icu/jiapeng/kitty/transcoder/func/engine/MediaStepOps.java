@@ -2,16 +2,11 @@ package icu.jiapeng.kitty.transcoder.func.engine;
 
 import cn.hutool.core.img.ImgUtil;
 import cn.hutool.core.io.file.PathUtil;
+import icu.jiapeng.kitty.transcoder.api.ProbeResult;
 import icu.jiapeng.kitty.transcoder.api.StrategyStepVO;
 import icu.jiapeng.kitty.transcoder.func.config.TranscodeConfig;
 import icu.jiapeng.kitty.transcoder.func.file.HttpFileHandler;
-import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.bytedeco.javacv.FFmpegFrameFilter;
-import org.bytedeco.javacv.FFmpegFrameGrabber;
-import org.bytedeco.javacv.FFmpegFrameRecorder;
-import org.bytedeco.javacv.Frame;
-import org.bytedeco.javacv.Java2DFrameConverter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -25,10 +20,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
-
-import static org.bytedeco.ffmpeg.global.avcodec.AV_CODEC_ID_H264;
-import static org.bytedeco.ffmpeg.global.avutil.AV_PIX_FMT_YUV420P;
+import java.util.function.Consumer;
 
 @Slf4j
 @Component
@@ -36,6 +30,14 @@ public class MediaStepOps {
 
     @Autowired(required = false)
     private TranscodeConfig transcodeConfig;
+
+    private final FFmpegCliExecutor cliExecutor;
+    private final FfprobeJsonParser ffprobeParser;
+
+    public MediaStepOps(FFmpegCliExecutor cliExecutor, FfprobeJsonParser ffprobeParser) {
+        this.cliExecutor = cliExecutor;
+        this.ffprobeParser = ffprobeParser;
+    }
 
     public String doTranscode(String inputPath, StrategyStepVO step, String stepSuffix, String resolvedOutputPath,
                               String taskWatermarkUrl, String taskWatermarkPosition, String taskId, String stepWorkDir,
@@ -65,51 +67,55 @@ public class MediaStepOps {
             if (!parent.exists()) parent.mkdirs();
         }
         int bitrate = (step.getBitrate() != null ? step.getBitrate() : 5000) * 1000;
-        double frameRate = step.getFrameRate() != null ? step.getFrameRate() : 30;
+        double frameRate = step.getFrameRate() != null ? step.getFrameRate().doubleValue() : 30;
         String codec = step.getEncoder() != null ? step.getEncoder() : "h264";
 
-        try (FFmpegFrameGrabber grabber = new FFmpegFrameGrabber(inputPath);
-             FFmpegFrameRecorder recorder = new FFmpegFrameRecorder(outputFile, width, height, 2)) {
-            grabber.start();
-            long totalMicros = grabber.getLengthInTime();
-            long lastReportMs = 0;
-            recorder.setFormat(format);
-            if ("h264".equalsIgnoreCase(codec) || "libx264".equalsIgnoreCase(codec)) {
-                recorder.setVideoCodec(AV_CODEC_ID_H264);
-            } else {
-                recorder.setVideoCodecName(codec);
-            }
-            recorder.setVideoBitrate(bitrate);
-            recorder.setFrameRate(frameRate);
-            recorder.setPixelFormat(AV_PIX_FMT_YUV420P);
-            if ("mp4".equalsIgnoreCase(format)) {
-                recorder.setOption("movflags", "+faststart");
-            }
-            recorder.setAudioCodecName("aac");
-            recorder.setAudioBitrate(128000);
-            recorder.setSampleRate(44100);
-            recorder.start();
-            Frame frame;
-            while ((frame = grabber.grab()) != null) {
-                if (context != null && context.isCancelled()) {
-                    throw new IOException("任务已取消");
-                }
-                recorder.record(frame);
-                if (context != null && totalMicros > 0) {
-                    long now = System.currentTimeMillis();
-                    if (now - lastReportMs >= 300) {
-                        lastReportMs = now;
-                        long pos = grabber.getTimestamp();
-                        int pct = (int) Math.min(99, Math.max(0, (pos * 100) / totalMicros));
-                        context.reportStepProgress(pct);
-                    }
-                }
-            }
-            if (context != null) context.reportStepProgress(100);
-            recorder.stop();
-            grabber.stop();
+        long durationMs = 0;
+        try {
+            String json = cliExecutor.runFfprobe(Arrays.asList("-v", "quiet", "-print_format", "json", "-show_format", "-show_streams", inputPath), outF.getParentFile());
+            ProbeResult probe = ffprobeParser.parse(json);
+            if (probe.getDurationMs() != null) durationMs = probe.getDurationMs();
+        } catch (Exception e) {
+            log.debug("ffprobe duration 获取失败，进度不解析: {}", e.getMessage());
         }
-        // 任务级水印：发起转码时传入才加水印（支持本地路径或 HTTP URL）
+
+        List<String> args = new ArrayList<>();
+        args.add("-y");
+        args.add("-i");
+        args.add(inputPath);
+        args.add("-s");
+        args.add(width + "x" + height);
+        args.add("-b:v");
+        args.add(String.valueOf(bitrate));
+        args.add("-r");
+        args.add(String.valueOf(frameRate));
+        args.add("-c:v");
+        if ("h264".equalsIgnoreCase(codec) || "libx264".equalsIgnoreCase(codec)) {
+            args.add("libx264");
+        } else {
+            args.add(codec);
+        }
+        args.add("-pix_fmt");
+        args.add("yuv420p");
+        if ("mp4".equalsIgnoreCase(format)) {
+            args.add("-movflags");
+            args.add("+faststart");
+        }
+        args.add("-c:a");
+        args.add("aac");
+        args.add("-b:a");
+        args.add("128000");
+        args.add("-ar");
+        args.add("44100");
+        args.add(outputFile);
+
+        java.util.function.BooleanSupplier cancelled = context != null ? context::isCancelled : () -> false;
+        Consumer<Integer> progress = (context != null && durationMs > 0) ? context::reportStepProgress : null;
+        int exit = cliExecutor.runFfmpeg(args, outF.getParentFile(), 0, cancelled, progress, durationMs);
+        if (exit != 0) {
+            throw new IOException("ffmpeg 转码退出码: " + exit);
+        }
+
         String wmPath = (taskWatermarkUrl != null && !taskWatermarkUrl.isBlank()) ? taskWatermarkUrl : null;
         if (wmPath != null) {
             if ((wmPath.startsWith("http://") || wmPath.startsWith("https://")) && taskId != null) {
@@ -128,9 +134,12 @@ public class MediaStepOps {
         return outputFile;
     }
 
-    @SneakyThrows
     public String doExtractFrames(String inputPath, StrategyStepVO step, String stepSuffix, String resolvedOutputPath, String stepWorkDir) {
-        return doExtractFrames(inputPath, step, stepSuffix, resolvedOutputPath, stepWorkDir, null);
+        try {
+            return doExtractFrames(inputPath, step, stepSuffix, resolvedOutputPath, stepWorkDir, null);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public String doExtractFrames(String inputPath, StrategyStepVO step, String stepSuffix, String resolvedOutputPath, String stepWorkDir, StepContext context) throws Exception {
@@ -142,32 +151,42 @@ public class MediaStepOps {
         int frameCount = step.getExtractFrameCount() != null && step.getExtractFrameCount() > 0 ? step.getExtractFrameCount() : 1;
         String fmt = "jpg";
         if (step.getExtractOutputFormat() != null && step.getExtractOutputFormat().equalsIgnoreCase("png")) fmt = "png";
-        java.util.function.BooleanSupplier isCancelled = context != null ? context::isCancelled : () -> false;
-        List<BufferedImage> frames = extractFramesByInterval(inputPath, interval, frameCount, isCancelled);
+
         Path framePathO = Paths.get(framePath);
         PathUtil.mkParentDirs(framePathO);
-        if (frameCount == 1 && !frames.isEmpty()) {
-            // 单帧：输出为单个文件 transcoder/$DATE/$TASK_ID_frame.png
-            File outFile = new File(framePath);
-            ImageIO.write(frames.getFirst(), fmt, outFile);
-            return outFile.getAbsolutePath();
+        File framePathFile = new File(framePath);
+
+        if (frameCount == 1) {
+            String outFile = framePath;
+            if (!outFile.toLowerCase().endsWith("." + fmt)) {
+                outFile = framePath + "." + fmt;
+            }
+            List<String> args = Arrays.asList(
+                    "-y", "-i", inputPath,
+                    "-vf", "select=eq(n\\,0)", "-vframes", "1",
+                    outFile
+            );
+            java.util.function.BooleanSupplier cancelled = context != null ? context::isCancelled : () -> false;
+            int exit = cliExecutor.runFfmpeg(args, framePathFile.getParentFile(), 0, cancelled, null, 0);
+            if (exit != 0) throw new IOException("ffmpeg 抽帧退出码: " + exit);
+            return new File(outFile).getAbsolutePath();
         }
-        // 多帧：输出 transcoder/$DATE/$TASK_ID_frame_0.png, _1.png, ...
-        File frameFile = new File(framePath);
-        for (int i = 0; i < frames.size(); i++) {
-            if (frameFile.exists() && frameFile.isFile()) {
-                Files.deleteIfExists(framePathO);
-            }
-            if (!frameFile.exists()) {
-                Files.createDirectories(framePathO);
-            }
-            BufferedImage img = frames.get(i);
-            if (img != null) {
-                File outFile = new File(frameFile, String.format("%d.%s", i, fmt));
-                ImageIO.write(img, fmt, outFile);
-            }
+
+        if (framePathFile.exists() && framePathFile.isFile()) {
+            Files.deleteIfExists(framePathO);
         }
-        return frameFile.getAbsolutePath();
+        Files.createDirectories(framePathO);
+        String outPattern = framePath + File.separator + "frame_%d." + fmt;
+        List<String> args = Arrays.asList(
+                "-y", "-i", inputPath,
+                "-vf", "select=not(mod(n\\," + interval + "))", "-vsync", "vfr",
+                "-frame_pts", "1", "-start_number", "0",
+                outPattern
+        );
+        java.util.function.BooleanSupplier cancelled = context != null ? context::isCancelled : () -> false;
+        int exit = cliExecutor.runFfmpeg(args, framePathFile.getParentFile(), 0, cancelled, null, 0);
+        if (exit != 0) throw new IOException("ffmpeg 抽帧退出码: " + exit);
+        return framePathFile.getAbsolutePath();
     }
 
     public String doSpriteSheet(String inputPath, StrategyStepVO step, String stepSuffix, String resolvedOutputPath, String stepWorkDir) throws Exception {
@@ -183,11 +202,20 @@ public class MediaStepOps {
             List<BufferedImage> images = loadFramesFromDirectory(inputPath, count);
             if (!images.isEmpty()) sprite = buildSpriteFromImages(images, cols, rows, scale);
         } else {
-            sprite = buildSpriteWithFilter(inputPath, cols, rows, count, scale);
+            sprite = buildSpriteWithFfmpeg(inputPath, cols, rows, count, scale);
             if (sprite == null) {
-                List<BufferedImage> images = extractFramesByTimestamp(inputPath, count);
-                if (images.isEmpty()) images = extractFramesByInterval(inputPath, 30, count, null);
-                if (!images.isEmpty()) sprite = buildSpriteFromImages(images, cols, rows, scale);
+                String tempDir = parentPath(inputPath) + File.separator + ".sprite_tmp_" + System.currentTimeMillis();
+                Files.createDirectories(Paths.get(tempDir));
+                try {
+                    String multiOut = doExtractFrames(inputPath, step, "_sprite_tmp", tempDir, stepWorkDir, null);
+                    File dir = new File(multiOut);
+                    if (dir.isDirectory()) {
+                        List<BufferedImage> images = loadFramesFromDirectory(multiOut, count);
+                        if (!images.isEmpty()) sprite = buildSpriteFromImages(images, cols, rows, scale);
+                    }
+                } finally {
+                    PathUtil.del(Paths.get(tempDir));
+                }
             }
         }
         if (sprite == null) {
@@ -198,7 +226,6 @@ public class MediaStepOps {
         String outPath = resolvedOutputPath != null && !resolvedOutputPath.isBlank()
                 ? toLocalFilePath(resolvedOutputPath, workDir)
                 : parentPath(inputPath) + File.separator + baseName + stepSuffix + "_sprite." + fmt;
-        // 雪碧图本质是静态图片，若 output_template 误填 .mp4 等视频扩展名，强制改为图片格式
         outPath = ensureImageExtension(outPath, fmt);
         File outFile = new File(outPath);
         if (outFile.getParent() != null) {
@@ -209,46 +236,33 @@ public class MediaStepOps {
         return outPath;
     }
 
-    /**
-     * 使用 FFmpegFrameFilter 一步到位生成雪碧图：select+scale(iw/N:ih/N)+tile，无需先抽帧。
-     */
-    private BufferedImage buildSpriteWithFilter(String inputPath, int cols, int rows, int count, int scale) throws Exception {
-        try (FFmpegFrameGrabber grabber = new FFmpegFrameGrabber(inputPath);
-             Java2DFrameConverter converter = new Java2DFrameConverter()) {
-            grabber.start();
-            int w = grabber.getImageWidth();
-            int h = grabber.getImageHeight();
-            if (w <= 0 || h <= 0) return null;
-            long durationUs = grabber.getLengthInTime();
-            double fps = grabber.getFrameRate();
-            long totalFrames = (durationUs > 0 && fps > 0) ? (long) ((durationUs / 1e6) * fps) : 300;
-            int interval = Math.max(1, (int) (totalFrames / count));
-            int s = Math.max(1, scale);
-            String filterStr = "select=not(mod(n\\," + interval + ")),scale=iw/" + s + ":ih/" + s + ",tile=" + cols + "x" + rows;
-            try (FFmpegFrameFilter filter = new FFmpegFrameFilter(filterStr, w, h)) {
-                int pf = grabber.getPixelFormat();
-                if (pf >= 0) filter.setPixelFormat(pf);
-                filter.setFrameRate(fps > 0 ? fps : 30);
-                filter.start();
-                Frame frame;
-                while ((frame = grabber.grab()) != null) {
-                    if (frame.image != null) {
-                        filter.push(frame);
-                        Frame out = filter.pull();
-                        if (out != null && out.image != null) {
-                            return converter.convert(out);
-                        }
-                    }
-                }
-                filter.push(null);
-                Frame out = filter.pull();
-                if (out != null && out.image != null) {
-                    return converter.convert(out);
-                }
-            }
-            grabber.stop();
+    private BufferedImage buildSpriteWithFfmpeg(String inputPath, int cols, int rows, int count, int scale) throws Exception {
+        String json = cliExecutor.runFfprobe(Arrays.asList("-v", "quiet", "-print_format", "json", "-show_format", "-show_streams", inputPath), new File(inputPath).getParentFile());
+        ProbeResult probe = ffprobeParser.parse(json);
+        Integer w = probe.getWidth();
+        Integer h = probe.getHeight();
+        if (w == null || h == null || w <= 0 || h <= 0) return null;
+        long durationMs = probe.getDurationMs() != null ? probe.getDurationMs() : 10000;
+        Double fps = probe.getFrameRate();
+        double fpsVal = (fps != null && fps > 0) ? fps : 30;
+        long totalFrames = (long) (durationMs / 1000.0 * fpsVal);
+        int interval = Math.max(1, (int) (totalFrames / count));
+        int s = Math.max(1, scale);
+        String filter = "select=not(mod(n\\," + interval + ")),scale=iw/" + s + ":ih/" + s + ",tile=" + cols + "x" + rows;
+        File parent = new File(inputPath).getParentFile();
+        File outImg = File.createTempFile("sprite_", "." + "jpg", parent);
+        try {
+            List<String> args = Arrays.asList(
+                    "-y", "-i", inputPath,
+                    "-vf", filter, "-frames:v", "1",
+                    outImg.getAbsolutePath()
+            );
+            int exit = cliExecutor.runFfmpeg(args, parent, 0, null, null, 0);
+            if (exit != 0) return null;
+            return ImageIO.read(outImg);
+        } finally {
+            Files.deleteIfExists(outImg.toPath());
         }
-        return null;
     }
 
     private BufferedImage buildSpriteFromImages(List<BufferedImage> images, int cols, int rows, int scale) {
@@ -275,10 +289,6 @@ public class MediaStepOps {
         return sprite;
     }
 
-    /**
-     * 从抽帧目录加载图片（支持 extract_frames 多帧输出），用于雪碧图。
-     * 匹配 frame_0.png / frame_1.jpg 等命名（多帧时为 TASK_ID/frame_INDEX.ext），按文件名排序取前 count 张。
-     */
     private List<BufferedImage> loadFramesFromDirectory(String dirPath, int count) throws IOException {
         List<BufferedImage> list = new ArrayList<>();
         File dir = new File(dirPath);
@@ -301,10 +311,6 @@ public class MediaStepOps {
         return list;
     }
 
-    /**
-     * 使用 ImageMagick 命令行进行图片格式转换、缩放、质量调整。
-     * 支持单文件或目录（递归处理目录内图片）。
-     */
     public String doImageConvert(String inputPath, StrategyStepVO step, String stepSuffix, String resolvedOutputPath, String stepWorkDir) throws Exception {
         File input = new File(inputPath);
         String workDir = (stepWorkDir != null && !stepWorkDir.isBlank()) ? stepWorkDir : (transcodeConfig != null ? transcodeConfig.getWorkDir() : null);
@@ -375,62 +381,9 @@ public class MediaStepOps {
         throw new IOException("ImageMagick 执行失败，请确保已安装 ImageMagick (magick命令)");
     }
 
-    /**
-     * 按时长均匀抽帧（雪碧图用），使用 setTimestamp 兼容性优于 setFrameNumber。
-     */
-    private List<BufferedImage> extractFramesByTimestamp(String inputPath, int count) throws Exception {
-        if (count <= 0) return new ArrayList<>();
-        List<BufferedImage> list = new ArrayList<>();
-        try (FFmpegFrameGrabber grabber = new FFmpegFrameGrabber(inputPath);
-             Java2DFrameConverter converter = new Java2DFrameConverter()) {
-            grabber.start();
-            long durationUs = grabber.getLengthInTime();
-            if (durationUs <= 0) return new ArrayList<>();
-            for (int i = 0; i < count; i++) {
-                long ts = (count <= 1) ? 0 : (i * durationUs) / (count - 1);
-                grabber.setTimestamp(ts);
-                Frame frame = grabber.grab();
-                if (frame != null && frame.image != null) {
-                    BufferedImage img = converter.convert(frame);
-                    if (img != null) list.add(img);
-                }
-            }
-            grabber.stop();
-        }
-        return list;
-    }
-
-    /**
-     * 使用 JavaCV 从视频中按间隔抽帧，返回 BufferedImage 列表。
-     * 抽帧步骤使用此方法，顺序 grab 兼容性最好。
-     */
-    private List<BufferedImage> extractFramesByInterval(String inputPath, int interval, int maxFrames, java.util.function.BooleanSupplier isCancelled) throws Exception {
-        List<BufferedImage> list = new ArrayList<>();
-        try (FFmpegFrameGrabber grabber = new FFmpegFrameGrabber(inputPath);
-             Java2DFrameConverter converter = new Java2DFrameConverter()) {
-            grabber.start();
-            Frame frame;
-            int videoFrameIndex = 0;
-            while (list.size() < maxFrames && (frame = grabber.grab()) != null) {
-                if (isCancelled != null && isCancelled.getAsBoolean()) {
-                    throw new IOException("任务已取消");
-                }
-                if (frame.image != null) {
-                    if (videoFrameIndex % interval == 0) {
-                        BufferedImage img = converter.convert(frame);
-                        if (img != null) list.add(img);
-                    }
-                    videoFrameIndex++;
-                }
-            }
-            grabber.stop();
-        }
-        return list;
-    }
-
     public void addWatermark(String inputFile, String outputFile, String watermarkPath, String position) throws Exception {
         if (watermarkPath == null || watermarkPath.isBlank() || !new File(watermarkPath).exists()) {
-            Files.copy(new File(inputFile).toPath(), new File(outputFile).toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            Files.copy(new File(inputFile).toPath(), new File(outputFile).toPath(), StandardCopyOption.REPLACE_EXISTING);
             return;
         }
         String overlay = "W-w-10:H-h-10";
@@ -466,9 +419,6 @@ public class MediaStepOps {
         return new File(path).getParent();
     }
 
-    /**
-     * 转码步骤输出必须为视频扩展名。若模板/上下文误传图片路径（如 .png），强制改为目标格式扩展名，避免视频写入图片导致不可播。
-     */
     private static String ensureVideoExtension(String path, String videoFmt) {
         if (path == null || path.isBlank() || videoFmt == null || videoFmt.isBlank()) return path;
         String lower = path.toLowerCase();
@@ -480,9 +430,6 @@ public class MediaStepOps {
         return path;
     }
 
-    /**
-     * 若路径以视频扩展名结尾（mp4/mpg/avi/mov 等），替换为图片扩展名，供雪碧图等图片输出使用
-     */
     private static String ensureImageExtension(String path, String imageFmt) {
         if (path == null || path.isBlank()) return path;
         String lower = path.toLowerCase();
@@ -495,10 +442,6 @@ public class MediaStepOps {
         return path;
     }
 
-    /**
-     * 将模板解析出的路径规范为本地文件路径：去掉 URL 中的 ? 及后续查询串（替换为 _），
-     * 相对路径则基于 workDir 转为绝对路径，避免 FFmpeg 报错 -2。
-     */
     public static String toLocalFilePath(String path, String workDir) {
         if (path == null || path.isBlank()) return path;
         String s = path.trim();

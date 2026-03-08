@@ -12,8 +12,6 @@
     </parent>
     <artifactId>kitty-transcoder-func</artifactId>
     <properties>
-        <javacv.version>1.5.10</javacv.version>
-        <ffmpeg.version>6.1.1-1.5.10</ffmpeg.version>
         <os-maven-plugin.version>1.7.0</os-maven-plugin.version>
     </properties>
     <dependencies>
@@ -91,12 +89,6 @@
             <artifactId>jackson-dataformat-yaml</artifactId>
         </dependency>
 
-        <!-- JavaCV 依赖（FFmpeg/OpenCV 等），由 profile 控制平台 -->
-        <dependency>
-            <groupId>org.bytedeco</groupId>
-            <artifactId>javacv-platform</artifactId>
-            <version>${javacv.version}</version>
-        </dependency>
         <dependency>
             <groupId>com.baomidou</groupId>
             <artifactId>mybatis-plus-jsqlparser</artifactId>
@@ -117,6 +109,11 @@
             <artifactId>spring-grpc-spring-boot-starter</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
