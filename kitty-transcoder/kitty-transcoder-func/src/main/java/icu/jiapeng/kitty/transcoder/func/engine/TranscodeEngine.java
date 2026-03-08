@@ -162,14 +162,16 @@ public class TranscodeEngine {
                 }
                 int inputStepId = deps.length == 0 ? -1 : maxOf(deps);
                 String stepSuffix = "_s" + sid;
-                ctx.setInputStepIndex(inputStepId);
-                ctx.setResolvedOutputPath(resolvedOutputPath);
                 StepExecutor exec = StepExecutor.Factory.resolveOrFail(step.getType());
                 final String inp = inputPath;
                 final int stepIdForPut = sid;
                 final String workDirFinal = workDir;
+                final String resolvedForStep = resolvedOutputPath;
+                final int inputStepIdFinal = inputStepId;
                 CompletableFuture<Void> f = CompletableFuture.runAsync(() -> {
                     try {
+                        ctx.setInputStepIndex(inputStepIdFinal);
+                        ctx.setResolvedOutputPath(resolvedForStep);
                         ctx.setCurrentStepIndex(stepIdForPut);
                         String out = exec.execute(inp, step, stepSuffix, ctx);
                         out = MediaStepOps.toLocalFilePath(out, workDirFinal);
