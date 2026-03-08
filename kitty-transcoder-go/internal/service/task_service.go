@@ -91,6 +91,75 @@ func (s *TaskService) GetTask(id string) (*model.TranscodeTask, error) {
 	return s.taskRepo.GetByID(id)
 }
 
+// TaskToVO 将实体转为 TaskVO，与 Java TaskVO 对齐
+func (s *TaskService) TaskToVO(t *model.TranscodeTask) *model.TaskVO {
+	if t == nil {
+		return nil
+	}
+	vo := &model.TaskVO{
+		ID:                t.ID,
+		TaskType:          t.TaskType,
+		Status:            t.Status,
+		Progress:          t.Progress,
+		InputType:         t.InputType,
+		InputPath:         t.InputPath,
+		InputFile:         t.InputPath,
+		OutputPath:        t.OutputPath,
+		OutputFile:        t.OutputPath,
+		OutputHttpURL:     t.OutputHttpURL,
+		WatermarkURL:      t.WatermarkURL,
+		WatermarkPosition: t.WatermarkPosition,
+		ErrorMessage:      t.ErrorMessage,
+	}
+	if t.StrategyID != nil {
+		vo.StrategyID = *t.StrategyID
+	}
+	vo.CreatedAt = t.CreatedAt.UnixMilli()
+	if t.StartedAt != nil {
+		vo.StartedAt = t.StartedAt.UnixMilli()
+	}
+	if t.CompletedAt != nil {
+		vo.CompletedAt = t.CompletedAt.UnixMilli()
+	}
+	if t.NotificationConfig != "" {
+		_ = json.Unmarshal([]byte(t.NotificationConfig), &vo.Notifications)
+	}
+	return vo
+}
+
+// GetTaskVO 返回 TaskVO，与 Java getTask 对齐
+func (s *TaskService) GetTaskVO(id string) (*model.TaskVO, error) {
+	t, err := s.taskRepo.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+	return s.TaskToVO(t), nil
+}
+
+// ListTasksWithPagination 分页列表并返回分页信息，与 Java 对齐
+func (s *TaskService) ListTasksWithPagination(page, pageSize int, status, taskType string) (*model.ListTasksResponse, error) {
+	if page <= 0 {
+		page = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 20
+	}
+	list, total, err := s.taskRepo.List(page, pageSize, status, taskType)
+	if err != nil {
+		return nil, err
+	}
+	vos := make([]model.TaskVO, 0, len(list))
+	for i := range list {
+		vos = append(vos, *s.TaskToVO(&list[i]))
+	}
+	return &model.ListTasksResponse{
+		List:     vos,
+		Total:    total,
+		Page:     page,
+		PageSize: pageSize,
+	}, nil
+}
+
 func (s *TaskService) ListTasks(page, pageSize int, status, taskType string) ([]model.TranscodeTask, int64, error) {
 	return s.taskRepo.List(page, pageSize, status, taskType)
 }

@@ -14,7 +14,7 @@ export function getTask(taskId) {
 /**
  * 分页获取任务列表
  * @param {{ page?: number, size?: number, taskId?: string, filename?: string, timeFrom?: number, timeTo?: number, strategyId?: string, status?: string, taskType?: string, sortBy?: string, sortOrder?: string }} params
- * @returns {Promise<Array<object>>}
+ * @returns {Promise<{ list: Array<object>, total: number, page: number, pageSize: number }>}
  */
 export function listTasks(params = {}) {
   const { page = 1, size = 50, taskId, filename, timeFrom, timeTo, strategyId, status, taskType, sortBy = 'createdAt', sortOrder = 'desc' } = params

@@ -123,7 +123,7 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    public List<TaskVO> listTasks(ListTasksRequest req) {
+    public ListTasksResponse listTasks(ListTasksRequest req) {
         int page = req.getPage() != null && req.getPage() > 0 ? req.getPage() : 1;
         int size = req.getSize() != null && req.getSize() > 0 ? req.getSize() : 20;
         com.baomidou.mybatisplus.extension.plugins.pagination.Page<TranscodeTask> p =
@@ -169,7 +169,7 @@ public class TaskServiceImpl implements TaskService {
         for (int i = 0; i < list.size(); i++) {
             ensureNotifications(list.get(i), p.getRecords().get(i));
         }
-        return list;
+        return new ListTasksResponse(list, p.getTotal(), page, size);
     }
 
     @Override

@@ -30,7 +30,7 @@ public interface TranscodeApi {
 
     @Operation(summary = "分页查询任务列表")
     @GetExchange("/api/transcode/tasks")
-    List<TaskVO> listTasks(ListTasksRequest request);
+    ListTasksResponse listTasks(ListTasksRequest request);
 
     @Operation(summary = "取消转码任务", description = "取消指定的转码任务")
     @Parameter(name = "id", description = "任务ID", required = true, example = "task_123456")

@@ -101,7 +101,8 @@ public class TranscodeGrpcServiceImpl extends TranscodeServiceGrpc.TranscodeServ
             if (!request.getTaskType().isEmpty()) req.setTaskType(request.getTaskType());
             if (!request.getSortBy().isEmpty()) req.setSortBy(request.getSortBy());
             if (!request.getSortOrder().isEmpty()) req.setSortOrder(request.getSortOrder());
-            List<TaskVO> list = taskService.listTasks(req);
+            ListTasksResponse resp = taskService.listTasks(req);
+            List<TaskVO> list = resp != null ? resp.getList() : java.util.Collections.emptyList();
             icu.jiapeng.kitty.transcoder.grpc.ListTasksResp.Builder b = icu.jiapeng.kitty.transcoder.grpc.ListTasksResp.newBuilder();
             for (TaskVO vo : list) {
                 b.addTasks(toTaskResp(vo));

@@ -1,6 +1,7 @@
 package icu.jiapeng.kitty.transcoder.func.task;
 
 import icu.jiapeng.kitty.transcoder.api.CreateTaskRequest;
+import icu.jiapeng.kitty.transcoder.api.ListTasksResponse;
 import icu.jiapeng.kitty.transcoder.api.ProgressVO;
 import icu.jiapeng.kitty.transcoder.api.TaskVO;
 import org.springframework.http.codec.ServerSentEvent;
@@ -28,9 +29,9 @@ public interface TaskService {
     /**
      * 分页查询任务列表
      * @param req 查询参数（taskId、filename、timeFrom、timeTo、strategyId、status、taskType、sortBy、sortOrder）
-     * @return 任务列表
+     * @return 分页结果（list、total、page、pageSize）
      */
-    List<TaskVO> listTasks(icu.jiapeng.kitty.transcoder.api.ListTasksRequest req);
+    ListTasksResponse listTasks(icu.jiapeng.kitty.transcoder.api.ListTasksRequest req);
 
     /**
      * 取消转码任务

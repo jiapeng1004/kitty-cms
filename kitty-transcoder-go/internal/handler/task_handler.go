@@ -134,19 +134,20 @@ func (h *TaskHandler) createWrap(r *ghttp.Request) {
 		return
 	}
 	go func() { _ = h.svc.ProcessTask(context.Background(), task.ID) }()
-	r.Response.WriteJson(g.Map{"id": task.ID})
+	// Java createTask 返回 String（任务 ID），无包装
+	r.Response.WriteJson(task.ID)
 }
 
 func (h *TaskHandler) getWrap(r *ghttp.Request) {
 	id := r.Get("id").String()
-	task, err := h.svc.GetTask(id)
+	vo, err := h.svc.GetTaskVO(id)
 	if err != nil {
 		r.Response.WriteStatus(500)
 		r.Response.Header().Set("Content-Type", "application/json; charset=UTF-8")
 		r.Response.WriteJson(g.Map{"error": err.Error()})
 		return
 	}
-	r.Response.WriteJson(task)
+	r.Response.WriteJson(vo)
 }
 
 func (h *TaskHandler) listWrap(r *ghttp.Request) {
@@ -156,16 +157,19 @@ func (h *TaskHandler) listWrap(r *ghttp.Request) {
 	}
 	pageSize := r.Get("pageSize").Int()
 	if pageSize <= 0 {
+		pageSize = r.Get("size").Int() // 与 Java ListTasksRequest.size 对齐
+	}
+	if pageSize <= 0 {
 		pageSize = 20
 	}
-	list, total, err := h.svc.ListTasks(page, pageSize, r.Get("status").String(), r.Get("taskType").String())
+	resp, err := h.svc.ListTasksWithPagination(page, pageSize, r.Get("status").String(), r.Get("taskType").String())
 	if err != nil {
 		r.Response.WriteStatus(500)
 		r.Response.Header().Set("Content-Type", "application/json; charset=UTF-8")
 		r.Response.WriteJson(g.Map{"error": err.Error()})
 		return
 	}
-	r.Response.WriteJson(g.Map{"list": list, "total": total})
+	r.Response.WriteJson(resp)
 }
 
 func (h *TaskHandler) cancelWrap(r *ghttp.Request) {
@@ -176,19 +180,20 @@ func (h *TaskHandler) cancelWrap(r *ghttp.Request) {
 		r.Response.WriteJson(g.Map{"error": err.Error()})
 		return
 	}
-	r.Response.WriteStatus(204)
+	// Java cancelTask 返回 Boolean
+	r.Response.WriteJson(true)
 }
 
 func (h *TaskHandler) progressWrap(r *ghttp.Request) {
 	id := r.Get("id").String()
-	task, err := h.svc.GetTask(id)
+	vo, err := h.svc.GetProgressVO(id)
 	if err != nil {
 		r.Response.WriteStatus(500)
 		r.Response.Header().Set("Content-Type", "application/json; charset=UTF-8")
 		r.Response.WriteJson(g.Map{"error": err.Error()})
 		return
 	}
-	r.Response.WriteJson(g.Map{"taskId": task.ID, "progress": task.Progress, "status": task.Status})
+	r.Response.WriteJson(vo)
 }
 
 // sseProgressWrap GET /api/transcode/sse/:id 单任务 SSE 进度流，与 Java getProgressSSE 对齐

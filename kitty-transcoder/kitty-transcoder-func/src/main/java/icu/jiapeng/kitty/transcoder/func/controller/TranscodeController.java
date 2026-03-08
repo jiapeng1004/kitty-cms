@@ -55,7 +55,7 @@ public class TranscodeController implements TranscodeApi {
     @Operation(summary = "分页查询任务列表")
     @GetMapping("/tasks")
     @Override
-    public List<TaskVO> listTasks(@ModelAttribute ListTasksRequest request) {
+    public ListTasksResponse listTasks(@ModelAttribute ListTasksRequest request) {
         return taskService.listTasks(request);
     }
 

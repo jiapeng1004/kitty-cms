@@ -41,37 +41,43 @@ func (h *StrategyHandler) create(r *ghttp.Request) {
 		r.Response.WriteJson(g.Map{"error": "name required"})
 		return
 	}
-	rootID, err := h.svc.CreateStrategy(req.Name, req.Steps)
+	_, err := h.svc.CreateStrategy(req.Name, req.Steps)
 	if err != nil {
 		r.Response.WriteStatus(500)
 		r.Response.Header().Set("Content-Type", "application/json; charset=UTF-8")
 		r.Response.WriteJson(g.Map{"error": err.Error()})
 		return
 	}
-	r.Response.WriteJson(g.Map{"id": req.Name, "rootId": rootID})
+	// Java createStrategy 返回 String（策略 ID/名称），无包装
+	r.Response.WriteJson(req.Name)
 }
 
+// list GET /api/transcode/strategy 返回 List<StrategyVO>，与 Java getStrategies 一致（非 rootID 数组）
 func (h *StrategyHandler) list(r *ghttp.Request) {
-	ids, err := h.svc.ListStrategies()
+	list, err := h.svc.ListStrategiesVO()
 	if err != nil {
 		r.Response.WriteStatus(500)
 		r.Response.Header().Set("Content-Type", "application/json; charset=UTF-8")
 		r.Response.WriteJson(g.Map{"error": err.Error()})
 		return
 	}
-	r.Response.WriteJson(ids)
+	if list == nil {
+		list = []model.StrategyVO{}
+	}
+	r.Response.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	r.Response.WriteJson(list)
 }
 
 func (h *StrategyHandler) get(r *ghttp.Request) {
 	id := r.Get("id").String()
-	steps, err := h.svc.GetStrategy(id)
+	vo, err := h.svc.GetStrategyVO(id)
 	if err != nil {
 		r.Response.WriteStatus(500)
 		r.Response.Header().Set("Content-Type", "application/json; charset=UTF-8")
 		r.Response.WriteJson(g.Map{"error": err.Error()})
 		return
 	}
-	r.Response.WriteJson(steps)
+	r.Response.WriteJson(vo)
 }
 
 func (h *StrategyHandler) delete(r *ghttp.Request) {
