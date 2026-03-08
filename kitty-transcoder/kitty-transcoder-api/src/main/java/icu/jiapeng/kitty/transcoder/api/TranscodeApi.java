@@ -16,6 +16,7 @@ import java.util.List;
 
 @Tag(name = "转码任务管理", description = "转码任务的创建、查询、取消等操作")
 @HttpExchange("${kitty-transcode-api}")
+@SuppressWarnings("unused")
 public interface TranscodeApi {
 
     @Operation(summary = "创建转码任务", description = "创建一个新的转码任务并返回任务ID")
