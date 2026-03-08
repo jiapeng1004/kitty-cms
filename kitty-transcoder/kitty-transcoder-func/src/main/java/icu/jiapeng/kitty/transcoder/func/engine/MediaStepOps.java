@@ -1,6 +1,7 @@
 package icu.jiapeng.kitty.transcoder.func.engine;
 
 import cn.hutool.core.img.ImgUtil;
+import cn.hutool.core.io.file.PathUtil;
 import icu.jiapeng.kitty.transcoder.api.StrategyStepVO;
 import icu.jiapeng.kitty.transcoder.func.config.TranscodeConfig;
 import icu.jiapeng.kitty.transcoder.func.file.HttpFileHandler;
@@ -133,25 +134,39 @@ public class MediaStepOps {
 
     public String doExtractFrames(String inputPath, StrategyStepVO step, String stepSuffix, String resolvedOutputPath, String stepWorkDir, StepContext context) throws Exception {
         String workDir = (stepWorkDir != null && !stepWorkDir.isBlank()) ? stepWorkDir : (transcodeConfig != null ? transcodeConfig.getWorkDir() : null);
-        String outDir = resolvedOutputPath != null && !resolvedOutputPath.isBlank()
+        String framePath = resolvedOutputPath != null && !resolvedOutputPath.isBlank()
                 ? toLocalFilePath(resolvedOutputPath, workDir)
-                : parentPath(inputPath) + File.separator + baseName(inputPath) + stepSuffix + "_frames";
-        File dir = new File(outDir);
-        if (!dir.exists()) dir.mkdirs();
+                : parentPath(inputPath) + File.separator + baseName(inputPath) + stepSuffix;
         int interval = step.getFrameInterval() != null && step.getFrameInterval() > 0 ? step.getFrameInterval() : 30;
         int frameCount = step.getExtractFrameCount() != null && step.getExtractFrameCount() > 0 ? step.getExtractFrameCount() : 1;
         String fmt = "jpg";
         if (step.getExtractOutputFormat() != null && step.getExtractOutputFormat().equalsIgnoreCase("png")) fmt = "png";
         java.util.function.BooleanSupplier isCancelled = context != null ? context::isCancelled : () -> false;
         List<BufferedImage> frames = extractFramesByInterval(inputPath, interval, frameCount, isCancelled);
+        Path framePathO = Paths.get(framePath);
+        PathUtil.mkParentDirs(framePathO);
+        if (frameCount == 1 && !frames.isEmpty()) {
+            // 单帧：输出为单个文件 transcoder/$DATE/$TASK_ID_frame.png
+            File outFile = new File(framePath);
+            ImageIO.write(frames.getFirst(), fmt, outFile);
+            return outFile.getAbsolutePath();
+        }
+        // 多帧：输出 transcoder/$DATE/$TASK_ID_frame_0.png, _1.png, ...
+        File frameFile = new File(framePath);
         for (int i = 0; i < frames.size(); i++) {
+            if (frameFile.exists() && frameFile.isFile()) {
+                Files.deleteIfExists(framePathO);
+            }
+            if (!frameFile.exists()) {
+                Files.createDirectories(framePathO);
+            }
             BufferedImage img = frames.get(i);
             if (img != null) {
-                File outFile = new File(dir, String.format("frame_%04d.%s", i + 1, fmt));
+                File outFile = new File(frameFile, String.format("%d.%s", i, fmt));
                 ImageIO.write(img, fmt, outFile);
             }
         }
-        return outDir;
+        return frameFile.getAbsolutePath();
     }
 
     public String doSpriteSheet(String inputPath, StrategyStepVO step, String stepSuffix, String resolvedOutputPath, String stepWorkDir) throws Exception {
@@ -260,8 +275,8 @@ public class MediaStepOps {
     }
 
     /**
-     * 从抽帧目录加载图片（支持 extract_frames 步骤输出），用于雪碧图。
-     * 匹配 frame_0001.png / frame_0001.jpg 等命名，按文件名排序取前 count 张。
+     * 从抽帧目录加载图片（支持 extract_frames 多帧输出），用于雪碧图。
+     * 匹配 frame_0.png / frame_1.jpg 等命名（多帧时为 TASK_ID/frame_INDEX.ext），按文件名排序取前 count 张。
      */
     private List<BufferedImage> loadFramesFromDirectory(String dirPath, int count) throws IOException {
         List<BufferedImage> list = new ArrayList<>();

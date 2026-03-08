@@ -43,9 +43,10 @@ public class MagicServiceImpl implements MagicService {
 
         // JavaCV/FFmpeg 原生支持 HTTP/HTTPS URL，无需预下载
         String effectiveInput = inputPath;
-        String resolvedOutputDir = null;
+        // 抽帧输出 base：单帧为 workDir/taskId_frame.png，多帧为 workDir/taskId/frame_0.png, frame_1.png, ...
+        String resolvedOutputBase = null;
         if (InputType.HTTP.equalsIgnoreCase(inputType) && (inputPath.startsWith("http://") || inputPath.startsWith("https://"))) {
-            resolvedOutputDir = java.nio.file.Paths.get(transcodeConfig.getWorkDir(), taskId, "frames").toAbsolutePath().toString();
+            resolvedOutputBase = java.nio.file.Paths.get(transcodeConfig.getWorkDir(), taskId).toAbsolutePath().toString();
         } else {
             File f = new File(inputPath);
             if (!f.exists()) throw new IllegalArgumentException("本地文件不存在：" + inputPath);
@@ -59,7 +60,7 @@ public class MagicServiceImpl implements MagicService {
             step.setExtractOutputFormat("png".equalsIgnoreCase(request.getOutputFormat()) ? "png" : "jpg");
 
             String workDir = transcodeConfig.getWorkDir();
-            String outPath = mediaStepOps.doExtractFrames(effectiveInput, step, "_magic", resolvedOutputDir, workDir);
+            String outPath = mediaStepOps.doExtractFrames(effectiveInput, step, "_magic", resolvedOutputBase, workDir);
             String outputHttpUrl = buildOutputHttpUrl(outPath);
             taskService.completeMagicTask(taskId, outPath, outputHttpUrl);
             return taskService.getTask(taskId);
