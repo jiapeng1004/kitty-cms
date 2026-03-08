@@ -2,6 +2,7 @@ package icu.jiapeng.kitty.transcoder.func.task;
 
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.TypeReference;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import icu.jiapeng.kitty.transcoder.api.*;
@@ -214,15 +215,17 @@ public class TaskServiceImpl implements TaskService {
             if (InputType.HTTP.equalsIgnoreCase(entity.getInputType())) {
                 localPath = resolveHttpInput(localPath, taskId, entity.getStrategyId());
             }
-            String outputPath = transcodeEngine.transcode(taskId, localPath, entity.getStrategyId(),
+            icu.jiapeng.kitty.transcoder.func.engine.TranscodeResult result = transcodeEngine.transcode(taskId, localPath, entity.getStrategyId(),
                     entity.getWatermarkUrl(), entity.getWatermarkPosition(),
                     this::updateTaskStatus);
+            String outputPath = result.mainOutput();
             String outputHttpUrl = buildOutputHttpUrl(outputPath);
 
             entity.setStatus(TaskStatus.COMPLETED);
             entity.setProgress(100);
             entity.setOutputPath(outputPath);
             entity.setOutputHttpUrl(outputHttpUrl);
+            entity.setStepOutputs(result.stepOutputs() != null && !result.stepOutputs().isEmpty() ? JSON.toJSONString(result.stepOutputs()) : null);
             entity.setCompletedAt(LocalDateTime.now());
             entity.setErrorMessage(null);
             taskMapper.updateById(entity);
@@ -307,7 +310,8 @@ public class TaskServiceImpl implements TaskService {
     }
 
     /**
-     * 任务进度/完成/失败时发送回调（HTTP 或 gRPC），统一使用 TranscodeProgressNotifyVO
+     * 任务进度/完成/失败时发送回调（HTTP 或 gRPC），统一使用 TranscodeProgressNotifyVO。
+     * 任务完成且存在 stepOutputs 时，填充 outputs 列表（多路转码、抽帧、雪碧图等全部输出）。
      */
     private void sendProgressNotification(TranscodeTask entity, int progress) {
         if (entity == null || entity.getNotificationConfig() == null || entity.getNotificationConfig().isBlank())
@@ -320,8 +324,15 @@ public class TaskServiceImpl implements TaskService {
             vo.setStatus(entity.getStatus());
             vo.setProgress(progress);
             vo.setOutputPath(entity.getOutputPath());
-            vo.setOutputHttpUrl(entity.getOutputHttpUrl());
+            String mainOutputHttpUrl = entity.getOutputHttpUrl();
+            if (mainOutputHttpUrl == null && entity.getOutputPath() != null) {
+                mainOutputHttpUrl = buildOutputHttpUrl(entity.getOutputPath());
+            }
+            vo.setOutputHttpUrl(mainOutputHttpUrl);
             vo.setErrorMessage(entity.getErrorMessage());
+            if (entity.getStepOutputs() != null && !entity.getStepOutputs().isBlank()) {
+                vo.setOutputs(buildStepOutputsList(entity));
+            }
             for (NotificationConfig nc : configs) {
                 if (nc.getTarget() == null || nc.getTarget().isBlank()) continue;
                 notificationDispatcher.dispatch(nc, vo);
@@ -330,14 +341,61 @@ public class TaskServiceImpl implements TaskService {
         }
     }
 
+    /**
+     * 根据任务已保存的 stepOutputs 及策略步骤类型，构建回调用的 outputs 列表（按 stepId 排序）。
+     */
+    private List<StepOutputItem> buildStepOutputsList(TranscodeTask entity) {
+        Map<Integer, String> stepOutputsMap = parseStepOutputs(entity.getStepOutputs());
+        if (stepOutputsMap.isEmpty()) return List.of();
+        Map<Integer, String> stepTypeByStepId = new HashMap<>();
+        if (entity.getStrategyId() != null && !entity.getStrategyId().isBlank()) {
+            StrategyVO strategy = strategyService.getStrategy(entity.getStrategyId());
+            if (strategy != null && strategy.getSteps() != null) {
+                for (StrategyStepVO s : strategy.getSteps()) {
+                    if (s.getStepId() != null) stepTypeByStepId.put(s.getStepId(), s.getType() != null ? s.getType() : "transcode");
+                }
+            }
+        }
+        return stepOutputsMap.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .map(e -> {
+                    String path = e.getValue();
+                    StepOutputItem item = new StepOutputItem(
+                            e.getKey(),
+                            stepTypeByStepId.getOrDefault(e.getKey(), "transcode"),
+                            path,
+                            null);
+                    item.setOutputHttpUrl(buildOutputHttpUrl(path));
+                    return item;
+                })
+                .toList();
+    }
+
+    /**
+     * 根据本地输出路径构建 HTTP 访问 URL。主输出与 StepOutputItem 的 outputHttpUrl 均由此生成。
+     * 若 path 为绝对路径且位于 workDir 下，会先转为相对路径再与 httpPrefix 拼接，保证 URL 正确。
+     */
     private String buildOutputHttpUrl(String outputPath) {
-        String prefix = transcodeConfig.getOutput() != null && transcodeConfig.getOutput().getHttpPrefix() != null
+        if (outputPath == null || outputPath.isBlank()) return null;
+        if (transcodeConfig == null || transcodeConfig.getOutput() == null) return null;
+        String prefix = transcodeConfig.getOutput().getHttpPrefix() != null
                 ? transcodeConfig.getOutput().getHttpPrefix() : "";
         if (prefix.isEmpty()) return null;
-        if (outputPath == null) return null;
         if (outputPath.startsWith(prefix)) return outputPath;
-        if (prefix.endsWith("/")) return prefix + outputPath;
-        return prefix + "/" + outputPath;
+        String pathForUrl = outputPath;
+        String workDir = transcodeConfig.getWorkDir();
+        if (workDir != null && !workDir.isBlank()) {
+            String normalizedPath = outputPath.replace('\\', '/');
+            String normalizedWork = workDir.replace('\\', '/').replaceFirst("/$", "");
+            if (normalizedPath.startsWith(normalizedWork + "/") || normalizedPath.equals(normalizedWork)) {
+                pathForUrl = normalizedPath.length() <= normalizedWork.length()
+                        ? ""
+                        : normalizedPath.substring(normalizedWork.length() + 1);
+            }
+        }
+        if (pathForUrl.isEmpty()) return prefix.endsWith("/") ? prefix : prefix + "/";
+        if (prefix.endsWith("/")) return prefix + pathForUrl;
+        return prefix + "/" + pathForUrl;
     }
 
     @Override
@@ -347,16 +405,20 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public void updateTaskStatus(String taskId, String status, int progress, List<StepProgressItem> stepProgressList) {
-        // 与 SSE 一致：每次进度更新也触发 HTTP/gRPC 回调，实现持续通知
-        TranscodeTask entity = taskMapper.selectById(taskId);
-        if (entity != null) {
-            Thread.startVirtualThread(() -> {
-                try {
-                    sendProgressNotification(entity, progress);
-                } catch (Throwable t) {
-                    // 静默忽略
-                }
-            });
+        // 与 SSE 一致：每次进度更新也触发 HTTP/gRPC 回调；但 progress==100 时不在此发，由 processTask 在落库 step_outputs 后统一发一次带完整 outputs 的 COMPLETED 通知
+        if (progress == 100) {
+            // 仅更新 DB 与 SSE，回调留到 processTask 中发送（带 outputs）
+        } else {
+            TranscodeTask entity = taskMapper.selectById(taskId);
+            if (entity != null) {
+                Thread.startVirtualThread(() -> {
+                    try {
+                        sendProgressNotification(entity, progress);
+                    } catch (Throwable t) {
+                        // 静默忽略
+                    }
+                });
+            }
         }
         LambdaUpdateWrapper<TranscodeTask> u = new LambdaUpdateWrapper<>();
         u.eq(TranscodeTask::getId, taskId)
@@ -477,6 +539,82 @@ public class TaskServiceImpl implements TaskService {
         taskMapper.update(null, u);
         TranscodeTask entity = taskMapper.selectById(taskId);
         if (entity != null) fireProgressNotification(taskId, entity, 100);
+    }
+
+    @Override
+    public boolean retryTask(String taskId) {
+        TranscodeTask entity = taskMapper.selectById(taskId);
+        if (entity == null) return false;
+        if (!TaskStatus.FAILED.equals(entity.getStatus()) && !TaskStatus.CANCELLED.equals(entity.getStatus())) {
+            return false;
+        }
+        cancellationRegistry.markCancelled(taskId);
+        LambdaUpdateWrapper<TranscodeTask> u = new LambdaUpdateWrapper<>();
+        u.eq(TranscodeTask::getId, taskId)
+                .set(TranscodeTask::getStatus, TaskStatus.PENDING)
+                .set(TranscodeTask::getProgress, 0)
+                .set(TranscodeTask::getErrorMessage, null)
+                .set(TranscodeTask::getOutputPath, null)
+                .set(TranscodeTask::getOutputHttpUrl, null)
+                .set(TranscodeTask::getStepOutputs, null)
+                .set(TranscodeTask::getProgressDetail, null)
+                .set(TranscodeTask::getCompletedAt, null)
+                .set(TranscodeTask::getStartedAt, null);
+        if (entity.getRetryCount() != null) {
+            u.set(TranscodeTask::getRetryCount, entity.getRetryCount() + 1);
+        }
+        taskMapper.update(null, u);
+        RBlockingQueue<String> queue = redissonClient.getBlockingQueue(RedisKeys.TASK_QUEUE_KEY);
+        queue.offer(taskId);
+        return true;
+    }
+
+    @Override
+    public String retryStep(String taskId, int stepId) throws Exception {
+        TranscodeTask entity = taskMapper.selectById(taskId);
+        if (entity == null) throw new IllegalArgumentException("任务不存在");
+        if (entity.getStrategyId() == null || entity.getStrategyId().isBlank()) {
+            throw new IllegalStateException("任务无策略，无法单步重试");
+        }
+        Map<Integer, String> stepOutputsMap = parseStepOutputs(entity.getStepOutputs() != null ? entity.getStepOutputs() : "");
+        if (stepOutputsMap.isEmpty()) {
+            StrategyVO strategy = strategyService.getStrategy(entity.getStrategyId());
+            if (strategy == null || strategy.getSteps() == null) throw new IllegalStateException("策略不存在");
+            StrategyStepVO step = strategy.getSteps().stream().filter(s -> stepId == (s.getStepId() != null ? s.getStepId() : 0)).findFirst().orElse(null);
+            if (step == null) throw new IllegalArgumentException("步骤不存在: " + stepId);
+            String depends = step.getDepends() != null ? step.getDepends().trim() : "";
+            boolean hasDeps = depends.length() > 0 && java.util.Arrays.stream(depends.split(",")).map(String::trim).filter(StrUtil::isNotBlank).anyMatch(p -> { try { Integer.parseInt(p); return true; } catch (NumberFormatException e) { return false; } });
+            if (hasDeps) {
+                throw new IllegalStateException("任务无步骤输出记录，无法重试依赖其他步骤的步骤（请先使用「任务重试」整体重试）");
+            }
+        }
+        String taskInputPath = entity.getInputPath();
+        if (InputType.HTTP.equalsIgnoreCase(entity.getInputType()) && taskInputPath != null && (taskInputPath.startsWith("http://") || taskInputPath.startsWith("https://"))) {
+            taskInputPath = resolveHttpInput(taskInputPath, taskId, entity.getStrategyId());
+        }
+        String workDir = transcodeConfig != null ? transcodeConfig.getWorkDir() : null;
+        if (entity.getStrategyId() != null && !entity.getStrategyId().isBlank()) {
+            var strategy = strategyService.getStrategy(entity.getStrategyId());
+            if (strategy != null && strategy.getWorkDir() != null && !strategy.getWorkDir().isBlank()) {
+                workDir = strategy.getWorkDir();
+            }
+        }
+        String out = transcodeEngine.runSingleStep(taskId, taskInputPath, entity.getStrategyId(), stepId,
+                stepOutputsMap, entity.getWatermarkUrl(), entity.getWatermarkPosition(), workDir);
+        LambdaUpdateWrapper<TranscodeTask> update = new LambdaUpdateWrapper<>();
+        update.eq(TranscodeTask::getId, taskId).set(TranscodeTask::getStepOutputs, JSON.toJSONString(stepOutputsMap));
+        int mainStepId = transcodeEngine.getMainOutputStepId(entity.getStrategyId());
+        if (stepId == mainStepId) {
+            update.set(TranscodeTask::getOutputPath, out).set(TranscodeTask::getOutputHttpUrl, buildOutputHttpUrl(out));
+        }
+        taskMapper.update(null, update);
+        TranscodeTask updated = taskMapper.selectById(taskId);
+        if (updated != null) fireProgressNotification(taskId, updated, updated.getProgress() != null ? updated.getProgress() : 100);
+        return out;
+    }
+
+    private static Map<Integer, String> parseStepOutputs(String json) {
+        return com.alibaba.fastjson.JSON.parseObject(json, new TypeReference<Map<Integer, String>>(){});
     }
 
 }

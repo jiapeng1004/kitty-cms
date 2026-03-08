@@ -21,6 +21,13 @@
             <a-tag v-else-if="s.status === 'completed'" color="success">完成</a-tag>
             <a-tag v-else-if="s.status === 'failed'" color="error">失败</a-tag>
             <a-tag v-else color="default">待执行</a-tag>
+            <a-button
+              v-if="task.status === 'COMPLETED' || s.status === 'failed'"
+              type="link"
+              size="small"
+              :loading="retryingStep === s.stepId"
+              @click="onRetryStep(s.stepId)"
+            >重试该步骤</a-button>
           </div>
         </div>
       </a-descriptions-item>
@@ -62,6 +69,7 @@
     </a-descriptions>
     <a-space class="mt">
       <a-button v-if="task.status === 'PENDING' || task.status === 'PROCESSING'" type="primary" danger @click="cancel">取消任务</a-button>
+      <a-button v-if="task.status === 'FAILED' || task.status === 'CANCELLED'" type="primary" :loading="retryingTask" @click="onRetryTask">任务重试</a-button>
       <a-button type="primary" @click="onFork">Fork（填充到新建任务）</a-button>
       <a-button @click="load">刷新</a-button>
     </a-space>
@@ -74,7 +82,7 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { useForkTaskStore } from '../stores/forkTask'
-import { getTask, cancelTask, getProgress, subscribeProgressStream, getPreviewInfo } from '../api/transcoder_api'
+import { getTask, cancelTask, getProgress, subscribeProgressStream, getPreviewInfo, retryTask, retryStep } from '../api/transcoder_api'
 import VideoPreview from '../components/VideoPreview.vue'
 
 const route = useRoute()
@@ -83,6 +91,8 @@ const loading = ref(true)
 const task = ref(null)
 const progressData = ref({ progress: 0, stepProgressList: [] })
 const previewFiles = ref([])
+const retryingTask = ref(false)
+const retryingStep = ref(null)
 let unsubscribe = null
 
 const displayNotifications = computed(() => {
@@ -183,6 +193,37 @@ async function cancel() {
     load()
   } catch (e) {
     message.error(e?.message || '取消失败')
+  }
+}
+
+async function onRetryTask() {
+  retryingTask.value = true
+  try {
+    const ok = await retryTask(route.params.id)
+    if (ok) {
+      message.success('已重新入队，请等待执行')
+      load()
+    } else {
+      message.warning('仅失败或已取消的任务可重试')
+    }
+  } catch (e) {
+    message.error(e?.response?.data?.message || e?.message || '任务重试失败')
+  } finally {
+    retryingTask.value = false
+  }
+}
+
+async function onRetryStep(stepId) {
+  retryingStep.value = stepId
+  try {
+    await retryStep(route.params.id, stepId)
+    message.success('步骤重试完成')
+    load()
+  } catch (e) {
+    const msg = e?.response?.data?.message || e?.message || '步骤重试失败'
+    message.error(msg)
+  } finally {
+    retryingStep.value = null
   }
 }
 

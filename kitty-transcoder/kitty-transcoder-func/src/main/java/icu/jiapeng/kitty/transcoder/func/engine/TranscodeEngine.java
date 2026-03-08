@@ -61,10 +61,10 @@ public class TranscodeEngine {
         StrategyVO strategy = new StrategyVO();
         strategy.setSteps(Collections.singletonList(step));
         strategy.setWorkDir(transcodeConfig.getWorkDir());
-        return runWithDependencies(taskId, inputFile, strategy, null, null, progressCallback);
+        return runWithDependencies(taskId, inputFile, strategy, null, null, progressCallback).mainOutput();
     }
 
-    public String transcode(String taskId, String inputFile, String strategyId,
+    public TranscodeResult transcode(String taskId, String inputFile, String strategyId,
                             String watermarkUrl, String watermarkPosition, ProgressCallback progressCallback) throws Exception {
         StrategyVO strategy = strategyService.getStrategy(strategyId);
         if (strategy == null || strategy.getSteps() == null || strategy.getSteps().isEmpty()) {
@@ -84,12 +84,13 @@ public class TranscodeEngine {
             ctx.setWatermarkPosition(watermarkPosition);
             ctx.setWorkDir(transcodeConfig.getWorkDir());
             StepExecutor exec = StepExecutor.Factory.resolveOrFail(StepExecutorType.TRANSCODE.getCode());
-            return exec.execute(inputFile, defaultStep, "_transcoded", ctx);
+            String out = exec.execute(inputFile, defaultStep, "_transcoded", ctx);
+            return new TranscodeResult(out, Map.of(1, out));
         }
         return runWithDependencies(taskId, inputFile, strategy, watermarkUrl, watermarkPosition, progressCallback);
     }
 
-    private String runWithDependencies(String taskId, String taskInputPath, StrategyVO strategy,
+    private TranscodeResult runWithDependencies(String taskId, String taskInputPath, StrategyVO strategy,
                                        String watermarkUrl, String watermarkPosition, ProgressCallback progressCallback) {
         List<StrategyStepVO> steps = strategy.getSteps();
         Map<Integer, StrategyStepVO> stepByStepId = steps.stream().collect(Collectors.toMap(StrategyStepVO::getStepId, Function.identity(), (o1, _)->o1));
@@ -98,10 +99,10 @@ public class TranscodeEngine {
         for (Map.Entry<Integer, StrategyStepVO> e : stepByStepId.entrySet()) {
             depsMap.put(e.getKey(), Arrays.stream(e.getValue().getDepends().split( ",")).filter(NumberUtil::isInteger).map(Integer::valueOf).toArray(Integer[]::new));
         }
-        StepContextImpl.RunStrategyCallback runStrategyCallback = (strategyId, inputPath) -> {
-            StrategyVO sub = strategyService.getStrategy(strategyId);
-            if (sub == null) throw new IllegalArgumentException("策略不存在：" + strategyId);
-            return runWithDependencies(taskId, inputPath, sub, watermarkUrl, watermarkPosition, progressCallback);
+        StepContextImpl.RunStrategyCallback runStrategyCallback = (stratId, inputPath) -> {
+            StrategyVO sub = strategyService.getStrategy(stratId);
+            if (sub == null) throw new IllegalArgumentException("策略不存在：" + stratId);
+            return runWithDependencies(taskId, inputPath, sub, watermarkUrl, watermarkPosition, progressCallback).mainOutput();
         };
         StepContextImpl ctx = new StepContextImpl(runStrategyCallback);
         ctx.setTaskId(taskId);
@@ -207,7 +208,57 @@ public class TranscodeEngine {
         int lastStep = findLastStepByTopology(stepIds, depsMap, stepByStepId);
         String lastOutput = stepOutputs.get(lastStep);
         if (lastOutput == null) throw new IllegalStateException("无最终输出");
-        return lastOutput;
+        return new TranscodeResult(lastOutput, new HashMap<>(stepOutputs));
+    }
+
+    /**
+     * 仅执行指定步骤（用于步骤级重试）。依赖步骤的输出从 stepOutputs 读取，执行结果写回 stepOutputs。
+     *
+     * @param taskId 任务ID
+     * @param taskInputPath 任务输入路径（无依赖步骤时使用）
+     * @param strategyId 策略ID
+     * @param stepId 要执行的步骤ID
+     * @param stepOutputs 已有步骤输出（含依赖步骤），执行后会将本步骤输出 put 进去
+     * @param watermarkUrl 水印 URL
+     * @param watermarkPosition 水印位置
+     * @param workDir 工作目录
+     * @return 本步骤输出路径
+     */
+    public String runSingleStep(String taskId, String taskInputPath, String strategyId, int stepId,
+                                Map<Integer, String> stepOutputs, String watermarkUrl, String watermarkPosition, String workDir) throws Exception {
+        StrategyVO strategy = strategyService.getStrategy(strategyId);
+        if (strategy == null || strategy.getSteps() == null) throw new IllegalArgumentException("策略不存在或无步骤");
+        Map<Integer, StrategyStepVO> stepByStepId = strategy.getSteps().stream().collect(Collectors.toMap(StrategyStepVO::getStepId, Function.identity(), (o1, _) -> o1));
+        StrategyStepVO step = stepByStepId.get(stepId);
+        if (step == null) throw new IllegalArgumentException("步骤不存在: " + stepId);
+        Integer[] deps = step.getDepends() != null
+                ? Arrays.stream(step.getDepends().split(",")).filter(NumberUtil::isInteger).map(Integer::valueOf).toArray(Integer[]::new)
+                : new Integer[0];
+        String inputPath = step.getInputTemplate() != null && !step.getInputTemplate().isBlank()
+                ? StepTemplateResolver.resolve(step.getInputTemplate(), taskId, taskInputPath, stepOutputs, stepId, workDir)
+                : (deps.length == 0 ? taskInputPath : stepOutputs.get(maxOf(deps)));
+        if (inputPath == null || inputPath.isBlank()) throw new IllegalStateException("步骤 " + stepId + " 输入路径为空");
+        inputPath = MediaStepOps.toLocalFilePath(inputPath, workDir);
+        String resolvedOutputPath = null;
+        if (step.getOutputTemplate() != null && !step.getOutputTemplate().isBlank()) {
+            resolvedOutputPath = StepTemplateResolver.resolve(step.getOutputTemplate(), taskId, taskInputPath, stepOutputs, stepId, workDir);
+            resolvedOutputPath = MediaStepOps.toLocalFilePath(resolvedOutputPath, workDir);
+        }
+        StepContextImpl ctx = new StepContextImpl((_, _) -> { throw new UnsupportedOperationException(); });
+        ctx.setTaskId(taskId);
+        ctx.setCancellationChecker(() -> taskCancellationRegistry.isCancelled(taskId));
+        ctx.setWatermarkUrl(watermarkUrl);
+        ctx.setWatermarkPosition(watermarkPosition);
+        ctx.setWorkDir(workDir);
+        ctx.setInputStepIndex(deps.length == 0 ? -1 : maxOf(deps));
+        ctx.setResolvedOutputPath(resolvedOutputPath);
+        ctx.setCurrentStepIndex(stepId);
+        StepExecutor exec = StepExecutor.Factory.resolveOrFail(step.getType());
+        String stepSuffix = "_s" + stepId;
+        String out = exec.execute(inputPath, step, stepSuffix, ctx);
+        out = MediaStepOps.toLocalFilePath(out, workDir);
+        stepOutputs.put(stepId, out);
+        return out;
     }
 
     private static Integer maxOf(Integer[] a) {
@@ -261,6 +312,23 @@ public class TranscodeEngine {
             list.add(item);
         }
         return list;
+    }
+
+    /**
+     * 返回策略的「主输出」步骤 ID（用于步骤重试后更新任务主输出）。
+     */
+    public int getMainOutputStepId(String strategyId) {
+        StrategyVO strategy = strategyService.getStrategy(strategyId);
+        if (strategy == null || strategy.getSteps() == null || strategy.getSteps().isEmpty()) return 1;
+        List<Integer> stepIds = strategy.getSteps().stream().map(StrategyStepVO::getStepId).toList();
+        Map<Integer, Integer[]> depsMap = new HashMap<>();
+        for (StrategyStepVO s : strategy.getSteps()) {
+            depsMap.put(s.getStepId(), s.getDepends() != null
+                    ? Arrays.stream(s.getDepends().split(",")).filter(NumberUtil::isInteger).map(Integer::valueOf).toArray(Integer[]::new)
+                    : new Integer[0]);
+        }
+        Map<Integer, StrategyStepVO> stepByStepId = strategy.getSteps().stream().collect(Collectors.toMap(StrategyStepVO::getStepId, Function.identity(), (o1, _) -> o1));
+        return findLastStepByTopology(stepIds, depsMap, stepByStepId);
     }
 
     /**

@@ -57,6 +57,25 @@ export function deleteTask(taskId) {
 }
 
 /**
+ * 任务整体重试：将失败/取消的任务重新入队执行
+ * @param {string} taskId
+ * @returns {Promise<boolean>} 是否已入队
+ */
+export function retryTask(taskId) {
+  return api.post(`${PREFIX}/task/${taskId}/retry`)
+}
+
+/**
+ * 单步骤重试：重新执行指定步骤（需任务已有步骤输出，如已成功完成过）
+ * @param {string} taskId
+ * @param {number} stepId
+ * @returns {Promise<string>} 该步骤新的输出路径
+ */
+export function retryStep(taskId, stepId) {
+  return api.post(`${PREFIX}/task/${taskId}/step/${stepId}/retry`)
+}
+
+/**
  * 魔法接口：同步抽帧
  * @param {object} body - inputType, inputPath, frameInterval, frameCount, outputFormat
  * @returns {Promise<object>} 任务详情

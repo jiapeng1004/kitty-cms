@@ -48,6 +48,14 @@ public interface TranscodeApi {
     @DeleteMapping("/task/{id}/record")
     Boolean deleteTask(@PathVariable String id);
 
+    @Operation(summary = "任务整体重试", description = "将失败/取消的任务重置为 PENDING 并重新入队")
+    @PostExchange("/api/transcode/task/{id}/retry")
+    Boolean retryTask(@PathVariable String id);
+
+    @Operation(summary = "单步骤重试", description = "重新执行指定步骤，需任务已有步骤输出（如已成功完成过）")
+    @PostExchange("/api/transcode/task/{id}/step/{stepId}/retry")
+    String retryStep(@PathVariable String id, @PathVariable Integer stepId) throws Exception;
+
     @Operation(summary = "查询转码进度", description = "根据任务ID查询转码进度")
     @Parameter(name = "id", description = "任务ID", required = true, example = "task_123456")
     @GetExchange("/api/transcode/progress/{id}")

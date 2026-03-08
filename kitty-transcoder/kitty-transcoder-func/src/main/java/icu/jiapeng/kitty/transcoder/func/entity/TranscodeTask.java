@@ -24,6 +24,9 @@ public class TranscodeTask {
     private String progressDetail;
     private String outputPath;
     private String outputHttpUrl;
+    /** 各步骤输出路径 JSON：{"1":"path/1080p.mp4","2":"path/480p.mp4"}，用于步骤级重试 */
+    @TableField("step_outputs")
+    private String stepOutputs;
     private String errorMessage;
     private String watermarkUrl;
     private String watermarkPosition;

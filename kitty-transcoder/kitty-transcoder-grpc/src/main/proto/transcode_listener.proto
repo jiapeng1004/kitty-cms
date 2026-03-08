@@ -17,9 +17,17 @@ message TranscodeProgressEvent {
   string task_id = 1;
   string status = 2;           // PROCESSING, COMPLETED, FAILED, CANCELLED
   int32 progress = 3;
-  string output_path = 4;      // 完成时
-  string output_http_url = 5;  // 完成时
+  string output_path = 4;      // 主输出路径（完成时）
+  string output_http_url = 5;  // 主输出 HTTP URL（完成时）
   string error_message = 6;    // 失败时
+  repeated StepOutputItem outputs = 7;  // 全部步骤输出（完成时）：多路转码、抽帧、雪碧图等
+}
+
+message StepOutputItem {
+  int32 step_id = 1;
+  string step_type = 2;        // transcode, extract_frames, sprite 等
+  string output_path = 3;
+  string output_http_url = 4;
 }
 
 message TranscodeListenerAck {

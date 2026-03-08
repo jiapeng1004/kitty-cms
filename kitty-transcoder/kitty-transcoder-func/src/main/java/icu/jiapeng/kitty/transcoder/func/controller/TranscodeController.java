@@ -71,6 +71,20 @@ public class TranscodeController implements TranscodeApi {
         return taskService.deleteTask(id);
     }
 
+    @Operation(summary = "任务整体重试")
+    @PostMapping("/task/{id}/retry")
+    @Override
+    public Boolean retryTask(@PathVariable String id) {
+        return taskService.retryTask(id);
+    }
+
+    @Operation(summary = "单步骤重试")
+    @PostMapping("/task/{id}/step/{stepId}/retry")
+    @Override
+    public String retryStep(@PathVariable String id, @PathVariable Integer stepId) throws Exception {
+        return taskService.retryStep(id, stepId);
+    }
+
     @Operation(summary = "查询任务进度")
     @GetMapping("/progress/{id}")
     @Override

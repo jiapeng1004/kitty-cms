@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.grpc.client.GrpcChannelFactory;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -50,14 +51,25 @@ public class GrpcNotificationClient implements NotificationClient {
     private void doNotify(String target, TranscodeProgressNotifyVO vo) {
         try {
             Channel channel = channelFactory.createChannel(target);
-            TranscodeProgressEvent event = TranscodeProgressEvent.newBuilder()
+            TranscodeProgressEvent.Builder eventBuilder = TranscodeProgressEvent.newBuilder()
                     .setTaskId(vo.getTaskId() != null ? vo.getTaskId() : "")
                     .setStatus(vo.getStatus() != null ? vo.getStatus() : "")
                     .setProgress(vo.getProgress() != null ? vo.getProgress() : 0)
                     .setOutputPath(vo.getOutputPath() != null ? vo.getOutputPath() : "")
                     .setOutputHttpUrl(vo.getOutputHttpUrl() != null ? vo.getOutputHttpUrl() : "")
-                    .setErrorMessage(vo.getErrorMessage() != null ? vo.getErrorMessage() : "")
-                    .build();
+                    .setErrorMessage(vo.getErrorMessage() != null ? vo.getErrorMessage() : "");
+            List<icu.jiapeng.kitty.transcoder.api.StepOutputItem> outputs = vo.getOutputs();
+            if (outputs != null && !outputs.isEmpty()) {
+                for (icu.jiapeng.kitty.transcoder.api.StepOutputItem item : outputs) {
+                    eventBuilder.addOutputs(icu.jiapeng.kitty.transcoder.grpc.StepOutputItem.newBuilder()
+                            .setStepId(item.getStepId() != null ? item.getStepId() : 0)
+                            .setStepType(item.getStepType() != null ? item.getStepType() : "")
+                            .setOutputPath(item.getOutputPath() != null ? item.getOutputPath() : "")
+                            .setOutputHttpUrl(item.getOutputHttpUrl() != null ? item.getOutputHttpUrl() : "")
+                            .build());
+                }
+            }
+            TranscodeProgressEvent event = eventBuilder.build();
             TranscodeListenerServiceGrpc.TranscodeListenerServiceBlockingStub stub =
                     TranscodeListenerServiceGrpc.newBlockingStub(channel)
                             .withDeadlineAfter(DEADLINE_SECONDS, TimeUnit.SECONDS);

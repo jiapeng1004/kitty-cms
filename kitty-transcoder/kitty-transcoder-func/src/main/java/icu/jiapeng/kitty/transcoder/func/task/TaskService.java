@@ -107,4 +107,21 @@ public interface TaskService {
      */
     void completeMagicTask(String taskId, String outputPath, String outputHttpUrl);
 
+    /**
+     * 任务整体重试：将失败/取消的任务重置为 PENDING 并重新入队。
+     *
+     * @param taskId 任务ID
+     * @return 是否已入队（仅 FAILED/CANCELLED 可重试）
+     */
+    boolean retryTask(String taskId);
+
+    /**
+     * 单步骤重试：重新执行指定步骤，依赖步骤输出从已保存的 stepOutputs 读取。仅当任务已有 stepOutputs（如已成功完成过）时可调用。
+     *
+     * @param taskId 任务ID
+     * @param stepId 步骤ID
+     * @return 该步骤新的输出路径；失败抛异常
+     */
+    String retryStep(String taskId, int stepId) throws Exception;
+
 }

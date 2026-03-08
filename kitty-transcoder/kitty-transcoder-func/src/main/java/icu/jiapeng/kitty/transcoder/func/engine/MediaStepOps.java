@@ -58,6 +58,7 @@ public class MediaStepOps {
         String outputFile = resolvedOutputPath != null && !resolvedOutputPath.isBlank()
                 ? toLocalFilePath(resolvedOutputPath, workDir)
                 : parentPath(inputPath) + File.separator + baseName(inputPath) + stepSuffix + "." + format;
+        outputFile = ensureVideoExtension(outputFile, format);
         File outF = new File(outputFile);
         if (outF.getParent() != null) {
             File parent = new File(outF.getParent());
@@ -463,6 +464,20 @@ public class MediaStepOps {
 
     public static String parentPath(String path) {
         return new File(path).getParent();
+    }
+
+    /**
+     * 转码步骤输出必须为视频扩展名。若模板/上下文误传图片路径（如 .png），强制改为目标格式扩展名，避免视频写入图片导致不可播。
+     */
+    private static String ensureVideoExtension(String path, String videoFmt) {
+        if (path == null || path.isBlank() || videoFmt == null || videoFmt.isBlank()) return path;
+        String lower = path.toLowerCase();
+        if (lower.endsWith(".png") || lower.endsWith(".jpg") || lower.endsWith(".jpeg")
+                || lower.endsWith(".webp") || lower.endsWith(".gif") || lower.endsWith(".bmp")) {
+            int lastDot = path.lastIndexOf('.');
+            return (lastDot > 0 ? path.substring(0, lastDot) : path) + "." + videoFmt.replace(".", "");
+        }
+        return path;
     }
 
     /**
