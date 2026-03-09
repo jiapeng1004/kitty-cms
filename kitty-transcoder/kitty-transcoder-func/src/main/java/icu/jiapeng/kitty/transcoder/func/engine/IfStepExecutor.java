@@ -13,7 +13,8 @@ public class IfStepExecutor implements StepExecutor {
     }
 
     @Override
-    public String execute(String inputPath, StrategyStepVO step, String stepSuffix, StepContext context) throws Exception {
+    public String execute(String inputPath,String outputPath, StrategyStepVO step) throws Exception {
+        StepContext context = StepContext.getInstance();
         if (context == null) throw new IllegalStateException("if 步骤需要 StepContext");
         String condition = step.getCondition();
         if (condition == null || condition.isBlank()) {

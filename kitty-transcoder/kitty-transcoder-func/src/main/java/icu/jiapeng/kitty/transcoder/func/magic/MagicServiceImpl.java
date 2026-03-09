@@ -42,7 +42,6 @@ public class MagicServiceImpl implements MagicService {
         String inputType = StrUtil.isNotBlank(request.getInputType()) ? request.getInputType() : InputType.DISK;
 
         // JavaCV/FFmpeg 原生支持 HTTP/HTTPS URL，无需预下载
-        String effectiveInput = inputPath;
         // 抽帧输出 base：单帧为 workDir/taskId_frame.png，多帧为 workDir/taskId/frame_0.png, frame_1.png, ...
         String resolvedOutputBase = null;
         if (InputType.HTTP.equalsIgnoreCase(inputType) && (inputPath.startsWith("http://") || inputPath.startsWith("https://"))) {
@@ -60,7 +59,7 @@ public class MagicServiceImpl implements MagicService {
             step.setExtractOutputFormat("png".equalsIgnoreCase(request.getOutputFormat()) ? "png" : "jpg");
 
             String workDir = transcodeConfig.getWorkDir();
-            String outPath = mediaStepOps.doExtractFrames(effectiveInput, step, "_magic", resolvedOutputBase, workDir);
+            String outPath = mediaStepOps.doExtractFrames(inputPath, step, resolvedOutputBase, workDir);
             String outputHttpUrl = buildOutputHttpUrl(outPath);
             taskService.completeMagicTask(taskId, outPath, outputHttpUrl);
             return taskService.getTask(taskId);
@@ -89,7 +88,7 @@ public class MagicServiceImpl implements MagicService {
             step.setImageResize(request.getResize());
 
             String workDir = transcodeConfig.getWorkDir();
-            String outPath = mediaStepOps.doImageConvert(localPath, step, "_magic", null, workDir);
+            String outPath = mediaStepOps.doImageConvert(localPath, step, null, workDir);
             String outputHttpUrl = buildOutputHttpUrl(outPath);
             taskService.completeMagicTask(taskId, outPath, outputHttpUrl);
             return taskService.getTask(taskId);

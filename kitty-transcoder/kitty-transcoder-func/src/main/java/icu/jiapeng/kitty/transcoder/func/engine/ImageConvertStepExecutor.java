@@ -1,6 +1,7 @@
 package icu.jiapeng.kitty.transcoder.func.engine;
 
 import icu.jiapeng.kitty.transcoder.api.StrategyStepVO;
+import jakarta.validation.constraints.NotBlank;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -18,9 +19,9 @@ public class ImageConvertStepExecutor implements StepExecutor {
     }
 
     @Override
-    public String execute(String inputPath, StrategyStepVO step, String stepSuffix, StepContext context) throws Exception {
-        String outputPath = context != null ? context.getResolvedOutputPath() : null;
+    public String execute(@NotBlank String inputPath, @NotBlank String outputPath, StrategyStepVO step) throws Exception {
+        StepContext context = StepContext.getInstance();
         String stepWorkDir = context != null ? context.getWorkDir() : null;
-        return mediaStepOps.doImageConvert(inputPath, step, stepSuffix, outputPath, stepWorkDir);
+        return mediaStepOps.doImageConvert(inputPath, step, outputPath, stepWorkDir);
     }
 }

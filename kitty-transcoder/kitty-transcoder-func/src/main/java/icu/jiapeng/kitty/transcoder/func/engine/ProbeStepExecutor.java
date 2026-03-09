@@ -25,7 +25,8 @@ public class ProbeStepExecutor implements StepExecutor {
     }
 
     @Override
-    public String execute(String inputPath, StrategyStepVO step, String stepSuffix, StepContext context) throws Exception {
+    public String execute(String inputPath,String outputPath, StrategyStepVO step) throws Exception {
+        StepContext context = StepContext.getInstance();
         File input = new File(inputPath);
         if (!input.exists()) throw new java.io.IOException("输入不存在：" + inputPath);
         if (input.isDirectory()) {

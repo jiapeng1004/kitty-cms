@@ -1,7 +1,9 @@
 package icu.jiapeng.kitty.transcoder.func.engine;
 
 import cn.hutool.core.img.ImgUtil;
+import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.io.file.PathUtil;
+import cn.hutool.core.util.StrUtil;
 import icu.jiapeng.kitty.transcoder.api.ProbeResult;
 import icu.jiapeng.kitty.transcoder.api.StrategyStepVO;
 import icu.jiapeng.kitty.transcoder.func.config.TranscodeConfig;
@@ -19,8 +21,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.*;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -39,9 +40,9 @@ public class MediaStepOps {
         this.ffprobeParser = ffprobeParser;
     }
 
-    public String doTranscode(String inputPath, StrategyStepVO step, String stepSuffix, String resolvedOutputPath,
-                              String taskWatermarkUrl, String taskWatermarkPosition, String taskId, String stepWorkDir,
-                              StepContext context) throws Exception {
+    public String doTranscode(String inputPath, StrategyStepVO step, String resolvedOutputPath,
+                              String taskWatermarkUrl, String taskWatermarkPosition, String taskId, String stepWorkDir) throws Exception {
+        StepContext context = StepContext.getInstance();
         File input = new File(inputPath);
         if (input.isDirectory()) throw new IOException("转码步骤需要文件输入，当前为目录");
         int width = 1920, height = 1080;
@@ -59,13 +60,13 @@ public class MediaStepOps {
         String workDir = (stepWorkDir != null && !stepWorkDir.isBlank()) ? stepWorkDir : (transcodeConfig != null ? transcodeConfig.getWorkDir() : null);
         String outputFile = resolvedOutputPath != null && !resolvedOutputPath.isBlank()
                 ? toLocalFilePath(resolvedOutputPath, workDir)
-                : parentPath(inputPath) + File.separator + baseName(inputPath) + stepSuffix + "." + format;
+                : null;
+        if (StrUtil.isBlank(outputFile)) {
+            throw new IllegalArgumentException("转码步骤需要输出文件");
+        }
         outputFile = ensureVideoExtension(outputFile, format);
         File outF = new File(outputFile);
-        if (outF.getParent() != null) {
-            File parent = new File(outF.getParent());
-            if (!parent.exists()) parent.mkdirs();
-        }
+        FileUtil.mkParentDirs(outputFile);
         int bitrate = (step.getBitrate() != null ? step.getBitrate() : 5000) * 1000;
         double frameRate = step.getFrameRate() != null ? step.getFrameRate().doubleValue() : 30;
         String codec = step.getEncoder() != null ? step.getEncoder() : "h264";
@@ -134,19 +135,22 @@ public class MediaStepOps {
         return outputFile;
     }
 
-    public String doExtractFrames(String inputPath, StrategyStepVO step, String stepSuffix, String resolvedOutputPath, String stepWorkDir) {
+    public String doExtractFrames(String inputPath, StrategyStepVO step, String resolvedOutputPath, String stepWorkDir) {
         try {
-            return doExtractFrames(inputPath, step, stepSuffix, resolvedOutputPath, stepWorkDir, null);
+            return doExtractFrames(inputPath, step, resolvedOutputPath, stepWorkDir, null);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
-    public String doExtractFrames(String inputPath, StrategyStepVO step, String stepSuffix, String resolvedOutputPath, String stepWorkDir, StepContext context) throws Exception {
+    public String doExtractFrames(String inputPath, StrategyStepVO step, String resolvedOutputPath, String stepWorkDir, StepContext context) throws Exception {
         String workDir = (stepWorkDir != null && !stepWorkDir.isBlank()) ? stepWorkDir : (transcodeConfig != null ? transcodeConfig.getWorkDir() : null);
         String framePath = resolvedOutputPath != null && !resolvedOutputPath.isBlank()
                 ? toLocalFilePath(resolvedOutputPath, workDir)
-                : parentPath(inputPath) + File.separator + baseName(inputPath) + stepSuffix;
+                : null;
+        if (StrUtil.isBlank(framePath)) {
+            throw new IllegalArgumentException("未指定抽帧输出路径");
+        }
         int interval = step.getFrameInterval() != null && step.getFrameInterval() > 0 ? step.getFrameInterval() : 30;
         int frameCount = step.getExtractFrameCount() != null && step.getExtractFrameCount() > 0 ? step.getExtractFrameCount() : 1;
         String fmt = "jpg";
@@ -189,7 +193,8 @@ public class MediaStepOps {
         return framePathFile.getAbsolutePath();
     }
 
-    public String doSpriteSheet(String inputPath, StrategyStepVO step, String stepSuffix, String resolvedOutputPath, String stepWorkDir) throws Exception {
+    public String doSpriteSheet(String inputPath, String resolvedOutputPath, StrategyStepVO step) throws Exception {
+        String stepWorkDir = Optional.ofNullable(StepContext.getInstance()).map(StepContext::getWorkDir).orElse("/");
         File input = new File(inputPath);
         int cols = step.getSpriteColumns() != null && step.getSpriteColumns() > 0 ? step.getSpriteColumns() : 4;
         int rows = step.getSpriteRows() != null && step.getSpriteRows() > 0 ? step.getSpriteRows() : 3;
@@ -207,7 +212,7 @@ public class MediaStepOps {
                 String tempDir = parentPath(inputPath) + File.separator + ".sprite_tmp_" + System.currentTimeMillis();
                 Files.createDirectories(Paths.get(tempDir));
                 try {
-                    String multiOut = doExtractFrames(inputPath, step, "_sprite_tmp", tempDir, stepWorkDir, null);
+                    String multiOut = doExtractFrames(inputPath, step, tempDir, stepWorkDir, null);
                     File dir = new File(multiOut);
                     if (dir.isDirectory()) {
                         List<BufferedImage> images = loadFramesFromDirectory(multiOut, count);
@@ -221,17 +226,16 @@ public class MediaStepOps {
         if (sprite == null) {
             throw new IOException("未抽到帧或雪碧图生成失败");
         }
-        String baseName = baseName(inputPath);
         String workDir = (stepWorkDir != null && !stepWorkDir.isBlank()) ? stepWorkDir : (transcodeConfig != null ? transcodeConfig.getWorkDir() : null);
         String outPath = resolvedOutputPath != null && !resolvedOutputPath.isBlank()
                 ? toLocalFilePath(resolvedOutputPath, workDir)
-                : parentPath(inputPath) + File.separator + baseName + stepSuffix + "_sprite." + fmt;
+                : null;
+        if (StrUtil.isBlank(outPath)) {
+            throw new IllegalArgumentException("未指定雪碧图输出路径");
+        }
         outPath = ensureImageExtension(outPath, fmt);
         File outFile = new File(outPath);
-        if (outFile.getParent() != null) {
-            File parent = new File(outFile.getParent());
-            if (!parent.exists()) parent.mkdirs();
-        }
+        FileUtil.mkParentDirs(outFile);
         ImgUtil.write(sprite, outFile);
         return outPath;
     }
@@ -289,11 +293,11 @@ public class MediaStepOps {
         return sprite;
     }
 
-    private List<BufferedImage> loadFramesFromDirectory(String dirPath, int count) throws IOException {
+    private List<BufferedImage> loadFramesFromDirectory(String dirPath, int count) {
         List<BufferedImage> list = new ArrayList<>();
         File dir = new File(dirPath);
         if (!dir.isDirectory()) return list;
-        File[] files = dir.listFiles((d, name) -> {
+        File[] files = dir.listFiles((_, name) -> {
             String lower = name.toLowerCase();
             return lower.matches("frame_\\d+\\.(png|jpg|jpeg|webp|bmp)");
         });
@@ -311,7 +315,7 @@ public class MediaStepOps {
         return list;
     }
 
-    public String doImageConvert(String inputPath, StrategyStepVO step, String stepSuffix, String resolvedOutputPath, String stepWorkDir) throws Exception {
+    public String doImageConvert(String inputPath, StrategyStepVO step, String resolvedOutputPath, String stepWorkDir) throws Exception {
         File input = new File(inputPath);
         String workDir = (stepWorkDir != null && !stepWorkDir.isBlank()) ? stepWorkDir : (transcodeConfig != null ? transcodeConfig.getWorkDir() : null);
         String targetFormat = step.getImageTargetFormat() != null && !step.getImageTargetFormat().isBlank()
@@ -322,12 +326,11 @@ public class MediaStepOps {
         if (input.isFile()) {
             String outPath = resolvedOutputPath != null && !resolvedOutputPath.isBlank()
                     ? toLocalFilePath(resolvedOutputPath, workDir)
-                    : parentPath(inputPath) + File.separator + baseName(inputPath) + stepSuffix + "." + targetFormat;
-            File outFile = new File(outPath);
-            if (outFile.getParent() != null) {
-                File parent = new File(outFile.getParent());
-                if (!parent.exists()) parent.mkdirs();
+                    : null;
+            if (StrUtil.isBlank(outPath)) {
+                throw new IllegalArgumentException("请指定输出路径");
             }
+            FileUtil.mkParentDirs(outPath);
             runImageMagickConvert(inputPath, outPath, targetFormat, quality, resize);
             return outPath;
         }
@@ -335,10 +338,12 @@ public class MediaStepOps {
         if (input.isDirectory()) {
             String outDir = resolvedOutputPath != null && !resolvedOutputPath.isBlank()
                     ? toLocalFilePath(resolvedOutputPath, workDir)
-                    : parentPath(inputPath) + File.separator + baseName(inputPath) + stepSuffix + "_converted";
-            File outDirF = new File(outDir);
-            if (!outDirF.exists()) outDirF.mkdirs();
-            File[] files = input.listFiles((dir, name) -> {
+                    : null;
+            if (StrUtil.isBlank(outDir)) {
+                throw new IllegalArgumentException("请指定输出目录");
+            }
+            FileUtil.mkParentDirs(outDir);
+            File[] files = input.listFiles((_, name) -> {
                 String lower = name.toLowerCase();
                 return lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".png")
                         || lower.endsWith(".webp") || lower.endsWith(".gif") || lower.endsWith(".bmp")
@@ -388,19 +393,12 @@ public class MediaStepOps {
         }
         String overlay = "W-w-10:H-h-10";
         if (position != null) {
-            switch (position.toLowerCase()) {
-                case "top-left":
-                    overlay = "10:10";
-                    break;
-                case "top-right":
-                    overlay = "W-w-10:10";
-                    break;
-                case "bottom-left":
-                    overlay = "10:H-h-10";
-                    break;
-                default:
-                    overlay = "W-w-10:H-h-10";
-            }
+            overlay = switch (position.toLowerCase()) {
+                case "top-left" -> "10:10";
+                case "top-right" -> "W-w-10:10";
+                case "bottom-left" -> "10:H-h-10";
+                default -> "W-w-10:H-h-10";
+            };
         }
         ProcessBuilder pb = new ProcessBuilder("ffmpeg", "-y", "-i", inputFile, "-i", watermarkPath,
                 "-filter_complex", "[1]scale=iw/4:-1[wm];[0][wm]overlay=" + overlay, "-c:a", "copy", outputFile);

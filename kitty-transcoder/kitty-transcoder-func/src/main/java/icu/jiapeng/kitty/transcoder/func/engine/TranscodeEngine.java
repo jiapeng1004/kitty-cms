@@ -1,6 +1,7 @@
 package icu.jiapeng.kitty.transcoder.func.engine;
 
 import cn.hutool.core.util.NumberUtil;
+import cn.hutool.core.util.StrUtil;
 import icu.jiapeng.kitty.transcoder.api.StepProgressItem;
 import icu.jiapeng.kitty.transcoder.api.StrategyStepVO;
 import icu.jiapeng.kitty.transcoder.api.StrategyVO;
@@ -64,40 +65,26 @@ public class TranscodeEngine {
         return runWithDependencies(taskId, inputFile, strategy, null, null, progressCallback).mainOutput();
     }
 
-    public TranscodeResult transcode(String taskId, String inputFile, Long strategyId,
-                            String watermarkUrl, String watermarkPosition, ProgressCallback progressCallback) throws Exception {
+    public TranscodeResult transcode(String taskId, String taskType, String inputFile, Long strategyId,
+                                     String watermarkUrl, String watermarkPosition, ProgressCallback progressCallback) throws Exception {
         StrategyVO strategy = strategyService.getStrategy(strategyId);
+        if (StrUtil.isBlank(taskType)) {
+            throw new IllegalArgumentException("任务类型为空");
+        }
         if (strategy == null || strategy.getSteps() == null || strategy.getSteps().isEmpty()) {
-            StrategyStepVO defaultStep = new StrategyStepVO();
-            defaultStep.setType(StepExecutorType.TRANSCODE.getCode());
-            defaultStep.setTargetFormat("mp4");
-            defaultStep.setResolution("1920x1080");
-            defaultStep.setBitrate(5000);
-            defaultStep.setFrameRate(30);
-            defaultStep.setEncoder("h264");
-            StepContextImpl ctx = new StepContextImpl((_, _) -> {
-                throw new UnsupportedOperationException();
-            });
-            ctx.setTaskId(taskId);
-            ctx.setCancellationChecker(() -> taskCancellationRegistry.isCancelled(taskId));
-            ctx.setWatermarkUrl(watermarkUrl);
-            ctx.setWatermarkPosition(watermarkPosition);
-            ctx.setWorkDir(transcodeConfig.getWorkDir());
-            StepExecutor exec = StepExecutor.Factory.resolveOrFail(StepExecutorType.TRANSCODE.getCode());
-            String out = exec.execute(inputFile, defaultStep, "_transcoded", ctx);
-            return new TranscodeResult(out, Map.of(1, out));
+            throw new UnsupportedOperationException("not impl");
         }
         return runWithDependencies(taskId, inputFile, strategy, watermarkUrl, watermarkPosition, progressCallback);
     }
 
     private TranscodeResult runWithDependencies(String taskId, String taskInputPath, StrategyVO strategy,
-                                       String watermarkUrl, String watermarkPosition, ProgressCallback progressCallback) {
+                                                String watermarkUrl, String watermarkPosition, ProgressCallback progressCallback) {
         List<StrategyStepVO> steps = strategy.getSteps();
-        Map<Integer, StrategyStepVO> stepByStepId = steps.stream().collect(Collectors.toMap(StrategyStepVO::getStepId, Function.identity(), (o1, _)->o1));
+        Map<Integer, StrategyStepVO> stepByStepId = steps.stream().collect(Collectors.toMap(StrategyStepVO::getStepId, Function.identity(), (o1, _) -> o1));
         List<Integer> stepIds = stepByStepId.keySet().stream().toList();
         Map<Integer, Integer[]> depsMap = new HashMap<>();
         for (Map.Entry<Integer, StrategyStepVO> e : stepByStepId.entrySet()) {
-            depsMap.put(e.getKey(), Arrays.stream(e.getValue().getDepends().split( ",")).filter(NumberUtil::isInteger).map(Integer::valueOf).toArray(Integer[]::new));
+            depsMap.put(e.getKey(), Arrays.stream(e.getValue().getDepends().split(",")).filter(NumberUtil::isInteger).map(Integer::valueOf).toArray(Integer[]::new));
         }
         StepContextImpl.RunStrategyCallback runStrategyCallback = (stratId, inputPath) -> {
             Long id = (stratId != null && !stratId.isBlank()) ? Long.parseLong(stratId.trim()) : null;
@@ -160,11 +147,9 @@ public class TranscodeEngine {
                 inputPath = MediaStepOps.toLocalFilePath(inputPath, workDir);
                 String resolvedOutputPath = null;
                 if (step.getOutputTemplate() != null && !step.getOutputTemplate().isBlank()) {
-                    resolvedOutputPath = StepTemplateResolver.resolve(step.getOutputTemplate(), taskId, taskInputPath, stepOutputs, sid, workDir);
-                    resolvedOutputPath = MediaStepOps.toLocalFilePath(resolvedOutputPath, workDir);
+                    resolvedOutputPath = MediaStepOps.toLocalFilePath(StepTemplateResolver.resolve(step.getOutputTemplate(), taskId, taskInputPath, stepOutputs, sid, workDir), workDir);
                 }
                 int inputStepId = deps.length == 0 ? -1 : maxOf(deps);
-                String stepSuffix = "_s" + sid;
                 StepExecutor exec = StepExecutor.Factory.resolveOrFail(step.getType());
                 final String inp = inputPath;
                 final int stepIdForPut = sid;
@@ -174,9 +159,8 @@ public class TranscodeEngine {
                 CompletableFuture<Void> f = CompletableFuture.runAsync(() -> {
                     try {
                         ctx.setInputStepIndex(inputStepIdFinal);
-                        ctx.setResolvedOutputPath(resolvedForStep);
                         ctx.setCurrentStepIndex(stepIdForPut);
-                        String out = exec.execute(inp, step, stepSuffix, ctx);
+                        String out = StepContext.call(ctx, () -> exec.execute(inp, resolvedForStep, step));
                         out = MediaStepOps.toLocalFilePath(out, workDirFinal);
                         stepOutputs.put(stepIdForPut, out);
                     } catch (Exception e) {
@@ -216,14 +200,14 @@ public class TranscodeEngine {
     /**
      * 仅执行指定步骤（用于步骤级重试）。依赖步骤的输出从 stepOutputs 读取，执行结果写回 stepOutputs。
      *
-     * @param taskId 任务ID
-     * @param taskInputPath 任务输入路径（无依赖步骤时使用）
-     * @param strategyId 策略ID
-     * @param stepId 要执行的步骤ID
-     * @param stepOutputs 已有步骤输出（含依赖步骤），执行后会将本步骤输出 put 进去
-     * @param watermarkUrl 水印 URL
+     * @param taskId            任务ID
+     * @param taskInputPath     任务输入路径（无依赖步骤时使用）
+     * @param strategyId        策略ID
+     * @param stepId            要执行的步骤ID
+     * @param stepOutputs       已有步骤输出（含依赖步骤），执行后会将本步骤输出 put 进去
+     * @param watermarkUrl      水印 URL
      * @param watermarkPosition 水印位置
-     * @param workDir 工作目录
+     * @param workDir           工作目录
      * @return 本步骤输出路径
      */
     public String runSingleStep(String taskId, String taskInputPath, Long strategyId, int stepId,
@@ -236,28 +220,32 @@ public class TranscodeEngine {
         Integer[] deps = step.getDepends() != null
                 ? Arrays.stream(step.getDepends().split(",")).filter(NumberUtil::isInteger).map(Integer::valueOf).toArray(Integer[]::new)
                 : new Integer[0];
-        String inputPath = step.getInputTemplate() != null && !step.getInputTemplate().isBlank()
-                ? StepTemplateResolver.resolve(step.getInputTemplate(), taskId, taskInputPath, stepOutputs, stepId, workDir)
-                : (deps.length == 0 ? taskInputPath : stepOutputs.get(maxOf(deps)));
-        if (inputPath == null || inputPath.isBlank()) throw new IllegalStateException("步骤 " + stepId + " 输入路径为空");
-        inputPath = MediaStepOps.toLocalFilePath(inputPath, workDir);
+        var ref = new Object() {
+            String inputPath = step.getInputTemplate() != null && !step.getInputTemplate().isBlank()
+                    ? StepTemplateResolver.resolve(step.getInputTemplate(), taskId, taskInputPath, stepOutputs, stepId, workDir)
+                    : (deps.length == 0 ? taskInputPath : stepOutputs.get(maxOf(deps)));
+        };
+        if (ref.inputPath == null || ref.inputPath.isBlank())
+            throw new IllegalStateException("步骤 " + stepId + " 输入路径为空");
+        ref.inputPath = MediaStepOps.toLocalFilePath(ref.inputPath, workDir);
         String resolvedOutputPath = null;
         if (step.getOutputTemplate() != null && !step.getOutputTemplate().isBlank()) {
             resolvedOutputPath = StepTemplateResolver.resolve(step.getOutputTemplate(), taskId, taskInputPath, stepOutputs, stepId, workDir);
             resolvedOutputPath = MediaStepOps.toLocalFilePath(resolvedOutputPath, workDir);
         }
-        StepContextImpl ctx = new StepContextImpl((_, _) -> { throw new UnsupportedOperationException(); });
+        StepContextImpl ctx = new StepContextImpl((_, _) -> {
+            throw new UnsupportedOperationException();
+        });
         ctx.setTaskId(taskId);
         ctx.setCancellationChecker(() -> taskCancellationRegistry.isCancelled(taskId));
         ctx.setWatermarkUrl(watermarkUrl);
         ctx.setWatermarkPosition(watermarkPosition);
         ctx.setWorkDir(workDir);
         ctx.setInputStepIndex(deps.length == 0 ? -1 : maxOf(deps));
-        ctx.setResolvedOutputPath(resolvedOutputPath);
         ctx.setCurrentStepIndex(stepId);
         StepExecutor exec = StepExecutor.Factory.resolveOrFail(step.getType());
-        String stepSuffix = "_s" + stepId;
-        String out = exec.execute(inputPath, step, stepSuffix, ctx);
+        String finalResolvedOutputPath = resolvedOutputPath;
+        String out = StepContext.call(ctx, () -> exec.execute(ref.inputPath, finalResolvedOutputPath, step));
         out = MediaStepOps.toLocalFilePath(out, workDir);
         stepOutputs.put(stepId, out);
         return out;
@@ -361,8 +349,8 @@ public class TranscodeEngine {
     }
 
     private static List<StepProgressItem> buildStepProgressList(Map<Integer, StrategyStepVO> stepByStepId,
-                                                               List<Integer> stepIds, int completedCount,
-                                                               List<Integer> currentLevel, boolean levelDone) {
+                                                                List<Integer> stepIds, int completedCount,
+                                                                List<Integer> currentLevel, boolean levelDone) {
         Map<Integer, AtomicInteger> levelProgress = levelDone ? null : Collections.emptyMap();
         return buildStepProgressListWithLevelProgress(stepByStepId, stepIds, completedCount, currentLevel, levelProgress, levelDone);
     }

@@ -18,9 +18,7 @@ public class SpriteStepExecutor implements StepExecutor {
     }
 
     @Override
-    public String execute(String inputPath, StrategyStepVO step, String stepSuffix, StepContext context) throws Exception {
-        String outputPath = context != null ? context.getResolvedOutputPath() : null;
-        String stepWorkDir = context != null ? context.getWorkDir() : null;
-        return mediaStepOps.doSpriteSheet(inputPath, step, stepSuffix, outputPath, stepWorkDir);
+    public String execute(String inputPath, String outputPath, StrategyStepVO step) throws Exception {
+        return mediaStepOps.doSpriteSheet(inputPath, outputPath, step);
     }
 }
