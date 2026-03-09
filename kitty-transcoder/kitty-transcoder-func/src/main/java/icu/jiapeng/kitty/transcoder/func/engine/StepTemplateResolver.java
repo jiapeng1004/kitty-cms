@@ -20,7 +20,7 @@ public final class StepTemplateResolver {
      */
     public static String resolve(String template, String taskId, String taskInputPath,
                                  Map<Integer, String> stepOutputs, int stepIndex, String workDir) {
-        if (template == null || template.isBlank()) return template;
+        if (template == null || template.isBlank()) return taskInputPath;
         LocalDateTime now = LocalDateTime.now();
         String datePath = now.format(DATE_FMT);
         String timePart = now.format(TIME_FMT);
