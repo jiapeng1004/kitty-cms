@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS transcode_task (
     started_at TIMESTAMP,
     completed_at TIMESTAMP,
     created_by_ak VARCHAR(64),
+    step_outputs TEXT NULL COMMENT '各步骤输出路径 JSON，如 {"1":"path/1080p.mp4","2":"path/480p.mp4"}',
     INDEX idx_transcode_task_strategy_id (strategy_id),
     INDEX idx_transcode_task_status (status),
     INDEX idx_transcode_task_created_at (created_at),
