@@ -16,6 +16,8 @@ public final class TranscodeConstants {
         public static final String TASK_LOCK_PREFIX = "transcode:task:lock:";
         public static final String CANCEL_KEY_PREFIX = "transcoder:cancel:";
         public static final String CANCEL_CHANNEL = "transcoder:cancel:channel";
+        /** 任务总进度 Hash 前缀：transcode:progress:{taskId}，字段 p(进度)/s(状态) */
+        public static final String PROGRESS_KEY_PREFIX = "transcode:progress:";
     }
 
     /** 任务状态 */

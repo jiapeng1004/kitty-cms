@@ -18,9 +18,9 @@ public class ExtractFramesStepExecutor implements StepExecutor {
     }
 
     @Override
-    public String execute(String inputPath, StrategyStepVO step, String stepSuffix, StepContext context) throws Exception {
-        String outputPath = context != null ? context.getResolvedOutputPath() : null;
+    public String execute(String inputPath,String outputPath, StrategyStepVO step) throws Exception {
+        StepContext context = StepContext.getInstance();
         String stepWorkDir = context != null ? context.getWorkDir() : null;
-        return mediaStepOps.doExtractFrames(inputPath, step, stepSuffix, outputPath, stepWorkDir, context);
+        return mediaStepOps.doExtractFrames(inputPath, step, outputPath, stepWorkDir, context);
     }
 }

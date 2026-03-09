@@ -44,7 +44,13 @@ public class TokenAuthFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        String key = request.getMethod().toUpperCase() + " " + request.getRequestURI();
+        String uri = request.getRequestURI();
+        // 1. 只对 /api/ 开头的接口做认证，其余（静态资源、前端页面等）全部放行
+        if (uri == null || !uri.startsWith("/api/")) {
+            return true;
+        }
+        // 2. /api/ 下再按 method+path 白名单放行
+        String key = request.getMethod().toUpperCase() + " " + uri;
         return WHITELIST.contains(key);
     }
 

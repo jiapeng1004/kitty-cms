@@ -1,6 +1,7 @@
 package icu.jiapeng.kitty.transcoder.func.engine;
 
 import icu.jiapeng.kitty.transcoder.api.StrategyStepVO;
+import jakarta.validation.constraints.NotBlank;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;
 
@@ -27,13 +28,11 @@ public interface StepExecutor extends InitializingBean {
     /**
      * 执行单一步骤。
      *
-     * @param inputPath         输入路径（文件或目录，可由输入模板解析得到）
-     * @param step              步骤参数
-     * @param stepSuffix        输出文件名后缀（如 "_s0"），当 resolvedOutputPath 为 null 时使用
-     * @param context 上下文，probe 写探测结果，if 读结果并调用 runStrategy；输出路径由引擎根据步骤的 outputTemplate 解析后写入 context，执行器从 context.getResolvedOutputPath() 读取
+     * @param inputPath 输入路径（文件或目录，可由输入模板解析得到）
+     * @param step      步骤参数
      * @return 本步骤输出路径（文件或目录）
      */
-    String execute(String inputPath, StrategyStepVO step, String stepSuffix, StepContext context) throws Exception;
+    String execute(@NotBlank String inputPath, String outputPath, StrategyStepVO step) throws Exception;
 
     /**
      *

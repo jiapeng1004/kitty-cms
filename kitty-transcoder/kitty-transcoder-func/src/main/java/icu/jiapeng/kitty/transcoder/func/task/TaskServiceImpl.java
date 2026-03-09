@@ -13,14 +13,17 @@ import icu.jiapeng.kitty.transcoder.func.constants.TranscodeConstants.RedisKeys;
 import icu.jiapeng.kitty.transcoder.func.constants.TranscodeConstants.TaskStatus;
 import icu.jiapeng.kitty.transcoder.func.constants.TranscodeConstants.TaskType;
 import icu.jiapeng.kitty.transcoder.func.engine.TranscodeEngine;
+import icu.jiapeng.kitty.transcoder.func.engine.TranscodeResult;
 import icu.jiapeng.kitty.transcoder.func.entity.TranscodeTask;
 import icu.jiapeng.kitty.transcoder.func.mapper.TranscodeTaskMapper;
 import icu.jiapeng.kitty.transcoder.func.mapping.TaskVoMapper;
 import icu.jiapeng.kitty.transcoder.func.notification.NotificationDispatcher;
 import icu.jiapeng.kitty.transcoder.func.strategy.StrategyService;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RBlockingQueue;
 import org.redisson.api.RLock;
+import org.redisson.api.RMap;
 import org.redisson.api.RedissonClient;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.stereotype.Service;
@@ -37,6 +40,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+@Slf4j
 @Service
 public class TaskServiceImpl implements TaskService {
 
@@ -197,7 +201,8 @@ public class TaskServiceImpl implements TaskService {
                 return;
             }
             TranscodeTask entity = taskMapper.selectById(taskId);
-            if (entity == null || TaskStatus.CANCELLED.equals(entity.getStatus())) {
+            if (entity == null) {
+                log.warn("任务不存在: {}", taskId);
                 return;
             }
             entity.setStatus(TaskStatus.PROCESSING);
@@ -212,7 +217,7 @@ public class TaskServiceImpl implements TaskService {
             if (InputType.HTTP.equalsIgnoreCase(entity.getInputType())) {
                 localPath = resolveHttpInput(localPath, taskId, entity.getStrategyId());
             }
-            icu.jiapeng.kitty.transcoder.func.engine.TranscodeResult result = transcodeEngine.transcode(taskId, localPath, entity.getStrategyId(),
+            TranscodeResult result = transcodeEngine.transcode(taskId, entity.getTaskType(), localPath, entity.getStrategyId(),
                     entity.getWatermarkUrl(), entity.getWatermarkPosition(),
                     this::updateTaskStatus);
             String outputPath = result.mainOutput();
@@ -349,7 +354,8 @@ public class TaskServiceImpl implements TaskService {
             StrategyVO strategy = strategyService.getStrategy(entity.getStrategyId());
             if (strategy != null && strategy.getSteps() != null) {
                 for (StrategyStepVO s : strategy.getSteps()) {
-                    if (s.getStepId() != null) stepTypeByStepId.put(s.getStepId(), s.getType() != null ? s.getType() : "transcode");
+                    if (s.getStepId() != null)
+                        stepTypeByStepId.put(s.getStepId(), s.getType() != null ? s.getType() : "transcode");
                 }
             }
         }
@@ -402,31 +408,109 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public void updateTaskStatus(String taskId, String status, int progress, List<StepProgressItem> stepProgressList) {
+        // 保证进度单调不减，且终态后不再被 PROCESSING 覆盖，避免 90% -> 0% -> 100% 等闪跳
+        TranscodeTask entity = taskMapper.selectById(taskId);
+        Integer oldProgress = entity != null ? entity.getProgress() : null;
+        String oldStatus = entity != null ? entity.getStatus() : null;
+
+        boolean isTerminalNew = TaskStatus.COMPLETED.equals(status)
+                || TaskStatus.FAILED.equals(status)
+                || TaskStatus.CANCELLED.equals(status);
+        boolean isTerminalOld = TaskStatus.COMPLETED.equals(oldStatus)
+                || TaskStatus.FAILED.equals(oldStatus)
+                || TaskStatus.CANCELLED.equals(oldStatus);
+
+        // 已经是终态的任务，忽略后续 PROCESSING/中间进度更新
+        if (isTerminalOld && !isTerminalNew) {
+            return;
+        }
+
+        int safeOld = oldProgress != null ? oldProgress : 0;
+        int safeNew = Math.max(safeOld, Math.min(100, Math.max(0, progress)));
+
         // 与 SSE 一致：每次进度更新也触发 HTTP/gRPC 回调；但 progress==100 时不在此发，由 processTask 在落库 step_outputs 后统一发一次带完整 outputs 的 COMPLETED 通知
-        if (progress == 100) {
-            // 仅更新 DB 与 SSE，回调留到 processTask 中发送（带 outputs）
-        } else {
-            TranscodeTask entity = taskMapper.selectById(taskId);
+        if (safeNew < 100 && !isTerminalNew) {
             if (entity != null) {
+                int notifyProgress = safeNew;
+                TranscodeTask snapshot = entity;
                 Thread.startVirtualThread(() -> {
                     try {
-                        sendProgressNotification(entity, progress);
+                        sendProgressNotification(snapshot, notifyProgress);
                     } catch (Throwable t) {
                         // 静默忽略
                     }
                 });
             }
         }
+
         LambdaUpdateWrapper<TranscodeTask> u = new LambdaUpdateWrapper<>();
         u.eq(TranscodeTask::getId, taskId)
                 .set(TranscodeTask::getStatus, status)
-                .set(TranscodeTask::getProgress, progress);
-        if (stepProgressList != null) {
-            u.set(TranscodeTask::getProgressDetail, JSON.toJSONString(stepProgressList));
+                .set(TranscodeTask::getProgress, safeNew);
+        // 分步进度：与旧值按 stepId 合并，保证每个步骤进度单调不减，不会从 90% 掉回 0%
+        if (stepProgressList != null && !stepProgressList.isEmpty()) {
+            Map<Integer, StepProgressItem> merged = new HashMap<>();
+            // 先放入旧的
+            if (entity != null && entity.getProgressDetail() != null && !entity.getProgressDetail().isBlank()) {
+                try {
+                    List<StepProgressItem> oldList = JSON.parseArray(entity.getProgressDetail(), StepProgressItem.class);
+                    if (oldList != null) {
+                        for (StepProgressItem it : oldList) {
+                            if (it != null && it.getStepId() != null) {
+                                merged.put(it.getStepId(), it);
+                            }
+                        }
+                    }
+                } catch (Exception ignored) {
+                }
+            }
+            // 用新的覆盖/提升
+            for (StepProgressItem cur : stepProgressList) {
+                if (cur == null || cur.getStepId() == null) continue;
+                int sid = cur.getStepId();
+                StepProgressItem old = merged.get(sid);
+                if (old == null) {
+                    merged.put(sid, cur);
+                    continue;
+                }
+                int oldPct = old.getProgress() != null ? old.getProgress() : 0;
+                int newPct = cur.getProgress() != null ? cur.getProgress() : 0;
+                old.setProgress(Math.max(oldPct, newPct));
+                // 状态：一旦 completed/failed 就不往回降到 pending/processing
+                String oldSt = old.getStatus();
+                String newSt = cur.getStatus();
+                boolean oldTerminal = "completed".equalsIgnoreCase(oldSt) || "failed".equalsIgnoreCase(oldSt) || "cancelled".equalsIgnoreCase(oldSt);
+                if (!oldTerminal && newSt != null) {
+                    old.setStatus(newSt);
+                }
+                if (cur.getName() != null) old.setName(cur.getName());
+                if (cur.getType() != null) old.setType(cur.getType());
+                if (cur.getDepends() != null) old.setDepends(cur.getDepends());
+            }
+            if (!merged.isEmpty()) {
+                List<StepProgressItem> finalList = merged.values().stream()
+                        .sorted(Comparator.comparing(StepProgressItem::getStepId))
+                        .toList();
+                u.set(TranscodeTask::getProgressDetail, JSON.toJSONString(finalList));
+            }
         }
         taskMapper.update(null, u);
+        writeProgressToRedis(taskId, status, safeNew);
         ProgressVO vo = getProgress(taskId);
         progressBroadcaster.broadcast(vo);
+    }
+
+    /**
+     * 将当前任务总进度写入 Redis，供多节点读取。Redis 只存最新快照，不作为持久化来源。
+     */
+    private void writeProgressToRedis(String taskId, String status, int progress) {
+        try {
+            RMap<String, Object> map = redissonClient.getMap(RedisKeys.PROGRESS_KEY_PREFIX + taskId);
+            map.put("p", progress);
+            map.put("s", status);
+            map.expire(7, TimeUnit.DAYS);
+        } catch (Exception ignored) {
+        }
     }
 
     @Override
@@ -441,8 +525,22 @@ public class TaskServiceImpl implements TaskService {
         TranscodeTask entity = taskMapper.selectById(taskId);
         ProgressVO vo = new ProgressVO();
         vo.setTaskId(taskId);
-        vo.setProgress(entity != null ? entity.getProgress() : 0);
-        vo.setStatus(entity != null ? entity.getStatus() : TaskStatus.PENDING);
+        Integer dbProgress = entity != null ? entity.getProgress() : null;
+        String dbStatus = entity != null ? entity.getStatus() : null;
+        Integer redisProgress = null;
+        String redisStatus = null;
+        try {
+            RMap<String, Object> map = redissonClient.getMap(RedisKeys.PROGRESS_KEY_PREFIX + taskId);
+            if (map != null && !map.isEmpty()) {
+                Object p = map.get("p");
+                Object s = map.get("s");
+                if (p instanceof Number) redisProgress = ((Number) p).intValue();
+                if (s != null) redisStatus = s.toString();
+            }
+        } catch (Exception ignored) {
+        }
+        vo.setProgress(redisProgress != null ? redisProgress : (dbProgress != null ? dbProgress : 0));
+        vo.setStatus(redisStatus != null ? redisStatus : (dbStatus != null ? dbStatus : TaskStatus.PENDING));
         if (entity != null && entity.getProgressDetail() != null && !entity.getProgressDetail().isBlank()) {
             try {
                 List<StepProgressItem> list = JSON.parseArray(entity.getProgressDetail(), StepProgressItem.class);
@@ -580,7 +678,14 @@ public class TaskServiceImpl implements TaskService {
             StrategyStepVO step = strategy.getSteps().stream().filter(s -> stepId == (s.getStepId() != null ? s.getStepId() : 0)).findFirst().orElse(null);
             if (step == null) throw new IllegalArgumentException("步骤不存在: " + stepId);
             String depends = step.getDepends() != null ? step.getDepends().trim() : "";
-            boolean hasDeps = depends.length() > 0 && java.util.Arrays.stream(depends.split(",")).map(String::trim).filter(StrUtil::isNotBlank).anyMatch(p -> { try { Integer.parseInt(p); return true; } catch (NumberFormatException e) { return false; } });
+            boolean hasDeps = depends.length() > 0 && java.util.Arrays.stream(depends.split(",")).map(String::trim).filter(StrUtil::isNotBlank).anyMatch(p -> {
+                try {
+                    Integer.parseInt(p);
+                    return true;
+                } catch (NumberFormatException e) {
+                    return false;
+                }
+            });
             if (hasDeps) {
                 throw new IllegalStateException("任务无步骤输出记录，无法重试依赖其他步骤的步骤（请先使用「任务重试」整体重试）");
             }
@@ -606,12 +711,14 @@ public class TaskServiceImpl implements TaskService {
         }
         taskMapper.update(null, update);
         TranscodeTask updated = taskMapper.selectById(taskId);
-        if (updated != null) fireProgressNotification(taskId, updated, updated.getProgress() != null ? updated.getProgress() : 100);
+        if (updated != null)
+            fireProgressNotification(taskId, updated, updated.getProgress() != null ? updated.getProgress() : 100);
         return out;
     }
 
     private static Map<Integer, String> parseStepOutputs(String json) {
-        return com.alibaba.fastjson.JSON.parseObject(json, new TypeReference<Map<Integer, String>>(){});
+        return com.alibaba.fastjson.JSON.parseObject(json, new TypeReference<Map<Integer, String>>() {
+        });
     }
 
 }

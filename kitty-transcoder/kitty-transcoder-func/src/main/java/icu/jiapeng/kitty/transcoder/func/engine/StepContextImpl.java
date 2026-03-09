@@ -1,30 +1,36 @@
 package icu.jiapeng.kitty.transcoder.func.engine;
 
 import icu.jiapeng.kitty.transcoder.api.ProbeResult;
-import lombok.Setter;
+import lombok.*;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
 import java.util.function.BooleanSupplier;
 
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class StepContextImpl implements StepContext {
 
-    /** 并行步骤时，各线程通过 ThreadLocal 持有自己的 stepId，避免 reportStepProgress 读到被其他线程覆盖的值 */
-    private static final ThreadLocal<Integer> currentStepIndexForThread = new ThreadLocal<>();
+    /**
+     * 并行步骤时，各线程通过 InheritableThreadLocal 持有自己的 stepId，
+     * 避免 reportStepProgress 读到被其他线程覆盖的值；子线程（如 ffmpeg 进度线程）
+     * 会继承创建时父线程的 stepId，从而将进度正确归属到对应步骤。
+     */
+    private static final InheritableThreadLocal<Integer> currentStepIndexForThread = new InheritableThreadLocal<>();
 
     private int currentStepIndex;
     private int inputStepIndex = -1;
-    private String resolvedOutputPath;
     private String watermarkUrl;
     private String watermarkPosition;
     private String taskId;
     private String workDir;
-    private final Map<Integer, ProbeResult> probeResults = new ConcurrentHashMap<>();
-    private final RunStrategyCallback runStrategyCallback;
-    @Setter
+    private Map<Integer, ProbeResult> probeResults = new ConcurrentHashMap<>();
+    private RunStrategyCallback runStrategyCallback;
     private volatile BiConsumer<Integer, Integer> stepProgressReporter;
-    @Setter
     private volatile BooleanSupplier cancellationChecker;
 
     public StepContextImpl(RunStrategyCallback runStrategyCallback) {
@@ -52,49 +58,39 @@ public class StepContextImpl implements StepContext {
         currentStepIndexForThread.set(stepIndex);
     }
 
-    /** 步骤结束时调用，清理当前线程的 ThreadLocal，避免线程复用后读到旧值 */
+    /**
+     * 步骤结束时调用，清理当前线程的 ThreadLocal，避免线程复用后读到旧值
+     */
     public static void clearCurrentStepIndexForThread() {
         currentStepIndexForThread.remove();
     }
-    @Override
-    public int getCurrentStepIndex() { return currentStepIndex; }
-    @Override
-    public void setInputStepIndex(int stepIndex) { this.inputStepIndex = stepIndex; }
-    @Override
-    public int getInputStepIndex() { return inputStepIndex; }
+
     @Override
     public void setProbeResult(int stepIndex, ProbeResult result) {
         if (result != null) probeResults.put(stepIndex, result);
     }
+
     @Override
-    public ProbeResult getProbeResult(int stepIndex) { return probeResults.get(stepIndex); }
-    @Override
-    public void setResolvedOutputPath(String path) { this.resolvedOutputPath = path; }
-    @Override
-    public String getResolvedOutputPath() { return resolvedOutputPath; }
+    public ProbeResult getProbeResult(int stepIndex) {
+        return probeResults.get(stepIndex);
+    }
+
+
     @Override
     public String runStrategy(String strategyId, String inputPath) throws Exception {
         return runStrategyCallback.runStrategy(strategyId, inputPath);
     }
-    @Override
-    public String getWatermarkUrl() { return watermarkUrl; }
-    @Override
-    public void setWatermarkUrl(String url) { this.watermarkUrl = url; }
-    @Override
-    public String getWatermarkPosition() { return watermarkPosition; }
-    @Override
-    public void setWatermarkPosition(String position) { this.watermarkPosition = position; }
-    @Override
-    public String getTaskId() { return taskId; }
-    @Override
-    public void setTaskId(String id) { this.taskId = id; }
-    @Override
-    public String getWorkDir() { return workDir; }
-    @Override
-    public void setWorkDir(String workDir) { this.workDir = workDir; }
+
 
     @FunctionalInterface
     public interface RunStrategyCallback {
         String runStrategy(String strategyId, String inputPath) throws Exception;
+    }
+
+    @Override
+    protected Object clone() throws CloneNotSupportedException {
+        StepContextImpl clone = (StepContextImpl) super.clone();
+        clone.setProbeResults(new HashMap<>(clone.getProbeResults()));
+        return clone;
     }
 }

@@ -18,12 +18,12 @@ public class TranscodeStepExecutor implements StepExecutor {
     }
 
     @Override
-    public String execute(String inputPath, StrategyStepVO step, String stepSuffix, StepContext context) throws Exception {
-        String outputPath = context != null ? context.getResolvedOutputPath() : null;
+    public String execute(String inputPath,String outputPath, StrategyStepVO step) throws Exception {
+        StepContext context = StepContext.getInstance();
         String wmUrl = context != null ? context.getWatermarkUrl() : null;
         String wmPos = context != null ? context.getWatermarkPosition() : null;
         String taskId = context != null ? context.getTaskId() : null;
         String stepWorkDir = context != null ? context.getWorkDir() : null;
-        return mediaStepOps.doTranscode(inputPath, step, stepSuffix, outputPath, wmUrl, wmPos, taskId, stepWorkDir, context);
+        return StepContext.call(context, () -> mediaStepOps.doTranscode(inputPath, step, outputPath, wmUrl, wmPos, taskId, stepWorkDir));
     }
 }
