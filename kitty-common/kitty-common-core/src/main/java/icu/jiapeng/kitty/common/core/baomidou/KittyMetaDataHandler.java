@@ -29,9 +29,6 @@ public class KittyMetaDataHandler implements MetaObjectHandler {
 
     public static final String UPDATE_TIME = "updateTime";
 
-    public static final String CREATOR = "creator";
-
-    public static final String UPDATER = "updater";
 
     @Override
     public void insertFill(MetaObject metaObject) {

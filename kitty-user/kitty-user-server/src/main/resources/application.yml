@@ -28,7 +28,7 @@ spring:
       database: 8
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/kitty_user?useUnicode=true&characterEncoding=utf-8&useSSL=false&allowPublicKeyRetrieval=true&allowMultiQueries=true&zeroDateTimeBehavior=convertToNull&transformedBitIsBoolean=true&tinyInt1isBit=false&allowLoadLocalInfile=true&allowLocalInfile=true
+    url: jdbc:mysql://localhost:3306/kitty_user?useUnicode=true&characterEncoding=utf-8&useSSL=false&allowPublicKeyRetrieval=true&allowMultiQueries=true&zeroDateTimeBehavior=convertToNull&transformedBitIsBoolean=true&tinyInt1isBit=false&allowLoadLocalInfile=true&allowLocalInfile=true&databaseTerm=schema
     username: root
     password: 123456
     hikari:
@@ -54,6 +54,10 @@ spring:
   threads:
     virtual:
       enabled: true
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:sql/kittycms_user.sql
 
 
 springdoc:

@@ -1,6 +1,6 @@
 -- 创建数据库
--- CREATE DATABASE IF NOT EXISTS kitty_cms charset utf8mb4 collate utf8mb4_general_ci;
--- USE kitty_cms;
+CREATE DATABASE IF NOT EXISTS kt_user_user charset utf8mb4 collate utf8mb4_general_ci;
+USE kt_user_user;
 
 -- 用户表
 CREATE TABLE IF NOT EXISTS kt_user_user
@@ -17,11 +17,10 @@ CREATE TABLE IF NOT EXISTS kt_user_user
     update_time TIMESTAMP    NULL     DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     creator     VARCHAR(32)  NULL     DEFAULT NULL COMMENT '创建者',
     updater     VARCHAR(32)  NULL     DEFAULT NULL COMMENT '更新者',
-    UNIQUE Key `idx_login_name` (`login_name`) USING BTREE COMMENT '登录名索引',
     Key `idx_phone` (`phone`) USING BTREE COMMENT '手机号索引',
     Key `idx_email` (`email`) USING BTREE COMMENT '邮箱索引',
     Key `idx_id_card` (`id_card`) USING BTREE COMMENT '身份证号索引',
-    Key `idx_nick_name` (`nick_name`) USING BTREE COMMENT '昵称索引',
+    UNIQUE Key `idx_nick_name` (`nick_name`) USING BTREE COMMENT '昵称索引',
     Key `idx_real_name` (`real_name`) USING BTREE COMMENT '真实姓名索引'
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
