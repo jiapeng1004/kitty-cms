@@ -16,7 +16,7 @@ grpc:
 
 spring:
   profiles:
-    active: "@spring.profiles.active@"
+    active: loc
   application:
     name: kitty-user
     version: "@project.version@"

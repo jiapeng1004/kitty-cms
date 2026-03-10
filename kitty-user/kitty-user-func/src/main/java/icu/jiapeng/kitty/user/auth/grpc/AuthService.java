@@ -19,7 +19,7 @@ import net.devh.boot.grpc.server.service.GrpcService;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
 @GrpcService
-public class AuthService extends AuthServiceGrpc.AuthServiceImplBase {
+public class AuthService extends icu.jiapeng.kitty.user.auth.grpc.AuthServiceGrpc.AuthServiceImplBase {
     @Resource
     private StringRedisTemplate stringRedisTemplate;
 
@@ -31,7 +31,7 @@ public class AuthService extends AuthServiceGrpc.AuthServiceImplBase {
         try {
             // 使用sa-token校验一下这个token
             Object loginIdByToken = StpUtil.getLoginIdByToken(request.getToken());
-            TokenIntrospectionResp.Builder builder = TokenIntrospectionResp.newBuilder();
+            icu.jiapeng.kitty.user.auth.grpc.TokenIntrospectionResp.Builder builder = icu.jiapeng.kitty.user.auth.grpc.TokenIntrospectionResp.newBuilder();
             builder.setValid(loginIdByToken != null);
             responseObserver.onNext(builder.build());
         } finally {
@@ -40,13 +40,13 @@ public class AuthService extends AuthServiceGrpc.AuthServiceImplBase {
     }
 
     @Override
-    public void saTokenDaoGet(SaTokenDaoGetReq request, StreamObserver<SaTokenDaoGetResp> responseObserver) {
+    public void saTokenDaoGet(icu.jiapeng.kitty.user.auth.grpc.SaTokenDaoGetReq request, StreamObserver<icu.jiapeng.kitty.user.auth.grpc.SaTokenDaoGetResp> responseObserver) {
         try {
             String value = stringRedisTemplate.opsForValue().get(request.getKey());
             if (StrUtil.isBlank(value)) {
                 value = "";
             }
-            SaTokenDaoGetResp.Builder builder = SaTokenDaoGetResp.newBuilder();
+            icu.jiapeng.kitty.user.auth.grpc.SaTokenDaoGetResp.Builder builder = icu.jiapeng.kitty.user.auth.grpc.SaTokenDaoGetResp.newBuilder();
             builder.setValue(value);
             responseObserver.onNext(builder.build());
         } finally {
@@ -55,10 +55,10 @@ public class AuthService extends AuthServiceGrpc.AuthServiceImplBase {
     }
 
     @Override
-    public void saTokenDaoTimeOut(SaTokenDaoTimeOutReq request, StreamObserver<SaTokenDaoTimeOutResp> responseObserver) {
+    public void saTokenDaoTimeOut(icu.jiapeng.kitty.user.auth.grpc.SaTokenDaoTimeOutReq request, StreamObserver<icu.jiapeng.kitty.user.auth.grpc.SaTokenDaoTimeOutResp> responseObserver) {
         try {
             long timeout = stringRedisTemplate.getExpire(request.getKey());
-            SaTokenDaoTimeOutResp.Builder builder = SaTokenDaoTimeOutResp.newBuilder();
+            icu.jiapeng.kitty.user.auth.grpc.SaTokenDaoTimeOutResp.Builder builder = icu.jiapeng.kitty.user.auth.grpc.SaTokenDaoTimeOutResp.newBuilder();
             builder.setTimeOut(timeout);
             responseObserver.onNext(builder.build());
         } finally {
