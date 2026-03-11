@@ -1,5 +1,5 @@
 {
-  "name": "@kitty-cms/admin",
+  "name": "admin",
   "version": "1.0.0",
   "description": "Admin panel for Kitty CMS",
   "type": "module",
