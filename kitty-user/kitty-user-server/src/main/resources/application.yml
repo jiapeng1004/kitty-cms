@@ -15,6 +15,13 @@ grpc:
     port: 9801
 
 spring:
+  mvc:
+    format:
+      date-time: yyyy-MM-dd HH:mm:ss
+      date: yyyy-MM-dd
+  jackson:
+    date-format: "yyyy-MM-dd HH:mm:ss"
+    time-zone: Asia/Shanghai
   profiles:
     active: loc
   application:
