@@ -15,6 +15,8 @@ import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import icu.jiapeng.kitty.common.core.baomidou.KittyMetaDataHandler;
 import icu.jiapeng.kitty.common.core.config.GrpcConfig;
+import icu.jiapeng.kitty.user.db.DefaultTenantDataSource;
+import icu.jiapeng.kitty.user.db.MybatisPlusTenSchemaInterceptor;
 import icu.jiapeng.kitty.user.filter.TenFilter;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -26,7 +28,12 @@ import org.springframework.core.Ordered;
 
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(UserConfigProperties.class)
-@Import({GrpcConfig.class, SaConfig.class, KittyMetaDataHandler.class})
+@Import({GrpcConfig.class
+        , SaConfig.class
+        , KittyMetaDataHandler.class
+        , MybatisPlusTenSchemaInterceptor.class
+        , DefaultTenantDataSource.class
+})
 @MapperScan("icu.jiapeng.kitty.user.*.mapper")
 public class UserFuncConfig {
     /**

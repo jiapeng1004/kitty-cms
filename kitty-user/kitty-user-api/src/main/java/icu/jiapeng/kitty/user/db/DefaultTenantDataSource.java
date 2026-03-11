@@ -11,7 +11,6 @@ import java.sql.*;
 import java.util.HashSet;
 
 @SuppressWarnings("all")
-@Component
 public class DefaultTenantDataSource implements TenantAwareDataSource, InitializingBean {
 
     @Autowired

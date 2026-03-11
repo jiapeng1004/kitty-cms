@@ -19,7 +19,6 @@ import java.util.Objects;
  * @since 2026/2/12
  */
 @Intercepts({@Signature(type = StatementHandler.class, method = "prepare", args = {Connection.class, Integer.class})})
-@Component
 public class MybatisPlusTenSchemaInterceptor implements Interceptor {
     @Resource
     private TenantAwareDataSource tenantAwareDataSource;
