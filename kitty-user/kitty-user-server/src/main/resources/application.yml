@@ -54,10 +54,6 @@ spring:
   threads:
     virtual:
       enabled: true
-  sql:
-    init:
-      mode: always
-      schema-locations: classpath:sql/kittycms_user.sql
 
 
 springdoc:
