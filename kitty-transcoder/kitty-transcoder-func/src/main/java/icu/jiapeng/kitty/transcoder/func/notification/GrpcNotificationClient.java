@@ -8,7 +8,7 @@ import io.grpc.Channel;
 import io.grpc.StatusRuntimeException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.grpc.client.GrpcChannelFactory;
+import net.devh.boot.grpc.client.channelfactory.GrpcChannelFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.List;

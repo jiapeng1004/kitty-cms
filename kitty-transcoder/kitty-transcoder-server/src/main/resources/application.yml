@@ -28,10 +28,10 @@ spring:
   threads:
     virtual:
       enabled: true
-  grpc:
-    server:
-      port: 9803
 
+grpc:
+  server:
+    port: 9803
 
 server:
   port: 9703

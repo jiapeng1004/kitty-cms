@@ -20,9 +20,9 @@ public class TranscoderGrpcAuthInterceptor implements ServerInterceptor {
 
     public static final Context.Key<String> ACCESS_KEY_ID_CTX = Context.key(TranscodeConstants.ATTR_ACCESS_KEY_ID);
 
-//    @Autowired
+    //    @Autowired
     private RedissonClient redissonClient;
-//    @Autowired
+    //    @Autowired
     private icu.jiapeng.kitty.transcoder.func.auth.AuthService authService;
 
     @Override
@@ -68,7 +68,8 @@ public class TranscoderGrpcAuthInterceptor implements ServerInterceptor {
 
         if (accessKeyId == null) {
             call.close(Status.UNAUTHENTICATED.withDescription("需要 Token 或 AK/SK 签名"), new Metadata());
-            return new ServerCall.Listener<>() {};
+            return new ServerCall.Listener<>() {
+            };
         }
 
         Context ctx = Context.current().withValue(ACCESS_KEY_ID_CTX, accessKeyId);

@@ -5,7 +5,7 @@ import icu.jiapeng.kitty.transcoder.grpc.TranscodeListenerServiceGrpc;
 import icu.jiapeng.kitty.transcoder.grpc.TranscodeProgressEvent;
 import io.grpc.stub.StreamObserver;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.grpc.server.service.GrpcService;
+import net.devh.boot.grpc.server.service.GrpcService;
 
 /**
  * 自省观察员：转码服务自身实现的 TranscodeListenerService，用于开发阶段无外部调用方时，

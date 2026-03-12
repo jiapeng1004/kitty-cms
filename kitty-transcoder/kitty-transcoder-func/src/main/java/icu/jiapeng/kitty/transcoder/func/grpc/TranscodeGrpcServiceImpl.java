@@ -10,7 +10,7 @@ import icu.jiapeng.kitty.transcoder.grpc.GetTaskReq;
 import icu.jiapeng.kitty.transcoder.grpc.TranscodeServiceGrpc;
 import io.grpc.stub.StreamObserver;
 import jakarta.annotation.Resource;
-import org.springframework.grpc.server.service.GrpcService;
+import net.devh.boot.grpc.server.service.GrpcService;
 
 import java.util.List;
 import java.util.Optional;
