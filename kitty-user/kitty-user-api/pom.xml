@@ -21,6 +21,10 @@
 
     <dependencies>
         <dependency>
+            <groupId>icu.jiapeng</groupId>
+            <artifactId>kitty-common-core</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-webmvc</artifactId>
             <scope>provided</scope>

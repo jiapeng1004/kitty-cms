@@ -13,10 +13,13 @@ package icu.jiapeng.kitty.user.cfg.controller;
 
 
 import icu.jiapeng.kitty.common.core.page.PageRespVo;
+import icu.jiapeng.kitty.user.cfg.api.ConfigApi;
 import icu.jiapeng.kitty.user.cfg.convert.BeansConvert;
-import icu.jiapeng.kitty.user.cfg.dto.ConfigQueryPageDTO;
 import icu.jiapeng.kitty.user.cfg.dto.GetValDTO;
 import icu.jiapeng.kitty.user.cfg.dto.SetValDTO;
+import icu.jiapeng.kitty.user.cfg.dto.ConfigCreateDTO;
+import icu.jiapeng.kitty.user.cfg.dto.ConfigQueryPageDTO;
+import icu.jiapeng.kitty.user.cfg.dto.ConfigUpdateDTO;
 import icu.jiapeng.kitty.user.cfg.service.KtConfigService;
 import icu.jiapeng.kitty.user.cfg.vo.ConfigListVo;
 import io.swagger.v3.oas.annotations.Operation;
@@ -28,45 +31,66 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 /**
- *
+ * 配置 API 实现，契约见 {@link ConfigApi}（kitty-user-api）
  *
  * @author jiapeng
  * @since 2025/12/20
  */
 @Tag(name = "配置 API")
-@RestController("/api/config")
+@RestController
+@RequestMapping("/api/config")
 @Validated
-public class KtConfigController {
+public class KtConfigController implements ConfigApi {
     @Resource
     private KtConfigService ktConfigService;
 
+    @Override
     @Operation(description = "分页查询")
     @GetMapping("/query")
     public PageRespVo<ConfigListVo> query(ConfigQueryPageDTO query) {
         return ktConfigService.query(query);
     }
 
+    @Override
     @Operation(description = "获取配置项")
     @GetMapping("/{id}")
-    public ConfigListVo get(@NotBlank(message = "id.not.null") @PathVariable String id) {
+    public ConfigListVo getById(@NotBlank(message = "{id.not.null}") @PathVariable String id) {
         return BeansConvert.INSTANCE.config2ListVo(ktConfigService.getById(id));
     }
 
+    @Override
+    @Operation(description = "新增配置项")
+    @PostMapping
+    public String create(@Valid @RequestBody ConfigCreateDTO dto) {
+        return ktConfigService.create(dto);
+    }
+
+    @Override
+    @Operation(description = "更新配置项")
+    @PutMapping("/{id}")
+    public Boolean update(@NotBlank(message = "{id.not.null}") @PathVariable String id,
+                          @Valid @RequestBody ConfigUpdateDTO dto) {
+        return ktConfigService.update(id, dto);
+    }
+
+    @Override
     @Operation(description = "删除配置项")
     @DeleteMapping("/{id}")
-    public Boolean remove(@NotBlank(message = "id.not.null") @PathVariable String id) {
+    public Boolean remove(@NotBlank(message = "{id.not.null}") @PathVariable String id) {
         return ktConfigService.removeById(id);
     }
 
     @Operation(description = "获取配置值")
     @GetMapping("/getVal")
+    @Override
     public String getVal(GetValDTO getValDTO) {
         return ktConfigService.getVal(getValDTO);
     }
 
     @Operation(description = "设置配置值")
     @PostMapping("/setVal")
-    public String setVal(@Valid SetValDTO setValDTO) {
+    @Override
+    public String setVal(@Valid @RequestBody SetValDTO setValDTO) {
         return ktConfigService.setVal(setValDTO);
     }
 }

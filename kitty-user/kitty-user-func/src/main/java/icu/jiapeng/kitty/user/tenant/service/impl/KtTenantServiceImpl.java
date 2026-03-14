@@ -13,8 +13,14 @@ package icu.jiapeng.kitty.user.tenant.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.RandomUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.extra.spring.SpringUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import icu.jiapeng.kitty.common.core.page.PageRespVo;
+import icu.jiapeng.kitty.user.scope.TenScoped;
+import icu.jiapeng.kitty.user.tenant.dto.TenantQueryPageDTO;
 import icu.jiapeng.kitty.user.tenant.listener.TenCreateListener;
 import icu.jiapeng.kitty.user.tenant.convert.TenantConvert;
 import icu.jiapeng.kitty.user.tenant.dto.TenantCreateDTO;
@@ -23,6 +29,7 @@ import icu.jiapeng.kitty.user.tenant.entity.KtTenant;
 import icu.jiapeng.kitty.user.tenant.mapper.KtTenantMapper;
 import icu.jiapeng.kitty.user.tenant.service.KtTenantService;
 import icu.jiapeng.kitty.user.tenant.vo.TenantVO;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.OrderComparator;
 import org.springframework.dao.DuplicateKeyException;
@@ -40,6 +47,30 @@ import java.util.Map;
 @Slf4j
 @Service
 public class KtTenantServiceImpl extends ServiceImpl<KtTenantMapper, KtTenant> implements KtTenantService {
+
+    @Override
+    @SneakyThrows
+    public List<TenantVO> listAll() {
+        // 切到主租户
+        Page<KtTenant> page = TenScoped.call(null, (ScopedValue.CallableOp<Page<KtTenant>, Exception>) () -> page(new Page<>(1, 500), new LambdaQueryWrapper<>()));
+        return page.getRecords().stream().map(TenantConvert.INSTANCE::entityToVo).toList();
+    }
+
+    @Override
+    public PageRespVo<TenantVO> query(TenantQueryPageDTO query) {
+        LambdaQueryWrapper<KtTenant> wrapper = new LambdaQueryWrapper<>();
+        if (StrUtil.isNotBlank(query.getSearchKey())) {
+            wrapper.like(KtTenant::getName, query.getSearchKey());
+        }
+        Page<KtTenant> page = page(new Page<>(query.getPage(), query.getSize()), wrapper);
+        return PageRespVo.<TenantVO>builder()
+                .page(page.getCurrent())
+                .size(page.getSize())
+                .total(page.getTotal())
+                .orders(query.getOrders())
+                .records(page.getRecords().stream().map(TenantConvert.INSTANCE::entityToVo).toList())
+                .build();
+    }
 
     @Override
     @Transactional

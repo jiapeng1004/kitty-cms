@@ -11,15 +11,30 @@
  */
 package icu.jiapeng.kitty.user.tenant.service;
 
+import icu.jiapeng.kitty.common.core.page.PageRespVo;
 import icu.jiapeng.kitty.user.tenant.dto.TenantCreateDTO;
+import icu.jiapeng.kitty.user.tenant.dto.TenantQueryPageDTO;
 import icu.jiapeng.kitty.user.tenant.dto.TenantUpdateDTO;
 import icu.jiapeng.kitty.user.tenant.vo.TenantVO;
+
+import java.util.List;
 
 /**
  * 租户服务接口
  */
 public interface KtTenantService {
     String create(TenantCreateDTO dto);
+
+    /** 登录页租户下拉用：返回全部租户（id、name），上限 500 */
+    List<TenantVO> listAll();
+
+    /**
+     * 分页查询租户
+     *
+     * @param query 查询参数
+     * @return 分页结果
+     */
+    PageRespVo<TenantVO> query(TenantQueryPageDTO query);
 
     TenantVO getById(String id);
 

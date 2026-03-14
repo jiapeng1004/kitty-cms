@@ -1,0 +1,110 @@
+---
+description: 前端调用后端必须使用 RPC 风格封装，禁止在 Vue/组件内直接写 api.get/post，必须通过 *api.js 模块导出函数调用
+globs: frontend/**/*.vue,frontend/**/src/**/*.js,frontend/**/src/**/*.ts
+---
+
+# 前端调用后端：RPC 风格封装（强制）
+
+**所有前端请求后端接口时，禁止在 Vue 或页面组件里直接使用 `api.get` / `api.post` 等。必须通过独立的 API 模块封装为 RPC 风格函数，组件只调用这些函数。**
+
+## 1. 规则
+
+- **禁止**在 `.vue` 或业务 JS/TS 中直接写：
+  - `import api from '@/utils/api'` 或 `from '../../utils/api'` 后调用 `api.get(...)`、`api.post(...)`、`api.put(...)`、`api.delete(...)`。
+- **必须**：
+  - 按业务域建立 `*_api.js`（或 `*_api.ts`）模块（如 `auth_api.js`、`user_api.js`、`config_api.js`）。
+  - 在该模块内：`import api from '../utils/api'`（或项目内统一的 api 实例路径）。
+  - 若后端有 **servlet.context-path**（如 `/kitty-user`），在 `api/constants.js` 中统一定义服务路径（如 `USER_SERVICE_PATH = '/kitty-user'`），各 API 模块从 constants 引入后拼成 `PREFIX = \`${USER_SERVICE_PATH}/api/xxx\``，保证请求发往 `baseURL + context-path + /api/xxx`。
+  - 定义好 `PREFIX` 后，**只在该模块内**使用 `api.get/post/put/delete`，并**导出**具名函数（如 `login(data)`、`getUserList(params)`）。
+  - 在 Vue 或其它业务文件中：只 `import { login, getUserList } from '@/api/xxx_api'`，调用这些函数，不直接使用 `api`。
+
+## 2. 推荐结构示例
+
+```javascript
+// api/constants.js：与后端 servlet.context-path 一致
+export const USER_SERVICE_PATH = '/kitty-user'
+
+// 例如 src/api/auth_api.js
+import api, { getBaseURL } from '../utils/api'
+import { USER_SERVICE_PATH } from './constants'
+
+const PREFIX = `${USER_SERVICE_PATH}/api/user`
+
+/**
+ * 用户登录
+ * @param {{ username: string, password: string, captcha: string }} data
+ * @returns {Promise<{ token: string, timeout: number }>}
+ */
+export function login(data) {
+  return api.post(`${PREFIX}/login`, data)
+}
+
+/**
+ * 获取验证码图片 URL（若需拼接 baseURL）
+ */
+export function getCaptchaUrl() {
+  return `${getBaseURL()}${PREFIX}/captcha?t=${Date.now()}`
+}
+```
+
+```javascript
+// 例如 src/api/user_api.js
+import api from '../utils/api'
+import { USER_SERVICE_PATH } from './constants'
+
+const PREFIX = `${USER_SERVICE_PATH}/api/user`
+
+/**
+ * 分页查询用户
+ * @param {{ page?: number, size?: number, searchKey?: string }} params
+ */
+export function getUserPage(params) {
+  return api.get(`${PREFIX}/query`, { params })
+}
+
+/**
+ * 根据 ID 获取用户详情
+ */
+export function getUserById(id) {
+  return api.get(`${PREFIX}/${id}`)
+}
+
+/**
+ * 更新用户
+ */
+export function updateUser(id, data) {
+  return api.put(`${PREFIX}/${id}`, data)
+}
+```
+
+```vue
+<!-- Vue 中只调用封装函数，不直接使用 api -->
+<script setup>
+import { login, getCaptchaUrl } from '@/api/auth_api'
+
+async function handleLogin() {
+  const res = await login({ username, password, captcha })
+  setToken(res.token)
+}
+</script>
+```
+
+## 3. 原因
+
+- 接口路径与请求方式集中在一处，便于维护和对接后端。
+- 便于重命名、查找引用、做 Mock 或替换实现。
+- 组件只关心“调哪个业务接口、传什么参数”，不关心 HTTP 细节。
+
+## 4. 禁止示例
+
+```vue
+<!-- 禁止：在组件内直接调 api -->
+<script setup>
+import api from '../../utils/api'
+
+const data = await api.get('/api/user/query', { params: { page: 1 } })
+await api.post('/api/user/login', formState)
+</script>
+```
+
+上述写法不允许出现；应改为在 `user_api.js` / `auth_api.js` 中封装后，在组件内只调用封装函数。

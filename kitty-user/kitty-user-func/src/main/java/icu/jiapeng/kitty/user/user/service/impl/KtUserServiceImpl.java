@@ -14,11 +14,18 @@ package icu.jiapeng.kitty.user.user.service.impl;
 import cn.dev33.satoken.secure.BCrypt;
 import cn.dev33.satoken.session.SaSession;
 import cn.dev33.satoken.stp.StpUtil;
-import cn.hutool.captcha.CaptchaUtil;
-import cn.hutool.captcha.LineCaptcha;
-import cn.hutool.core.io.IoUtil;
+import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.StrUtil;
+import icu.jiapeng.kitty.user.captcha.CaptchaService;
+import icu.jiapeng.kitty.user.captcha.CaptchaServiceType;
+import icu.jiapeng.kitty.user.cfg.TenantConfigEnum;
+import icu.jiapeng.kitty.user.cfg.service.KtConfigService;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import icu.jiapeng.kitty.common.core.page.PageRespVo;
+import icu.jiapeng.kitty.user.user.dto.UserQueryPageDTO;
+import icu.jiapeng.kitty.user.user.dto.UserUpdateDTO;
 import icu.jiapeng.kitty.common.core.constant.ResultStatus;
 import icu.jiapeng.kitty.common.core.exceptions.BizException;
 import icu.jiapeng.kitty.user.constans.UserStatus;
@@ -28,14 +35,10 @@ import icu.jiapeng.kitty.user.user.entity.KtUserUser;
 import icu.jiapeng.kitty.user.user.mapper.KtUserUserMapper;
 import icu.jiapeng.kitty.user.user.service.KtUserService;
 import icu.jiapeng.kitty.user.user.vo.LoginResultVo;
+import icu.jiapeng.kitty.user.user.vo.UserListVO;
 import jakarta.annotation.Resource;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
-
-import java.util.concurrent.TimeUnit;
 
 
 @Slf4j
@@ -43,7 +46,7 @@ import java.util.concurrent.TimeUnit;
 public class KtUserServiceImpl extends ServiceImpl<KtUserUserMapper, KtUserUser> implements KtUserService {
 
     @Resource
-    private StringRedisTemplate stringRedisTemplate;
+    private KtConfigService ktConfigService;
 
 
     @Override
@@ -59,7 +62,7 @@ public class KtUserServiceImpl extends ServiceImpl<KtUserUserMapper, KtUserUser>
             throw BizException.of(ResultStatus.USER_PHONE_EXIST);
         }
         // 校验手机号格式是否正确
-        if (!userRegister.getPhone().matches("^1[3-9]\\d{9}$")) {
+        if (StrUtil.isNotBlank(userRegister.getPhone()) && !userRegister.getPhone().matches("^1[3-9]\\d{9}$")) {
             throw BizException.of(ResultStatus.USER_PHONE_FORMAT_ERROR);
         }
         // 校验密码是否复合规范,符号不低于8,大写,小写,数字 必须存在
@@ -96,12 +99,15 @@ public class KtUserServiceImpl extends ServiceImpl<KtUserUserMapper, KtUserUser>
 
     @Override
     public LoginResultVo login(UserLoginParam userLoginParam) {
-//        // 校验验证码
-//        if (!"1".equals(stringRedisTemplate.opsForValue().get("user:login:captcha:" + userLoginParam.getCaptcha().toLowerCase()))) {
-//            throw BizException.of(ResultStatus.CAPTCHA_ERROR);
-//        } else {
-//            stringRedisTemplate.delete("user:login:captcha:" + userLoginParam.getCaptcha());
-//        }
+        String type = ktConfigService.getVal(TenantConfigEnum.CAPTCHA_SERVICE_TYPE);
+        if (StrUtil.isBlank(type)) {
+            type = CaptchaServiceType.HUTOOL_REDIS.getType();
+        }
+        CaptchaService captchaService = CaptchaService.Factory.resolve(type.trim())
+                .orElseThrow(() -> BizException.of(ResultStatus.PARAM_ERROR));
+        if (!captchaService.validate(userLoginParam.getCaptcha())) {
+            throw BizException.of(ResultStatus.CAPTCHA_ERROR);
+        }
         // 获取这个用户
         KtUserUser user = lambdaQuery().eq(KtUserUser::getNickName, userLoginParam.getUsername()).last("LIMIT 1").one();
         if (user == null) {
@@ -124,15 +130,62 @@ public class KtUserServiceImpl extends ServiceImpl<KtUserUserMapper, KtUserUser>
     }
 
     @Override
-    public void captcha(HttpServletRequest request, HttpServletResponse response) {
-        response.setContentType("image/png");
-        try {
-            //hutool把验证码 生成图片
-            LineCaptcha lineCaptcha = CaptchaUtil.createLineCaptcha(100, 40, 4, 5);
-            IoUtil.write(response.getOutputStream(), true, lineCaptcha.getImageBytes());
-            stringRedisTemplate.opsForValue().set("user:login:captcha:" + lineCaptcha.getCode().toLowerCase(), "1", 61, TimeUnit.SECONDS);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+    public void logout() {
+        StpUtil.logout();
+    }
+
+    @Override
+    public PageRespVo<UserListVO> query(UserQueryPageDTO query) {
+        LambdaQueryWrapper<KtUserUser> wrapper = new LambdaQueryWrapper<>();
+        if (StrUtil.isNotBlank(query.getSearchKey())) {
+            String key = query.getSearchKey();
+            wrapper.and(w -> w.like(KtUserUser::getNickName, key)
+                    .or().like(KtUserUser::getPhone, key)
+                    .or().like(KtUserUser::getEmail, key));
         }
+        Page<KtUserUser> page = page(new Page<>(query.getPage(), query.getSize()), wrapper);
+        return PageRespVo.<UserListVO>builder()
+                .page(page.getCurrent())
+                .size(page.getSize())
+                .total(page.getTotal())
+                .orders(query.getOrders())
+                .records(page.getRecords().stream().map(this::entityToUserListVO).toList())
+                .build();
+    }
+
+    @Override
+    public UserListVO getDetail(String id) {
+        KtUserUser entity = getById(id);
+        return entity == null ? null : entityToUserListVO(entity);
+    }
+
+    @Override
+    public boolean update(String id, UserUpdateDTO dto) {
+        KtUserUser one = getById(id);
+        if (one == null) {
+            return false;
+        }
+        if (dto.getRealName() != null) {
+            one.setRealName(dto.getRealName());
+        }
+        if (dto.getNickName() != null) {
+            one.setNickName(dto.getNickName());
+        }
+        if (dto.getPhone() != null) {
+            one.setPhone(dto.getPhone());
+        }
+        if (dto.getEmail() != null) {
+            one.setEmail(dto.getEmail());
+        }
+        if (dto.getStatus() != null) {
+            one.setStatus(dto.getStatus());
+        }
+        return updateById(one);
+    }
+
+    private UserListVO entityToUserListVO(KtUserUser entity) {
+        UserListVO vo = new UserListVO();
+        BeanUtil.copyProperties(entity, vo, "pwd", "deleted");
+        return vo;
     }
 }

@@ -12,6 +12,7 @@
 package icu.jiapeng.kitty.common.core.baomidou;
 
 
+import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import org.apache.ibatis.reflection.MetaObject;
 
@@ -29,14 +30,37 @@ public class KittyMetaDataHandler implements MetaObjectHandler {
 
     public static final String UPDATE_TIME = "updateTime";
 
+    public static final String DELETED = "deleted";
+
+    public static final String CREATOR = "creator";
+
+    public static final String UPDATER = "updater";
+
 
     @Override
     public void insertFill(MetaObject metaObject) {
-        this.strictInsertFill(metaObject, CREATE_TIME, Date.class, new Date());
+        try {
+            this.strictInsertFill(metaObject, CREATE_TIME, Date.class, new Date());
+        } catch (Exception _) {
+        }
+        try {
+            this.strictInsertFill(metaObject, DELETED, Integer.class, 0);
+        } catch (Exception _) {
+        }
+        try {
+            String loginId = StpUtil.getLoginId("system");
+            this.strictInsertFill(metaObject, CREATOR, String.class, loginId);
+        } catch (Exception _) {
+        }
     }
 
     @Override
     public void updateFill(MetaObject metaObject) {
         this.strictUpdateFill(metaObject, UPDATE_TIME, Date.class, new Date());
+        try {
+            String loginId = StpUtil.getLoginId("system");
+            this.strictInsertFill(metaObject, UPDATER, String.class, loginId);
+        } catch (Exception _) {
+        }
     }
 }

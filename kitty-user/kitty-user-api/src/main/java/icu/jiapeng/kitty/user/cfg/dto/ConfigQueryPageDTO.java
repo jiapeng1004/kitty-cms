@@ -11,40 +11,28 @@
  */
 package icu.jiapeng.kitty.user.cfg.dto;
 
-
-import com.baomidou.mybatisplus.extension.plugins.pagination.PageDTO;
 import icu.jiapeng.kitty.common.core.page.PageReqDTO;
-import icu.jiapeng.kitty.user.cfg.entity.KtConfig;
 import icu.jiapeng.kitty.user.cfg.vo.ConfigListVo;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- *
+ * 配置项分页查询参数
  *
  * @author jiapeng
- * @since 2025/12/20
  */
-@EqualsAndHashCode(callSuper = true)
 @Data
+@EqualsAndHashCode(callSuper = true)
 @Schema(description = "配置项分页查询参数")
-public class ConfigQueryPageDTO extends PageReqDTO<KtConfig> {
-    /**
-     * 关键词
-     */
-    @Schema(description = "关键词")
+public class ConfigQueryPageDTO extends PageReqDTO<ConfigListVo> {
+
+    @Schema(description = "关键词", nullable = true)
     private String searchKey;
 
-    /**
-     * 配置项分类
-     */
-    @Schema(description = "配置项分类 id")
+    @Schema(description = "配置项分类 id", nullable = true)
     private String classId;
 
-    /**
-     * 配置项key
-     */
-    @Schema(description = "配置项key")
+    @Schema(description = "配置项key", nullable = true)
     private String configKey;
 }

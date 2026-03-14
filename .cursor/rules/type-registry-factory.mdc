@@ -1,0 +1,109 @@
+---
+description: 按类型注册/解析的工厂模式：接口定义 getType()，内部 Factory 提供 register/resolve，resolve 返回 Optional，重复注册同类型则报错
+globs: **/*Service.java,**/*Handler.java,**/*Provider.java
+---
+
+# 类型注册工厂模式（Type Registry / Factory）
+
+当需要按「类型标识」注册多种实现、运行时再根据类型解析时，采用本规则：**接口声明 `getType()` + 内部静态 Factory 负责注册与解析**。实现类通过 `InitializingBean.afterPropertiesSet()` 自注册。
+
+## 1. 接口约定
+
+- 接口必须提供 **`String getType()`**，作为该实现在工厂中的唯一标识。
+- **Factory 必须定义在该 Service 接口内的静态内部类**（`public static final class Factory`），不得单独建 Resolver、Factory 等外部类来“封装”解析逻辑；注册与解析只通过 **`XxxService.Factory** 完成。
+- Factory 提供：
+  - **`register(Service)`** / **`register(String type, Service)`**：注册实现。**先到先得**；若该 `type` 已被注册，则**抛异常或明确报错**，不允许静默覆盖。
+  - **`resolve(String type)`**：返回 **`Optional<Service>`**。不存在时返回 `Optional.empty()`，由**调用方**在调用处自行 `orElseThrow(...)` 或其它处理，不在接口外再包一层 Resolver。
+- 实现类实现 **`InitializingBean`**，在 **`afterPropertiesSet()`** 中调用 **`Factory.register(this)`** 完成自注册。
+- **内部服务**场景下，实现类的类型标识用**枚举**维护；实现类 `getType()` 返回枚举的 `getType()`，例如 **`MyServiceType.TYPE_A.getType()`**，便于统一管理、避免魔法字符串。
+
+## 2. Controller 解析服务并调用的流程
+
+需要按类型选用实现时（如验证码服务、素材源服务），**不在业务 Service 里写死实现**，而是在 **Controller 中解析**：
+
+1. 在 Service 接口上定义请求参数常量（如 `String XXX_TYPE_PARAM_NAME = "captchaType"`），便于前端或调用方指定类型。
+2. 在 **Controller 或需要调用的业务类中**解析 type：**优先请求参数**，**其次配置/租户配置**，**再兜底枚举默认**。
+3. 直接使用 **`XxxService.Factory.resolve(type).orElseThrow(...)`** 得到服务实例（**禁止**再包一层 Resolver/Helper 类；解析逻辑写在调用处即可）。
+4. 调用解析得到的 **`service.xxx(req, resp)`** 等业务方法。
+
+这样「生成验证码」「登录校验」等入口统一走「解析 → 调用策略」的流程，便于扩展多种实现。
+
+## 3. 简化示例（仅保留 hello 示例方法）
+
+```java
+import org.springframework.beans.factory.InitializingBean;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+
+public interface MyService extends InitializingBean {
+
+    /** 实现类型标识，用于 Factory 注册与解析 */
+    String getType();
+
+    @Override
+    default void afterPropertiesSet() {
+        Factory.register(this);
+    }
+
+    /** 示例方法，业务方法按需声明 */
+    String hello(String name);
+
+    final class Factory {
+        private static final ConcurrentMap<String, MyService> MAP = new ConcurrentHashMap<>();
+
+        public static void register(MyService service) {
+            register(service.getType(), service);
+        }
+
+        /** 先到注册成功；同一 type 再次注册则抛异常 */
+        public static void register(String type, MyService service) {
+            MyService existing = MAP.putIfAbsent(type, service);
+            if (existing != null) {
+                throw new IllegalStateException("类型已注册: " + type + ", 现有实现: " + existing.getClass().getName());
+            }
+        }
+
+        /** 不存在时返回 Optional.empty()，由调用方决定后续处理 */
+        public static Optional<MyService> resolve(String type) {
+            return Optional.ofNullable(MAP.get(type));
+        }
+    }
+}
+```
+
+实现类示例（内部服务用枚举维护 type）：
+
+```java
+public enum MyServiceType {
+    TYPE_A("typeA"),
+    DEFAULT("default");
+    @Getter private final String type;
+    MyServiceType(String type) { this.type = type; }
+}
+
+@Service
+public class MyServiceImpl implements MyService {
+    @Override
+    public String getType() {
+        return MyServiceType.TYPE_A.getType();
+    }
+
+    @Override
+    public String hello(String name) {
+        return "Hello, " + name;
+    }
+}
+```
+
+## 4. 要点小结
+
+| 项目 | 要求 |
+|------|------|
+| `getType()` | 接口必须声明，实现类返回唯一类型标识 |
+| `Factory.register` | 先到成功；同 type 再次注册 → 抛异常/报错，不静默覆盖 |
+| `Factory.resolve(type)` | 返回 `Optional<Service>`，不存在即 `empty()`，不提供 resolveOrFail |
+| 自注册 | 实现类实现 `InitializingBean`，在 `afterPropertiesSet()` 中 `Factory.register(this)` |
+| 类型标识 | 内部服务用枚举维护，实现类返回 `XxxServiceType.XXX.getType()` |
+| Factory 位置 | **仅**在 Service 接口内定义为静态内部类，禁止单独的 Resolver/Factory 类 |
+| Controller/调用方 | 解析 type（请求参数 → 配置 → 枚举默认），直接 `XxxService.Factory.resolve(type).orElseThrow()` 后调用 service 方法 |

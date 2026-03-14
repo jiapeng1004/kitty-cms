@@ -23,6 +23,7 @@ import icu.jiapeng.kitty.common.core.page.CommonOrder;
 import icu.jiapeng.kitty.common.core.page.PageRespVo;
 import icu.jiapeng.kitty.user.cfg.convert.BeansConvert;
 import icu.jiapeng.kitty.user.cfg.dto.ClassCreateDTO;
+import icu.jiapeng.kitty.user.cfg.dto.ClassUpdateDTO;
 import icu.jiapeng.kitty.user.cfg.dto.ConfigClassPageDTO;
 import icu.jiapeng.kitty.user.cfg.entity.KtConfigClass;
 import icu.jiapeng.kitty.user.cfg.mapper.KtConfigClassMapper;
@@ -51,7 +52,7 @@ public class KtConfigClassServiceImpl extends ServiceImpl<KtConfigClassMapper, K
         if (CollUtil.isNotEmpty(query.getOrders())) {
             query.getOrders().forEach(order -> page.addOrder(OrderItem.withExpression(StrUtil.toUnderlineCase(order.getOrderField()), CommonOrder.ASC.equals(order.getOrder()))));
         }
-        Page<KtConfigClass> ktConfigPage = page(page, lm);
+        Page<KtConfigClass> ktConfigPage = lm.page(page);
         return PageRespVo.<ConfigClassListVo>builder()
                 .page(ktConfigPage.getCurrent())
                 .size(ktConfigPage.getSize())
@@ -66,5 +67,23 @@ public class KtConfigClassServiceImpl extends ServiceImpl<KtConfigClassMapper, K
         KtConfigClass ktConfigClass = BeanUtil.copyProperties(classCreateDTO, KtConfigClass.class);
         save(ktConfigClass);
         return ktConfigClass.getId();
+    }
+
+    @Override
+    public boolean update(String id, ClassUpdateDTO dto) {
+        KtConfigClass one = getById(id);
+        if (one == null) {
+            return false;
+        }
+        if (StrUtil.isNotBlank(dto.getClassName())) {
+            one.setClassName(dto.getClassName());
+        }
+        if (StrUtil.isNotBlank(dto.getClassDesc())) {
+            one.setClassDesc(dto.getClassDesc());
+        }
+        if (dto.getOwner() != null) {
+            one.setOwner(dto.getOwner());
+        }
+        return updateById(one);
     }
 }

@@ -270,6 +270,11 @@
             </dependency>
             <dependency>
                 <groupId>cn.dev33</groupId>
+                <artifactId>sa-token-core</artifactId>
+                <version>${sa-token.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>cn.dev33</groupId>
                 <artifactId>sa-token-redis-jackson</artifactId>
                 <version>${sa-token.version}</version>
             </dependency>
@@ -277,6 +282,11 @@
                 <groupId>com.xkcoding.justauth</groupId>
                 <artifactId>justauth-spring-boot-starter</artifactId>
                 <version>${just-auth.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>me.zhyd.oauth</groupId>
+                <artifactId>JustAuth</artifactId>
+                <version>1.16.7</version>
             </dependency>
             <!-- Redisson 依赖（用于分布式锁和任务队列） -->
             <dependency>

@@ -11,86 +11,60 @@
  */
 package icu.jiapeng.kitty.user.cfg.vo;
 
-
-import com.baomidou.mybatisplus.annotation.TableField;
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.util.Date;
 import java.util.Map;
 
 /**
- *
+ * 配置项列表/详情 VO
  *
  * @author jiapeng
- * @since 2025/12/20
  */
 @Data
-@Schema(description = "配置项分页结果")
+@Schema(description = "配置项列表/详情")
 public class ConfigListVo {
+
     @Schema(description = "配置项ID")
     private String id;
-    /**
-     * 创建时间
-     */
+
     @Schema(description = "创建时间")
     private Date createTime;
-    /**
-     * 创建者
-     */
+
     @Schema(description = "创建者")
     private String creator;
-    /**
-     * 修改时间
-     */
+
     @Schema(description = "修改时间")
     private Date updateTime;
-    /**
-     * 修改者
-     */
+
     @Schema(description = "修改者")
     private String updater;
 
-
-    /**
-     * 配置项名称
-     */
     @Schema(description = "配置项名称")
     private String configName;
 
-    /**
-     * 配置项 KEY
-     */
-    @TableField("config_key")
-    @NotNull
+    @Schema(description = "配置项 KEY")
     private String configKey;
 
-    /**
-     * 配置项详细描述
-     */
-    @TableField("config_desc")
+    @Schema(description = "配置项详细描述（仅接口返回，列表可不展示）")
     private String configDesc;
 
-    /**
-     * 配置方式
-     * {@link icu.jiapeng.kitty.user.cfg.constants.ConfigWay}
-     *
-     */
-    @TableField("config_way")
-    @NotNull
+    @Schema(description = "当前值")
+    private String configValue;
+
+    @Schema(description = "默认值")
+    private String configDefault;
+
+    @Schema(description = "配置方式")
     private String configWay;
 
-    /**
-     * 配置项枚举值configWay=RADIO/CHECKBOX有效
-     * {@link java.util.Map} Map<String,String> 枚举值-枚举label
-     */
-    @TableField("config_enum")
-    private Map<String,String> configEnum;
+    @Schema(description = "配置项枚举值")
+    private Map<String, String> configEnum;
 
-    /**
-     * 所属分类 id
-     */
-    @TableField("class_id")
+    @Schema(description = "所属分类 id")
     private String classId;
+
+    @Schema(description = "所属分类名称（由 classId 解析，可选）")
+    private String className;
 }

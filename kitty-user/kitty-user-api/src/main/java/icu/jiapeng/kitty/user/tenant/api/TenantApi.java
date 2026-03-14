@@ -11,7 +11,9 @@
  */
 package icu.jiapeng.kitty.user.tenant.api;
 
+import icu.jiapeng.kitty.common.core.page.PageRespVo;
 import icu.jiapeng.kitty.user.tenant.dto.TenantCreateDTO;
+import icu.jiapeng.kitty.user.tenant.dto.TenantQueryPageDTO;
 import icu.jiapeng.kitty.user.tenant.dto.TenantUpdateDTO;
 import icu.jiapeng.kitty.user.tenant.vo.TenantVO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -22,13 +24,24 @@ import org.springframework.web.service.annotation.GetExchange;
 import org.springframework.web.service.annotation.PostExchange;
 import org.springframework.web.service.annotation.PutExchange;
 
+import java.util.List;
 
 @Tag(name = "租户API")
 public interface TenantApi {
+
+    /** 开放接口：登录页租户下拉列表，返回 id、name，无需鉴权 */
+    @Operation(summary = "租户列表（登录页选择用）")
+    @GetExchange("/api/tenant/list")
+    List<TenantVO> list();
+
     @Operation(summary = "创建租户")
     @PostExchange("/api/tenant")
     @ApiResponse(description = "租户id")
     String create(TenantCreateDTO dto);
+
+    @Operation(summary = "分页查询租户")
+    @GetExchange("/api/tenant/query")
+    PageRespVo<TenantVO> query(TenantQueryPageDTO query);
 
     @Operation(summary = "根据ID获取租户")
     @GetExchange("/api/tenant/{id}")

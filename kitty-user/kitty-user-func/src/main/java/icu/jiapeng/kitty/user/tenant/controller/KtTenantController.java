@@ -11,8 +11,10 @@
  */
 package icu.jiapeng.kitty.user.tenant.controller;
 
+import icu.jiapeng.kitty.common.core.page.PageRespVo;
 import icu.jiapeng.kitty.user.tenant.api.TenantApi;
 import icu.jiapeng.kitty.user.tenant.dto.TenantCreateDTO;
+import icu.jiapeng.kitty.user.tenant.dto.TenantQueryPageDTO;
 import icu.jiapeng.kitty.user.tenant.dto.TenantUpdateDTO;
 import icu.jiapeng.kitty.user.tenant.service.KtTenantService;
 import icu.jiapeng.kitty.user.tenant.vo.TenantVO;
@@ -20,6 +22,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -32,6 +36,18 @@ public class KtTenantController implements TenantApi {
     @PostMapping("/api/tenant")
     public String create(@Valid @RequestBody TenantCreateDTO dto) {
         return ktTenantService.create(dto);
+    }
+
+    @GetMapping("/api/tenant/list")
+    @Override
+    public List<TenantVO> list() {
+        return ktTenantService.listAll();
+    }
+
+    @GetMapping("/api/tenant/query")
+    @Override
+    public PageRespVo<TenantVO> query(TenantQueryPageDTO query) {
+        return ktTenantService.query(query);
     }
 
     @Override

@@ -127,6 +127,34 @@ java -jar kitty-transcoder/kitty-transcoder-server/target/app.jar
 
 ---
 
+## 📐 项目规范 | Project Conventions
+
+**以下规范所有模块与后续代码生成必须严格遵守。**
+
+### 1. 接口响应形式
+
+- **正常响应**：接口成功时**直接返回业务数据**（裸响应），不做统一包装。例如返回 `UserVO`、`PageRespVo<T>`、`String`、`boolean` 等，不要包一层 `{ code, data, message }`。
+- **错误响应**：不通过返回值里的 `code` 表示失败。业务异常时**抛出异常**（如 `BizException`），由项目内已实现的 **全局异常处理器**（如 `GlobalExceptionHandler`）统一捕获并封装为错误响应（如 `CommonErrorResult`）。调用方通过 HTTP 状态码与异常响应体判断错误。
+
+### 2. API 契约与 DTO/VO 归属
+
+- **除非明确仅用于内部、不对外暴露的接口**，其余所有对外的 HTTP API：
+  - **DTO、VO** 必须放在对应模块的 **`-api` 包**（如 `kitty-user-api`、`kitty-cms-api`），不得放在 `-func` 或实现模块里。
+  - **Controller** 必须实现以 **HttpExchange**（如 `@GetExchange`、`@PostExchange`）声明在 **`-api` 包** 中的 **Api 接口**，契约与实现分离。
+- 入参、出参禁止使用裸 `Map`，必须使用 DTO/VO 类型（参见 `.cursor/rules/controller-request-response.mdc`）。
+
+### 3. 前端调用后端：RPC 风格
+
+- **禁止**在 Vue 或业务组件中直接写 `api.get/post/put/delete` 请求后端。
+- **必须**按业务域建立 `*_api.js`（或 `*_api.ts`）模块：在模块内 `import api from '../utils/api'`、定义 `PREFIX`、用 `api.get/post/put/delete` 封装并**导出具名函数**（如 `login(data)`、`getUserPage(params)`）；组件内只 `import { login, getUserPage } from '@/api/xxx_api'` 并调用这些函数。详见 **`.cursor/rules/frontend-api-rpc-style.mdc`**。
+
+### 4. 约束文件
+
+- **前端静态资源**：图标、图片等路径**仅允许在 `assets/index.ts`（或项目约定的唯一入口）中书写一次**，其余通过 `import { IMG_LOGO } from '@/assets'` 等引用，禁止硬编码路径。详见 **`.cursor/rules/frontend-assets-centralized.mdc`**。
+- 详细约束与示例见 **`.cursor/rules/`** 下规则文件（如 `api-response-and-contract.mdc`、`frontend-api-rpc-style.mdc`、`frontend-assets-centralized.mdc`、`controller-request-response.mdc`、`no-hardcoded-map-keys.mdc`、`type-registry-factory.mdc`），**代码生成与人工编码均需遵守**。
+
+---
+
 ## 📁 配置 | Configuration
 
 各服务配置位于 `*/src/main/resources/application.yml`，可配置数据源、Redis、端口等。

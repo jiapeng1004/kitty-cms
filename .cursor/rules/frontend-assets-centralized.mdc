@@ -1,0 +1,44 @@
+---
+description: 前端静态资源（图标、图片）路径仅允许在一处定义，其余全部通过 import 引用常量，禁止硬编码路径
+globs: frontend/**/*.vue,frontend/**/src/**/*.ts,frontend/**/src/**/*.js
+---
+
+# 前端资源路径集中与对象化（强制）
+
+**所有图标、图片等静态资源路径禁止在组件或业务代码中硬编码。路径只允许写一次，其余地方通过引用该对象/常量使用。**
+
+## 1. 规则
+
+- **禁止**在 `.vue`、`.ts`、`.js` 中直接写：
+  - `src="/images/logo.png"`、`:src="'/assets/xx.svg'"`、`url('/path/to/bg.jpg')`、`import ... from '../../assets/logo.png'`（在多个文件中重复写同一路径）。
+- **必须**：
+  - 在项目内建立**唯一的资源导出模块**（如 `src/assets/index.ts`），在该文件中**集中 import 所有静态资源**并**导出为命名常量**（如 `IMG_LOGO`、`IMG_BRAND_BG`、`ICON_XXX`）。
+  - 组件或其它业务文件中**只**从该模块 `import { IMG_LOGO } from '@/assets'`（或项目约定的路径），模板或样式中使用该常量，**不允许**再次书写资源路径字符串。
+
+## 2. 推荐结构示例
+
+```typescript
+// src/assets/index.ts（唯一书写路径的地方）
+import imgLogo from './images/logo.svg'
+import imgBrandBg from './images/brand-bg.jpg'
+
+export const IMG_LOGO = imgLogo
+export const IMG_BRAND_BG = imgBrandBg
+```
+
+```vue
+<!-- 组件中只引用常量 -->
+<script setup>
+import { IMG_LOGO } from '@/assets'
+</script>
+<template>
+  <img :src="IMG_LOGO" alt="Logo" />
+</template>
+```
+
+- 若使用 CSS 背景图，可通过 JS 注入或 CSS 变量传入该常量 URL，**禁止**在 CSS 中写死 `url('/xxx/yyy.png')`（应使用从 assets 模块导出的常量）。
+
+## 3. 说明
+
+- 动态 URL（如接口返回的图片地址、验证码接口 URL）不在此列，仍由接口或 `getXxxUrl()` 等函数提供。
+- 图标若使用 iconfont 等字体/组件库，图标名或组件引用也建议集中定义、按名引用，避免魔法字符串散落多处。

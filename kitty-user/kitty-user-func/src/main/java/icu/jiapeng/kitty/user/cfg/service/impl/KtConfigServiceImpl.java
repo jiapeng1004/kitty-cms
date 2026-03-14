@@ -12,6 +12,7 @@
 package icu.jiapeng.kitty.user.cfg.service.impl;
 
 
+import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSONObject;
@@ -25,16 +26,24 @@ import icu.jiapeng.kitty.common.core.page.CommonOrder;
 import icu.jiapeng.kitty.common.core.page.PageReqDTO;
 import icu.jiapeng.kitty.common.core.page.PageRespVo;
 import icu.jiapeng.kitty.user.cfg.convert.BeansConvert;
+import icu.jiapeng.kitty.user.cfg.dto.ConfigCreateDTO;
 import icu.jiapeng.kitty.user.cfg.dto.ConfigQueryPageDTO;
+import icu.jiapeng.kitty.user.cfg.dto.ConfigUpdateDTO;
 import icu.jiapeng.kitty.user.cfg.dto.GetValDTO;
 import icu.jiapeng.kitty.user.cfg.dto.SetValDTO;
 import icu.jiapeng.kitty.user.cfg.entity.KtConfig;
+import icu.jiapeng.kitty.user.cfg.entity.KtConfigClass;
 import icu.jiapeng.kitty.user.cfg.mapper.KtConfigMapper;
+import icu.jiapeng.kitty.user.cfg.service.KtConfigClassService;
 import icu.jiapeng.kitty.user.cfg.service.KtConfigService;
 import icu.jiapeng.kitty.user.cfg.vo.ConfigListVo;
+import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 
 /**
@@ -46,6 +55,45 @@ import java.util.Objects;
 @Service
 public class KtConfigServiceImpl extends ServiceImpl<KtConfigMapper, KtConfig> implements KtConfigService {
 
+    @Resource
+    private KtConfigClassService ktConfigClassService;
+
+    @Override
+    public String create(ConfigCreateDTO dto) {
+        KtConfig entity = BeanUtil.copyProperties(dto, KtConfig.class);
+        if (Objects.nonNull(dto.getConfigEnum())) {
+            entity.setConfigEnum(JSONObject.toJSONString(dto.getConfigEnum()));
+        }
+        save(entity);
+        return entity.getId();
+    }
+
+    @Override
+    public boolean update(String id, ConfigUpdateDTO dto) {
+        KtConfig one = getById(id);
+        if (Objects.isNull(one)) {
+            return false;
+        }
+        if (StrUtil.isNotBlank(dto.getConfigName())) {
+            one.setConfigName(dto.getConfigName());
+        }
+        if (StrUtil.isNotBlank(dto.getConfigDesc())) {
+            one.setConfigDesc(dto.getConfigDesc());
+        }
+        if (StrUtil.isNotBlank(dto.getConfigWay())) {
+            one.setConfigWay(dto.getConfigWay());
+        }
+        if (dto.getClassId() != null) {
+            one.setClassId(dto.getClassId());
+        }
+        one.setConfigDefault(dto.getConfigDefault());
+        one.setConfigValue(dto.getConfigValue());
+        if (Objects.nonNull(dto.getConfigEnum())) {
+            one.setConfigEnum(JSONObject.toJSONString(dto.getConfigEnum()));
+        }
+        return updateById(one);
+    }
+
     @Override
     public PageRespVo<ConfigListVo> query(ConfigQueryPageDTO query) {
         // 分页查询
@@ -54,10 +102,14 @@ public class KtConfigServiceImpl extends ServiceImpl<KtConfigMapper, KtConfig> i
             lmWrapper.eq(KtConfig::getClassId, query.getClassId());
         }
         if (StrUtil.isNotBlank(query.getConfigKey())) {
-            lmWrapper.like(KtConfig::getConfigKey, query.getConfigKey());
+            lmWrapper.likeRight(KtConfig::getConfigKey, query.getConfigKey());
         }
         if (StrUtil.isNotBlank(query.getSearchKey())) {
-            lmWrapper.like(KtConfig::getConfigName, query.getSearchKey());
+            lmWrapper.nested(lmWrapper1 -> lmWrapper1
+                    .like(KtConfig::getConfigName, query.getSearchKey())
+                    .or()
+                    .likeRight(KtConfig::getConfigKey, query.getSearchKey())
+            );
         }
         Page<KtConfig> ktConfigPage = new Page<>(query.getPage(), query.getSize());
         if (CollUtil.isNotEmpty(query.getOrders())) {
@@ -65,14 +117,41 @@ public class KtConfigServiceImpl extends ServiceImpl<KtConfigMapper, KtConfig> i
                 ktConfigPage.addOrder(OrderItem.withExpression(StrUtil.toUnderlineCase(order.getOrderField()), CommonOrder.ASC.equals(order.getOrder())));
             }
         }
-        Page<KtConfig> page = page(ktConfigPage, lmWrapper);
+        Page<KtConfig> configPage = page(ktConfigPage, lmWrapper);
+        List<ConfigListVo> records = configPage.getRecords().stream().map(BeansConvert.INSTANCE::config2ListVo).toList();
+        fillClassName(records);
         return PageRespVo.<ConfigListVo>builder()
                 .page(query.getPage())
                 .size(query.getSize())
-                .total(page.getTotal())
+                .total(configPage.getTotal())
                 .orders(query.getOrders())
-                .records(page.getRecords().stream().map(BeansConvert.INSTANCE::config2ListVo).toList())
+                .records(records)
                 .build();
+    }
+
+
+    /**
+     * 批量解析 classId 为分类名，写入每条记录的 className
+     */
+    private void fillClassName(List<ConfigListVo> records) {
+        if (CollUtil.isEmpty(records)) {
+            return;
+        }
+        List<String> classIds = records.stream()
+                .map(ConfigListVo::getClassId)
+                .filter(StrUtil::isNotBlank)
+                .distinct()
+                .toList();
+        if (classIds.isEmpty()) {
+            return;
+        }
+        Map<String, String> idToName = ktConfigClassService.listByIds(classIds).stream()
+                .collect(Collectors.toMap(KtConfigClass::getId, KtConfigClass::getClassName, (a, _) -> a));
+        for (ConfigListVo vo : records) {
+            if (StrUtil.isNotBlank(vo.getClassId())) {
+                vo.setClassName(idToName.get(vo.getClassId()));
+            }
+        }
     }
 
     @Override
@@ -103,18 +182,6 @@ public class KtConfigServiceImpl extends ServiceImpl<KtConfigMapper, KtConfig> i
         KtConfig cfgUpdate = new KtConfig();
         cfgUpdate.setId(one.getId());
         one.setConfigValue(setValDTO.getConfigValue());
-        if (StrUtil.isNotBlank(setValDTO.getConfigName())) {
-            one.setConfigName(setValDTO.getConfigName());
-        }
-        if (StrUtil.isNotBlank(setValDTO.getConfigDesc())) {
-            one.setConfigDesc(setValDTO.getConfigDesc());
-        }
-        if (StrUtil.isNotBlank(setValDTO.getConfigWay())) {
-            one.setConfigWay(setValDTO.getConfigWay());
-        }
-        if (Objects.nonNull(setValDTO.getConfigEnum())) {
-            one.setConfigEnum(JSONObject.toJSONString(setValDTO.getConfigEnum()));
-        }
         cfgUpdate.setConfigValue(setValDTO.getConfigValue());
         updateById(cfgUpdate);
         return setValDTO.getConfigValue();

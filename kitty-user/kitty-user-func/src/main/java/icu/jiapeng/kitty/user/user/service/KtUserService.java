@@ -12,12 +12,14 @@
 package icu.jiapeng.kitty.user.user.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import icu.jiapeng.kitty.common.core.page.PageRespVo;
 import icu.jiapeng.kitty.user.user.dto.UserLoginParam;
+import icu.jiapeng.kitty.user.user.dto.UserQueryPageDTO;
 import icu.jiapeng.kitty.user.user.dto.UserRegister;
+import icu.jiapeng.kitty.user.user.dto.UserUpdateDTO;
 import icu.jiapeng.kitty.user.user.entity.KtUserUser;
 import icu.jiapeng.kitty.user.user.vo.LoginResultVo;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import icu.jiapeng.kitty.user.user.vo.UserListVO;
 import org.jspecify.annotations.NonNull;
 
 public interface KtUserService extends IService<@NonNull KtUserUser> {
@@ -39,9 +41,32 @@ public interface KtUserService extends IService<@NonNull KtUserUser> {
     LoginResultVo login(UserLoginParam userLoginParam);
 
     /**
-     * 获取验证码
-     * @param request 请求
-     * @param response 响应
+     * 退出登录：使当前会话 token 失效
      */
-    void captcha(HttpServletRequest request, HttpServletResponse response);
+    void logout();
+
+    /**
+     * 分页查询用户（管理端）
+     *
+     * @param query 查询参数
+     * @return 分页结果
+     */
+    PageRespVo<UserListVO> query(UserQueryPageDTO query);
+
+    /**
+     * 根据ID获取用户详情（管理端，不含密码）
+     *
+     * @param id 用户id
+     * @return 用户信息
+     */
+    UserListVO getDetail(String id);
+
+    /**
+     * 更新用户（管理端）
+     *
+     * @param id  用户id
+     * @param dto 更新参数
+     * @return 是否成功
+     */
+    boolean update(String id, UserUpdateDTO dto);
 }

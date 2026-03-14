@@ -26,14 +26,14 @@ import java.util.List;
  * @since 2025/12/19
  */
 @GrpcService
-public class KtPermissionSvc extends KtPermissionSvcGrpc.KtPermissionSvcImplBase {
+public class KtPermissionSvc extends icu.jiapeng.kitty.user.permission.grpc.KtPermissionSvcGrpc.KtPermissionSvcImplBase {
     @Resource
     private KtPermissionService ktPermissionService;
 
     @Override
-    public void getPCodesByUserId(UserIdReq request, StreamObserver<PermissionCodesResp> responseObserver) {
+    public void getPCodesByUserId(icu.jiapeng.kitty.user.permission.grpc.UserIdReq request, StreamObserver<icu.jiapeng.kitty.user.permission.grpc.PermissionCodesResp> responseObserver) {
         try {
-            PermissionCodesResp.Builder builder = PermissionCodesResp.newBuilder();
+            icu.jiapeng.kitty.user.permission.grpc.PermissionCodesResp.Builder builder = icu.jiapeng.kitty.user.permission.grpc.PermissionCodesResp.newBuilder();
             List<String> permissionCodes = ktPermissionService.getUserPermissionCodeList(request.getUserId());
             for (int i = 0; i < permissionCodes.size(); i++) {
                 builder.setPCodes(i, permissionCodes.get(i));

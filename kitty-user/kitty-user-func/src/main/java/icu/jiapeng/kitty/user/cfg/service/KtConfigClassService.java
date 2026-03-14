@@ -15,6 +15,7 @@ package icu.jiapeng.kitty.user.cfg.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import icu.jiapeng.kitty.common.core.page.PageRespVo;
 import icu.jiapeng.kitty.user.cfg.dto.ClassCreateDTO;
+import icu.jiapeng.kitty.user.cfg.dto.ClassUpdateDTO;
 import icu.jiapeng.kitty.user.cfg.dto.ConfigClassPageDTO;
 import icu.jiapeng.kitty.user.cfg.entity.KtConfigClass;
 import icu.jiapeng.kitty.user.cfg.vo.ConfigClassListVo;
@@ -41,4 +42,13 @@ public interface KtConfigClassService extends IService<KtConfigClass> {
      * @return 新增结果
      */
     String create(ClassCreateDTO classCreateDTO);
+
+    /**
+     * 更新
+     *
+     * @param id  分类 id
+     * @param dto 更新参数
+     * @return 是否成功
+     */
+    boolean update(String id, ClassUpdateDTO dto);
 }

@@ -13,11 +13,14 @@ package icu.jiapeng.kitty.user.cfg.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import icu.jiapeng.kitty.common.core.page.PageRespVo;
+import icu.jiapeng.kitty.user.cfg.dto.ConfigCreateDTO;
 import icu.jiapeng.kitty.user.cfg.dto.ConfigQueryPageDTO;
+import icu.jiapeng.kitty.user.cfg.dto.ConfigUpdateDTO;
+import icu.jiapeng.kitty.user.cfg.vo.ConfigListVo;
+import icu.jiapeng.kitty.user.cfg.TenantConfigEnum;
 import icu.jiapeng.kitty.user.cfg.dto.GetValDTO;
 import icu.jiapeng.kitty.user.cfg.dto.SetValDTO;
 import icu.jiapeng.kitty.user.cfg.entity.KtConfig;
-import icu.jiapeng.kitty.user.cfg.vo.ConfigListVo;
 import jakarta.validation.Valid;
 
 /**
@@ -36,12 +39,41 @@ public interface KtConfigService extends IService<KtConfig> {
     PageRespVo<ConfigListVo> query(ConfigQueryPageDTO query);
 
     /**
+     * 新增配置项
+     *
+     * @param dto 创建参数
+     * @return 配置项 id
+     */
+    String create(ConfigCreateDTO dto);
+
+    /**
+     * 更新配置项
+     *
+     * @param id  配置项 id
+     * @param dto 更新参数
+     * @return 是否成功
+     */
+    boolean update(String id, ConfigUpdateDTO dto);
+
+    /**
      * 获取值
      *
      * @param getValDTO 获取值参数
      * @return 值
      */
     String getVal(GetValDTO getValDTO);
+
+    /**
+     * 按配置枚举获取值，推荐使用此方法以统一维护配置 key。
+     * 查不到配置时返回枚举维护的默认值（不依赖 configService/库表）。
+     *
+     * @param configKey 配置项枚举
+     * @return 值，未配置时为枚举的 defaultVal
+     */
+    default String getVal(TenantConfigEnum configKey) {
+        String v = getVal(new GetValDTO().setConfigKey(configKey.getKey()));
+        return (v == null || v.isBlank()) ? configKey.getDefaultVal() : v;
+    }
 
     /**
      * 设置值
