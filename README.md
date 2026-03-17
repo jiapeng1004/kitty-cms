@@ -27,28 +27,40 @@
 
 ```
 kitty-cms/
-├── kitty-common/          # 公共模块 Common
-├── kitty-user/            # 用户中心 User Center (9701, 9801)
-├── kitty-cms/              # CMS 服务 CMS Service (9702, 9802)
-├── kitty-material/         # 素材管理 Material Management
-├── kitty-transcoder/       # 转码服务 Transcoder (9703, 9803)
+├── .cursor/                # OpenSpec/Agent 相关
+├── .github/workflows/     # CI/CD
+├── data/                   # 本地数据/缓存（可选）
+├── docs/                   # 文档
 ├── frontend/               # 前端应用 Frontend
 │   └── packages/
 │       ├── admin/          # 管理后台 Admin
 │       ├── mobile/         # 移动端 Mobile
 │       └── transcoder/     # 转码控制台 Transcoder Console
-└── .github/workflows/      # CI/CD
+├── kitty-api/              # 共享 API（如有）
+├── kitty-common/           # 公共模块 Common
+├── kitty-func/             # 功能聚合（如有）
+├── kitty-grpc/             # gRPC 聚合（如有）
+├── kitty-plugin/          # 可插拔能力（如本地 DNS）
+├── kitty-server/          # 各微服务（Server 入口）
+│   ├── kitty-user-server/
+│   ├── kitty-cms-server/
+│   ├── kitty-material-server/
+│   └── kitty-transcoder-server/
+├── kitty-transcoder-go/   # Go 版转码组件
+├── logs/                   # 日志目录（可选）
+├── openspec/               # OpenSpec 变更工作流
+└── scripts/                # 脚本（如有）
 ```
 
 ### 模块导航 | Module Index
 
 | 模块 Module | 说明 Description | 文档 Doc |
 |-------------|------------------|----------|
-| [kitty-common](kitty-common) | 公共工具、DTO、基础能力 | [README](kitty-common/README.md) |
-| [kitty-user](kitty-user) | 用户、角色、租户、权限、配置 | [README](kitty-user/README.md) |
-| [kitty-cms](kitty-cms) | 内容管理核心服务 | [README](kitty-cms/README.md) |
-| [kitty-material](kitty-material) | 素材（图片/视频等）管理 | [README](kitty-material/README.md) |
-| [kitty-transcoder](kitty-transcoder) | 音视频转码、预览、任务队列 | [README](kitty-transcoder/README.md) |
+| [kitty-common](kitty-common) | 公共工具、DTO、基础能力 | - |
+| [kitty-user-server](kitty-server/kitty-user-server) | 用户、角色、租户、权限、配置 | [README](kitty-server/kitty-user-server/README.md) |
+| [kitty-cms-server](kitty-server/kitty-cms-server) | 内容管理核心服务 | [README](kitty-server/kitty-cms-server/README.md) |
+| [kitty-material-server](kitty-server/kitty-material-server) | 素材（图片/视频等）管理 | [README](kitty-server/kitty-material-server/README.md) |
+| [kitty-transcoder-server](kitty-server/kitty-transcoder-server) | 音视频转码、预览、任务队列 | [README](kitty-server/kitty-transcoder-server/README.md) |
 | [frontend](frontend) | Vue 3 前端应用集合 | [README](frontend/README.md) |
 
 ---

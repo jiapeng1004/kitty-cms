@@ -23,3 +23,33 @@ export const IMG_WECHAT_LOGO = imgWechat
 // 预留：作者区背景图，可替换为实际资源后取消注释
 // import imgBrandBg from './images/brand-bg.jpg'
 // export const IMG_BRAND_BG = imgBrandBg as string
+
+// 内置菜单图标（antd 图标名 → 组件）
+import {
+    DashboardOutlined,
+    SettingOutlined,
+    UserOutlined,
+    AppstoreOutlined,
+    TeamOutlined,
+    IdcardOutlined
+} from '@ant-design/icons-vue'
+import type { FunctionalComponent } from 'vue'
+import type { AntdIconProps } from '@ant-design/icons-vue/lib/components/AntdIcon'
+
+export const BUILTIN_MENU_ICONS: Record<string, FunctionalComponent<AntdIconProps>> = {
+    dashboard: DashboardOutlined,
+    setting: SettingOutlined,
+    user: UserOutlined,
+    appstore: AppstoreOutlined,
+    team: TeamOutlined,
+    'id-badge': IdcardOutlined
+}
+
+export const BUILTIN_MENU_ICON_OPTIONS = [
+  { label: '工作台（dashboard）', value: 'dashboard' },
+  { label: '设置（setting）', value: 'setting' },
+  { label: '用户（user）', value: 'user' },
+  { label: '应用（appstore）', value: 'appstore' },
+  { label: '团队（team）', value: 'team' },
+  { label: '身份（id-badge）', value: 'id-badge' }
+]

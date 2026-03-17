@@ -1,0 +1,1 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=icu.jiapeng.kitty.plugin.sa.config.SaGrpcConfig

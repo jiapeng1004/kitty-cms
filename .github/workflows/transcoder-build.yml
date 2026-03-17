@@ -36,7 +36,7 @@ jobs:
       - name: Build kitty-transcoder
         run: |
           chmod +x mvnw
-          ./mvnw -B "-Djavacpp.platform=linux-x86_64" -pl kitty-transcoder/kitty-transcoder-server -am -DskipTests clean package
+          ./mvnw -B "-Djavacpp.platform=linux-x86_64" -pl kitty-server/kitty-transcoder-server -am -DskipTests clean package
 
       - name: Verify app.jar
         run: |
@@ -124,7 +124,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./kitty-transcoder/Dockerfile
+          file: ./kitty-server/kitty-transcoder-server/Dockerfile
           push: true
           tags: |
             registry.cn-hangzhou.aliyuncs.com/jp-java/kitty-transcoder:${{ github.ref_type == 'tag' && github.ref_name || github.sha }}

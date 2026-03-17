@@ -22,10 +22,11 @@
     </developers>
     <modules>
         <module>kitty-common</module>
-        <module>kitty-user</module>
-        <module>kitty-cms</module>
-        <module>kitty-material</module>
-        <module>kitty-transcoder</module>
+        <module>kitty-api</module>
+        <module>kitty-grpc</module>
+        <module>kitty-plugin</module>
+        <module>kitty-func</module>
+        <module>kitty-server</module>
     </modules>
     <scm>
         <connection/>
@@ -74,9 +75,103 @@
         <dependencies>
             <dependency>
                 <groupId>icu.jiapeng</groupId>
-                <artifactId>kitty-common-core</artifactId>
+                <artifactId>kitty-common</artifactId>
                 <version>${kittycms.version}</version>
             </dependency>
+
+            <!-- api -->
+            <dependency>
+                <groupId>icu.jiapeng</groupId>
+                <artifactId>kitty-user-api</artifactId>
+                <version>0.0.1-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>icu.jiapeng</groupId>
+                <artifactId>kitty-cms-api</artifactId>
+                <version>0.0.1-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>icu.jiapeng</groupId>
+                <artifactId>kitty-transcoder-api</artifactId>
+                <version>0.0.1-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>icu.jiapeng</groupId>
+                <artifactId>kitty-material-api</artifactId>
+                <version>0.0.1-SNAPSHOT</version>
+            </dependency>
+
+            <!-- grpc -->
+
+            <dependency>
+                <groupId>icu.jiapeng</groupId>
+                <artifactId>kitty-transcoder-grpc</artifactId>
+                <version>0.0.1-SNAPSHOT</version>
+            </dependency>
+
+            <dependency>
+                <groupId>icu.jiapeng</groupId>
+                <artifactId>kitty-user-grpc</artifactId>
+                <version>0.0.1-SNAPSHOT</version>
+            </dependency>
+
+            <!-- func -->
+            <dependency>
+                <groupId>icu.jiapeng</groupId>
+                <artifactId>kitty-user-func</artifactId>
+                <version>0.0.1-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>icu.jiapeng</groupId>
+                <artifactId>kitty-cms-func</artifactId>
+                <version>0.0.1-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>icu.jiapeng</groupId>
+                <artifactId>kitty-transcoder-func</artifactId>
+                <version>0.0.1-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>icu.jiapeng</groupId>
+                <artifactId>kitty-material-func</artifactId>
+                <version>0.0.1-SNAPSHOT</version>
+            </dependency>
+
+            <!-- plugin -->
+            <dependency>
+                <groupId>icu.jiapeng</groupId>
+                <artifactId>kitty-user-plugin-grpc-sa</artifactId>
+                <version>0.0.1-SNAPSHOT</version>
+            </dependency>
+
+            <dependency>
+                <groupId>icu.jiapeng</groupId>
+                <artifactId>kitty-local-dns-starter</artifactId>
+                <version>0.0.1-SNAPSHOT</version>
+            </dependency>
+
+            <!-- server -->
+            <dependency>
+                <groupId>icu.jiapeng</groupId>
+                <artifactId>kitty-user-server</artifactId>
+                <version>0.0.1-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>icu.jiapeng</groupId>
+                <artifactId>kitty-cms-server</artifactId>
+                <version>0.0.1-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>icu.jiapeng</groupId>
+                <artifactId>kitty-transcoder-server</artifactId>
+                <version>0.0.1-SNAPSHOT</version>
+            </dependency>
+            <dependency>
+                <groupId>icu.jiapeng</groupId>
+                <artifactId>kitty-material-server</artifactId>
+                <version>0.0.1-SNAPSHOT</version>
+            </dependency>
+
             <dependency>
                 <groupId>io.swagger.core.v3</groupId>
                 <artifactId>swagger-annotations-jakarta</artifactId>

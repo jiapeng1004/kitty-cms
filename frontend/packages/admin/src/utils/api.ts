@@ -71,12 +71,17 @@ instance.interceptors.request.use(
 instance.interceptors.response.use(
     (response) => response.data,
     (error) => {
-        if (error.response?.status === 401) {
+        const status = error.response?.status as number | undefined
+        const msg: string | undefined = error.response?.data?.message
+
+        // 未登录 / 登录过期 / token 无效等场景统一视为需重新登录
+        if (status === 401 || msg === 'token.expired' || msg === 'token.invalid') {
             setToken(null)
             setUserName(null)
-            const path = window.location.hash ? `#${window.location.hash}` : ''
-            if (!path.includes('#/login') && !path.includes('#/register')) {
-                window.location.href = `${window.location.pathname}#/login`
+            const current = window.location.pathname + window.location.search
+            if (!current.startsWith('/login') && !current.startsWith('/register')) {
+                const redirect = encodeURIComponent(current)
+                window.location.href = `/login?redirect=${redirect}`
             }
         }
         return Promise.reject(error)
