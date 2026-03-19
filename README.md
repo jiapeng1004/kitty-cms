@@ -35,6 +35,7 @@ kitty-cms/
 │   └── packages/
 │       ├── admin/          # 管理后台 Admin
 │       ├── mobile/         # 移动端 Mobile
+│       ├── topic/          # 选题控制台 Topic Console（独立 SPA）
 │       └── transcoder/     # 转码控制台 Transcoder Console
 ├── kitty-api/              # 共享 API（如有）
 ├── kitty-common/           # 公共模块 Common
@@ -46,7 +47,8 @@ kitty-cms/
 │   ├── kitty-cms-server/
 │   ├── kitty-material-server/
 │   └── kitty-transcoder-server/
-├── kitty-transcoder-go/   # Go 版转码组件
+├── kitty-topic/            # 选题服务（Go：Gin + GORM + gRPC + Swagger）
+├── kitty-transcoder-go/   # Go 版转码组件（已废弃，由 Java 转码服务替代）
 ├── logs/                   # 日志目录（可选）
 ├── openspec/               # OpenSpec 变更工作流
 └── scripts/                # 脚本（如有）
@@ -61,6 +63,7 @@ kitty-cms/
 | [kitty-cms-server](kitty-server/kitty-cms-server) | 内容管理核心服务 | [README](kitty-server/kitty-cms-server/README.md) |
 | [kitty-material-server](kitty-server/kitty-material-server) | 素材（图片/视频等）管理 | [README](kitty-server/kitty-material-server/README.md) |
 | [kitty-transcoder-server](kitty-server/kitty-transcoder-server) | 音视频转码、预览、任务队列 | [README](kitty-server/kitty-transcoder-server/README.md) |
+| [kitty-topic](kitty-topic) | 选题（Topic）微服务：HTTP + gRPC | [README](kitty-topic/README.md) |
 | [frontend](frontend) | Vue 3 前端应用集合 | [README](frontend/README.md) |
 
 ---
@@ -105,6 +108,7 @@ npm ci
 npm run build:admin      # 管理后台
 npm run build:mobile    # 移动端
 npm run build:transcoder # 转码控制台
+npm run build:topic      # 选题控制台
 npm run build:all       # 全部
 ```
 
@@ -135,6 +139,7 @@ java -jar kitty-transcoder/kitty-transcoder-server/target/app.jar
 | kitty-user | 9701 | 9801 |
 | kitty-cms | 9702 | 9802 |
 | kitty-transcoder | 9703 | 9803 |
+| kitty-topic | 9704 | 9091 |
 | kitty-material | 见模块文档 | - |
 
 ---

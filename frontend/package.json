@@ -13,14 +13,16 @@
     "dev:admin": "npm run dev -w admin",
     "dev:mobile": "npm run dev -w mobile",
     "dev:transcoder": "npm run dev -w transcoder",
+    "dev:topic": "npm run dev -w topic",
     "dev:new": "npm run dev -w new-project",
     "build:admin": "npm run build -w admin",
     "build:mobile": "npm run build -w mobile",
     "build:transcoder": "npm run build -w transcoder",
+    "build:topic": "npm run build -w topic",
     "build:new": "npm run build -w new-project",
     "preview:admin": "npm run preview -w admin",
     "preview:new": "npm run preview -w new-project",
-    "build:all": "npm run build -w admin && npm run build -w mobile && npm run build -w transcoder && npm run build -w new-project"
+    "build:all": "npm run build -w admin && npm run build -w mobile && npm run build -w transcoder && npm run build -w topic && npm run build -w new-project"
   },
   "keywords": [],
   "author": "Jia Peng",

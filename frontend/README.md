@@ -28,6 +28,7 @@ frontend/
 ├── packages/
 │   ├── admin/        # 管理后台 Admin Panel
 │   ├── mobile/       # 移动端 (uni-app) Mobile
+│   ├── topic/        # 选题控制台 Topic Console（独立 SPA）
 │   └── transcoder/   # 转码控制台 Transcoder Console
 └── package.json      # Workspace 根配置
 ```
@@ -39,6 +40,7 @@ frontend/
 | [admin](packages/admin) | 管理后台，Vue 3 + Ant Design Vue | [README](packages/admin/README.md) |
 | [mobile](packages/mobile) | 移动端，uni-app 多端 | [README](packages/mobile/README.md) |
 | [transcoder](packages/transcoder) | 转码服务控制台 | [README](packages/transcoder/README.md) |
+| [topic](packages/topic) | 选题管理（独立 SPA） | [README](packages/topic/README.md) |
 
 ---
 
@@ -64,6 +66,7 @@ npm run dev:transcoder # 转码控制台
 npm run build:admin
 npm run build:mobile
 npm run build:transcoder
+npm run build:topic
 npm run build:all      # 全部构建
 ```
 
@@ -76,6 +79,7 @@ npm run build:all      # 全部构建
 | admin | Vue 3 + Vite | Ant Design Vue |
 | mobile | uni-app (Vue 3) | uni-ui |
 | transcoder | Vue 3 + Vite | Ant Design Vue |
+| topic | Vue 3 + Vite | Ant Design Vue |
 
 ---
 
