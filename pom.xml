@@ -2,11 +2,6 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <parent>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.0.2</version>
-    </parent>
     <groupId>icu.jiapeng</groupId>
     <artifactId>kittycms</artifactId>
     <version>0.0.1-SNAPSHOT</version>
@@ -35,9 +30,20 @@
         <url/>
     </scm>
     <properties>
-        <kittycms.version>0.0.1-SNAPSHOT</kittycms.version>
         <repo.version>1.0.0</repo.version>
         <java.version>25</java.version>
+        <!-- 与 spring-boot-dependencies 4.0.2 对齐；import BOM 不会注入这些属性，此处需显式声明 -->
+        <spring-boot.version>4.0.2</spring-boot.version>
+        <!-- 最新版本quarkus -->
+        <quarkus.version>3.34.0</quarkus.version>
+        <lombok.version>1.18.42</lombok.version>
+        <maven-compiler-plugin.version>3.14.1</maven-compiler-plugin.version>
+        <maven-surefire-plugin.version>3.5.4</maven-surefire-plugin.version>
+        <maven-resources-plugin.version>3.3.1</maven-resources-plugin.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <resource.delimiter>@</resource.delimiter>
+        <maven.compiler.release>${java.version}</maven.compiler.release>
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
         <hutool.version>5.8.41</hutool.version>
@@ -58,7 +64,7 @@
         <sa-token.version>1.37.0</sa-token.version>
         <podam.version>8.0.2.RELEASE</podam.version>
         <commons-io.version>1.3.2</commons-io.version>
-        <hibernate-validator>9.1.0.Final</hibernate-validator>
+        <hibernate-validator.version>9.1.0.Final</hibernate-validator.version>
         <maven-replacer-plugin.version>1.5.3</maven-replacer-plugin.version>
         <devh.grpc.version>3.1.0.RELEASE</devh.grpc.version>
         <xolstice-protobuf-maven-plugin.version>0.6.1</xolstice-protobuf-maven-plugin.version>
@@ -74,31 +80,47 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring-boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>io.quarkus</groupId>
+                <artifactId>quarkus-bom</artifactId>
+                <version>${quarkus.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <dependency>
                 <groupId>icu.jiapeng</groupId>
                 <artifactId>kitty-common</artifactId>
-                <version>${kittycms.version}</version>
+                <version>${version}</version>
             </dependency>
 
             <!-- api -->
             <dependency>
                 <groupId>icu.jiapeng</groupId>
                 <artifactId>kitty-user-api</artifactId>
-                <version>0.0.1-SNAPSHOT</version>
+                <version>${version}</version>
             </dependency>
             <dependency>
                 <groupId>icu.jiapeng</groupId>
                 <artifactId>kitty-cms-api</artifactId>
-                <version>0.0.1-SNAPSHOT</version>
+                <version>${version}</version>
             </dependency>
             <dependency>
                 <groupId>icu.jiapeng</groupId>
                 <artifactId>kitty-transcoder-api</artifactId>
-                <version>0.0.1-SNAPSHOT</version>
+                <version>${version}</version>
             </dependency>
             <dependency>
                 <groupId>icu.jiapeng</groupId>
                 <artifactId>kitty-material-api</artifactId>
-                <version>0.0.1-SNAPSHOT</version>
+                <version>${version}</version>
             </dependency>
 
             <!-- grpc -->
@@ -106,70 +128,70 @@
             <dependency>
                 <groupId>icu.jiapeng</groupId>
                 <artifactId>kitty-transcoder-grpc</artifactId>
-                <version>0.0.1-SNAPSHOT</version>
+                <version>${version}</version>
             </dependency>
 
             <dependency>
                 <groupId>icu.jiapeng</groupId>
                 <artifactId>kitty-user-grpc</artifactId>
-                <version>0.0.1-SNAPSHOT</version>
+                <version>${version}</version>
             </dependency>
 
             <!-- func -->
             <dependency>
                 <groupId>icu.jiapeng</groupId>
                 <artifactId>kitty-user-func</artifactId>
-                <version>0.0.1-SNAPSHOT</version>
+                <version>${version}</version>
             </dependency>
             <dependency>
                 <groupId>icu.jiapeng</groupId>
                 <artifactId>kitty-cms-func</artifactId>
-                <version>0.0.1-SNAPSHOT</version>
+                <version>${version}</version>
             </dependency>
             <dependency>
                 <groupId>icu.jiapeng</groupId>
                 <artifactId>kitty-transcoder-func</artifactId>
-                <version>0.0.1-SNAPSHOT</version>
+                <version>${version}</version>
             </dependency>
             <dependency>
                 <groupId>icu.jiapeng</groupId>
                 <artifactId>kitty-material-func</artifactId>
-                <version>0.0.1-SNAPSHOT</version>
+                <version>${version}</version>
             </dependency>
 
             <!-- plugin -->
             <dependency>
                 <groupId>icu.jiapeng</groupId>
                 <artifactId>kitty-user-plugin-grpc-sa</artifactId>
-                <version>0.0.1-SNAPSHOT</version>
+                <version>${version}</version>
             </dependency>
 
             <dependency>
                 <groupId>icu.jiapeng</groupId>
                 <artifactId>kitty-local-dns-starter</artifactId>
-                <version>0.0.1-SNAPSHOT</version>
+                <version>${version}</version>
             </dependency>
 
             <!-- server -->
             <dependency>
                 <groupId>icu.jiapeng</groupId>
                 <artifactId>kitty-user-server</artifactId>
-                <version>0.0.1-SNAPSHOT</version>
+                <version>${version}</version>
             </dependency>
             <dependency>
                 <groupId>icu.jiapeng</groupId>
                 <artifactId>kitty-cms-server</artifactId>
-                <version>0.0.1-SNAPSHOT</version>
+                <version>${version}</version>
             </dependency>
             <dependency>
                 <groupId>icu.jiapeng</groupId>
                 <artifactId>kitty-transcoder-server</artifactId>
-                <version>0.0.1-SNAPSHOT</version>
+                <version>${version}</version>
             </dependency>
             <dependency>
                 <groupId>icu.jiapeng</groupId>
                 <artifactId>kitty-material-server</artifactId>
-                <version>0.0.1-SNAPSHOT</version>
+                <version>${version}</version>
             </dependency>
 
             <dependency>
@@ -414,6 +436,27 @@
 
 
     <build>
+        <!-- 原先由 spring-boot-starter-parent 提供：application*.yml/yaml/properties 参与过滤，其余资源原样打包 -->
+        <resources>
+            <resource>
+                <directory>${basedir}/src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>**/application*.yml</include>
+                    <include>**/application*.yaml</include>
+                    <include>**/application*.properties</include>
+                </includes>
+            </resource>
+            <resource>
+                <directory>${basedir}/src/main/resources</directory>
+                <filtering>false</filtering>
+                <excludes>
+                    <exclude>**/application*.yml</exclude>
+                    <exclude>**/application*.yaml</exclude>
+                    <exclude>**/application*.properties</exclude>
+                </excludes>
+            </resource>
+        </resources>
         <extensions>
             <extension>
                 <groupId>kr.motd.maven</groupId>
@@ -423,6 +466,37 @@
         </extensions>
         <pluginManagement>
             <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>${maven-compiler-plugin.version}</version>
+                    <configuration>
+                        <release>${java.version}</release>
+                        <parameters>true</parameters>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>${maven-surefire-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-resources-plugin</artifactId>
+                    <version>${maven-resources-plugin.version}</version>
+                    <configuration>
+                        <propertiesEncoding>${project.build.sourceEncoding}</propertiesEncoding>
+                        <delimiters>
+                            <delimiter>${resource.delimiter}</delimiter>
+                        </delimiters>
+                        <useDefaultDelimiters>false</useDefaultDelimiters>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                    <version>${spring-boot.version}</version>
+                </plugin>
                 <plugin>
                     <groupId>org.xolstice.maven.plugins</groupId>
                     <artifactId>protobuf-maven-plugin</artifactId>
