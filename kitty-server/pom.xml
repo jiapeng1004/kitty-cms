@@ -19,6 +19,7 @@
         <module>kitty-cms-server</module>
         <module>kitty-transcoder-server</module>
         <module>kitty-material-server</module>
+        <module>kitty-click-qk</module>
     </modules>
 
 </project>

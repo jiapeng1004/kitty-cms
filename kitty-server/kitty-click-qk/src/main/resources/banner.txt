@@ -1,0 +1,9 @@
+  /\_/\
+ ( o.o )    ╭──────────────╮
+  > ^ <     │  KittyClick  │
+            ╰──────────────╯
+     🌸  Built with purr & code! 🌸
+
+:: App     : ${quarkus.application.name}
+:: Version : ${quarkus.application.version}
+:: Java    : ${java.version}

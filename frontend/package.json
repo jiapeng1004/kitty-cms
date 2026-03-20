@@ -13,7 +13,6 @@
     "dev:admin": "npm run dev -w admin",
     "dev:mobile": "npm run dev -w mobile",
     "dev:transcoder": "npm run dev -w transcoder",
-    "dev:topic": "npm run dev -w topic",
     "dev:new": "npm run dev -w new-project",
     "build:admin": "npm run build -w admin",
     "build:mobile": "npm run build -w mobile",
