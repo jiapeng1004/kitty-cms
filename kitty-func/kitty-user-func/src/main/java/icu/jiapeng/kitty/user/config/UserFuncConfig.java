@@ -27,14 +27,14 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.core.Ordered;
 
-@Configuration(proxyBeanMethods = false)
+@Configuration
 @EnableConfigurationProperties(UserConfigProperties.class)
 @Import({GrpcConfig.class
         , SaConfig.class
         , KittyMetaDataHandler.class
         , DefaultTenantDataSource.class
 })
-@MapperScan("icu.jiapeng.kitty.user.*.mapper")
+@MapperScan("icu.jiapeng.kitty.user.**.mapper")
 public class UserFuncConfig {
     /**
      * 添加分页插件

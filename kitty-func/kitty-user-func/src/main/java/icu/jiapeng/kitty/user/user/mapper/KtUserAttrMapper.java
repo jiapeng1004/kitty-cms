@@ -19,6 +19,5 @@ import org.jspecify.annotations.NonNull;
 /**
  * 用户表
  */
-@Mapper
 public interface KtUserAttrMapper extends BaseMapper<@NonNull KtUserAttr> {
 }

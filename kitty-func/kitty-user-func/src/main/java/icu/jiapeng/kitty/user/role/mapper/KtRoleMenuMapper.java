@@ -7,7 +7,6 @@ import org.apache.ibatis.annotations.Mapper;
 /**
  * 角色-菜单关系表 Mapper
  */
-@Mapper
 public interface KtRoleMenuMapper extends BaseMapper<KtRoleMenu> {
 }
 

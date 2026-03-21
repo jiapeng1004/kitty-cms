@@ -21,7 +21,7 @@ import org.springframework.context.annotation.Import;
 
 @Configuration
 @Import(value = {GrpcConfig.class, SaConfig.class})
-@MapperScan("icu.jiapeng.kitty.cms.*.mapper")
+@MapperScan("icu.jiapeng.kitty.cms.**.mapper")
 public class CmsFuncConfig {
     /**
      * 添加分页插件

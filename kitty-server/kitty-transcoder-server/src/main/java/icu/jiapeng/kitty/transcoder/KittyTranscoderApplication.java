@@ -5,7 +5,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-@MapperScan("icu.jiapeng.kitty.transcoder.func.mapper")
+@MapperScan("icu.jiapeng.kitty.transcoder.**.mapper")
 public class KittyTranscoderApplication {
 
     public static void main(String[] args) {

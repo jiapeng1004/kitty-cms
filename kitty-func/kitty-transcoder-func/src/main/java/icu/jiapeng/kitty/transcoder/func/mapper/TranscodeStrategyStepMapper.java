@@ -4,6 +4,5 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import icu.jiapeng.kitty.transcoder.func.entity.TranscodeStrategyStep;
 import org.apache.ibatis.annotations.Mapper;
 
-@Mapper
 public interface TranscodeStrategyStepMapper extends BaseMapper<TranscodeStrategyStep> {
 }

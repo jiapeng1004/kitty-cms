@@ -19,6 +19,5 @@ import org.jspecify.annotations.NonNull;
 /**
  * 租户表
  */
-@Mapper
 public interface KtTenantMapper extends BaseMapper<@NonNull KtTenant> {
 }

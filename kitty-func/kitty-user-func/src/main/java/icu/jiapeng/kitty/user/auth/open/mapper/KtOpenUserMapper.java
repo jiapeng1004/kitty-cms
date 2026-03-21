@@ -13,12 +13,10 @@ package icu.jiapeng.kitty.user.auth.open.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import icu.jiapeng.kitty.user.auth.open.entity.KtOpenUser;
-import org.apache.ibatis.annotations.Mapper;
 import org.jspecify.annotations.NonNull;
 
 /**
  * 开放认证用户映射表 Mapper
  */
-@Mapper
 public interface KtOpenUserMapper extends BaseMapper<@NonNull KtOpenUser> {
 }
