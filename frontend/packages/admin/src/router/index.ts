@@ -105,6 +105,10 @@ router.beforeEach(async (to, _from, next) => {
         } finally {
             dynamicRoutesInited = true
         }
+        // 动态路由是首次导航过程中才注册的，必须重走一次当前地址，
+        // 否则本次导航仍按「无子路由」匹配，会出现白屏（刷新或直接打开深层链接时尤其明显）。
+        next({ ...to, replace: true })
+        return
     }
 
     next()
