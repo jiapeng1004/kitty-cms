@@ -27,7 +27,7 @@ public class Oauth2ClientVO {
     @Schema(description = "允许的授权类型，逗号分隔，参考 Oauth2GrantType")
     private String allowedGrantTypes;
 
-    @Schema(description = "允许的认证方式，逗号分隔")
+    @Schema(description = "允许的认证方式，逗号分隔，参考 Oauth2ClientAuthenticationMethod")
     private String allowAuthenticationMethods;
 
     @Schema(description = "允许的回调地址，逗号分隔")

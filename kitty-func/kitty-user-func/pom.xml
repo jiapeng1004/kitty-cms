@@ -25,6 +25,14 @@
         </dependency>
         <dependency>
             <groupId>icu.jiapeng</groupId>
+            <artifactId>kitty-oauth2-server-spring-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>icu.jiapeng</groupId>
+            <artifactId>kitty-oauth2-resource-spring-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>icu.jiapeng</groupId>
             <artifactId>kitty-common</artifactId>
         </dependency>
         <dependency>
@@ -101,10 +109,10 @@
             <groupId>me.zhyd.oauth</groupId>
             <artifactId>JustAuth</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-thymeleaf</artifactId>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>org.springframework.boot</groupId>-->
+<!--            <artifactId>spring-boot-starter-thymeleaf</artifactId>-->
+<!--        </dependency>-->
         <dependency>
             <groupId>org.mapstruct</groupId>
             <artifactId>mapstruct</artifactId>

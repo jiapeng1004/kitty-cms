@@ -135,9 +135,13 @@
           />
         </a-form-item>
         <a-form-item label="认证方式">
-          <a-input
-            v-model:value="formState.allowAuthenticationMethods"
-            placeholder="如 client_secret_basic"
+          <a-select
+            v-model:value="selectedAuthMethods"
+            mode="multiple"
+            allow-clear
+            style="width: 100%"
+            placeholder="请选择令牌端点认证方式"
+            :options="authMethodOptions"
             :disabled="modalType === 'view'"
           />
         </a-form-item>
@@ -195,7 +199,10 @@ import {
   getOauth2ClientPage,
   updateOauth2Client
 } from '@/api/oauth2_client_api'
-import { getOpenOauth2GrantTypeList } from '@/api/oauth2_meta_api'
+import {
+  getOpenOauth2ClientAuthenticationMethodList,
+  getOpenOauth2GrantTypeList
+} from '@/api/oauth2_meta_api'
 import { getOauth2ScopeList } from '@/api/oauth2_scope_api'
 import { getCurrentUserPermissionList } from '@/api/permission_api'
 import { getResponseMessage } from '@/utils/api'
@@ -208,8 +215,10 @@ const modalType = ref<'create' | 'edit' | 'view'>('create')
 const searchKey = ref('')
 const selectedScopes = ref<string[]>([])
 const selectedGrantTypes = ref<string[]>([])
+const selectedAuthMethods = ref<string[]>([])
 const scopeOptions = ref<{ label: string; value: string }[]>([])
 const grantTypeOptions = ref<{ label: string; value: string }[]>([])
+const authMethodOptions = ref<{ label: string; value: string }[]>([])
 const permissionCodes = ref<string[]>([])
 const secretVisible = reactive<Record<string, boolean>>({})
 
@@ -260,6 +269,7 @@ onMounted(() => {
   fetchData()
   loadScopeOptions()
   loadGrantTypeOptions()
+  loadAuthMethodOptions()
   loadPermissionCodes()
 })
 
@@ -306,6 +316,19 @@ async function loadGrantTypeOptions() {
   } catch (error) {
     message.error(getResponseMessage(error))
     grantTypeOptions.value = []
+  }
+}
+
+async function loadAuthMethodOptions() {
+  try {
+    const list = await getOpenOauth2ClientAuthenticationMethodList()
+    authMethodOptions.value = (list ?? []).map((item) => ({
+      label: item.desc ? `${item.desc} (${item.code})` : item.code,
+      value: item.code
+    }))
+  } catch (error) {
+    message.error(getResponseMessage(error))
+    authMethodOptions.value = []
   }
 }
 
@@ -369,6 +392,9 @@ async function showModal(record: any, type: 'create' | 'edit' | 'view') {
       selectedGrantTypes.value = data?.allowedGrantTypes
         ? String(data.allowedGrantTypes).split(',').map((item) => item.trim()).filter(Boolean)
         : []
+      selectedAuthMethods.value = data?.allowAuthenticationMethods
+        ? String(data.allowAuthenticationMethods).split(',').map((item) => item.trim()).filter(Boolean)
+        : []
     } catch (error) {
       message.error(getResponseMessage(error))
       return
@@ -395,6 +421,7 @@ async function showModal(record: any, type: 'create' | 'edit' | 'view') {
     })
     selectedScopes.value = []
     selectedGrantTypes.value = []
+    selectedAuthMethods.value = []
   }
   modalVisible.value = true
 }
@@ -406,7 +433,9 @@ async function handleOk() {
       clientName: formState.clientName,
       allowedScopes: selectedScopes.value.length ? selectedScopes.value.join(',') : undefined,
       allowedGrantTypes: selectedGrantTypes.value.length ? selectedGrantTypes.value.join(',') : undefined,
-      allowAuthenticationMethods: formState.allowAuthenticationMethods || undefined,
+      allowAuthenticationMethods: selectedAuthMethods.value.length
+        ? selectedAuthMethods.value.join(',')
+        : undefined,
       allowedRedirectUris: formState.allowedRedirectUris || undefined,
       accessTokenTimeout: formState.accessTokenTimeout,
       refreshTokenTimeout: formState.refreshTokenTimeout,

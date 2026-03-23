@@ -1,0 +1,7 @@
+org.springframework.boot.env.EnvironmentPostProcessor=\
+icu.jiapeng.kitty.oauth2.resource.springweb.env.OAuth2ResourceTokenPersistenceDefaultEnvironmentPostProcessor
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+icu.jiapeng.kitty.oauth2.resource.springweb.autoconfigure.OAuth2ResourceExtrasRedisAccessTokenValidationAutoConfiguration,\
+icu.jiapeng.kitty.oauth2.resource.springweb.autoconfigure.OAuth2ResourceExtrasMybatisPlusAccessTokenValidationAutoConfiguration,\
+icu.jiapeng.kitty.oauth2.resource.springweb.autoconfigure.OAuth2ResourceExtrasCenterAccessTokenValidationAutoConfiguration,\
+icu.jiapeng.kitty.oauth2.resource.springweb.autoconfigure.OAuth2ScopeCheckAutoConfiguration

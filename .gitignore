@@ -66,3 +66,6 @@ build/
 /openspec/specs/api-reference/签名设计.doc
 /openspec/specs/api-reference/转码策略.sql
 /data/
+
+### -loc- ###
+**/*-loc-*

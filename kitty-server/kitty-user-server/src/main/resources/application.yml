@@ -85,6 +85,16 @@ logging:
   level:
     com.baomidou.mybatisplus: false
 kitty:
+  # OAuth2 授权服务器插件（kitty-oauth2-server-spring-web）；issuer 为空则从请求推导
+  oauth2:
+    authorization-server:
+      login-page-url: "/login"
+      # extras 默认关闭，须显式开启才会注册插件内默认适配器（见 kitty-oauth2-server-spring-web README）
+      extras:
+        end-user-session: satoken
+        token-persistence: mybatis-plus
+        consent-storage: mybatis-plus
+      issuer: ${spring.application.name}
   user:
     rsa-public-key: classpath:rsa.pub
     rsa-private-key: classpath:rsa.pri

@@ -1,0 +1,6 @@
+icu.jiapeng.kitty.oauth2.server.springweb.autoconfigure.OAuth2ExtrasSaTokenAutoConfiguration
+icu.jiapeng.kitty.oauth2.server.springweb.autoconfigure.OAuth2ExtrasSpringSecurityAutoConfiguration
+icu.jiapeng.kitty.oauth2.server.springweb.autoconfigure.OAuth2ServerExtrasRedisTokenPersistenceAutoConfiguration
+icu.jiapeng.kitty.oauth2.server.springweb.autoconfigure.OAuth2ServerExtrasMybatisPlusTokenPersistenceAutoConfiguration
+icu.jiapeng.kitty.oauth2.server.springweb.autoconfigure.OAuth2ExtrasMybatisPlusAutoConfiguration
+icu.jiapeng.kitty.oauth2.server.springweb.autoconfigure.OAuth2AuthorizationServerSpringWebAutoConfiguration

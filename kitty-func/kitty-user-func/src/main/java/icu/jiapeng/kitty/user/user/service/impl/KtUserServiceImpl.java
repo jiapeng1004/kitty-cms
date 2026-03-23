@@ -29,6 +29,7 @@ import icu.jiapeng.kitty.user.user.dto.UserUpdateDTO;
 import icu.jiapeng.kitty.common.core.constant.ResultStatus;
 import icu.jiapeng.kitty.common.core.exceptions.BizException;
 import icu.jiapeng.kitty.user.constans.UserStatus;
+import org.jspecify.annotations.Nullable;
 import icu.jiapeng.kitty.user.user.dto.UserLoginParam;
 import icu.jiapeng.kitty.user.user.dto.UserRegister;
 import icu.jiapeng.kitty.user.user.entity.KtUser;
@@ -39,6 +40,8 @@ import icu.jiapeng.kitty.user.user.vo.UserListVO;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+
+import java.util.Objects;
 
 
 @Slf4j
@@ -127,6 +130,24 @@ public class KtUserServiceImpl extends ServiceImpl<KtUserUserMapper, KtUser> imp
         loginResultVo.setToken(token);
         loginResultVo.setTimeout(timeout);
         return loginResultVo;
+    }
+
+    @Override
+    public @Nullable String authenticateForOAuth2PasswordGrant(String username, String password) {
+        if (StrUtil.isBlank(username) || StrUtil.isBlank(password)) {
+            return null;
+        }
+        KtUser user = lambdaQuery().eq(KtUser::getNickName, username).last("LIMIT 1").one();
+        if (user == null || user.getPwd() == null) {
+            return null;
+        }
+        if (!Objects.equals(user.getStatus(), UserStatus.NORMAL.getStatus())) {
+            return null;
+        }
+        if (!BCrypt.checkpw(password, user.getPwd())) {
+            return null;
+        }
+        return user.getId();
     }
 
     @Override

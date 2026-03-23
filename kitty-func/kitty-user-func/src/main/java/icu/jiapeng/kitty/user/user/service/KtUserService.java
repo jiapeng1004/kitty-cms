@@ -41,6 +41,16 @@ public interface KtUserService extends IService<@NonNull KtUser> {
     LoginResultVo login(UserLoginParam userLoginParam);
 
     /**
+     * OAuth2 密码模式（RFC 6749 resource owner）：校验用户名与密码，不含验证码。
+     * 仅用于自定义 OAuth2 令牌端点，不创建 Sa-Token 会话。
+     *
+     * @param username 用户名（与登录接口一致，当前为昵称）
+     * @param password 明文密码
+     * @return 用户 id；校验失败或用户非启用状态时返回 null
+     */
+    String authenticateForOAuth2PasswordGrant(String username, String password);
+
+    /**
      * 退出登录：使当前会话 token 失效
      */
     void logout();

@@ -56,7 +56,7 @@ public class KtOauth2Client extends CommonEntity {
     private String allowedGrantTypes;
 
     /**
-     * 允许的认证方式
+     * 允许的认证方式（逗号分隔，取值见 {@link icu.jiapeng.kitty.user.oauth2.enums.Oauth2ClientAuthenticationMethod}）
      */
     @TableField("allow_authentication_methods")
     private String allowAuthenticationMethods;

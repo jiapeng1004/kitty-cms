@@ -35,7 +35,8 @@ public class SaConfig implements WebMvcConfigurer {
                         , "/api/user/captcha" // 放行验证码接口
                         , "/basic/**" // 放行基础接口
                         , "/open/**" // 放行开放平台
-                        , "/oauth2/**" // 放行OAuth2
+                        , "/oauth2/**" // 放行 OAuth2（自定义授权服务器端点）
+                        , "/.well-known/**" // 放行 OAuth2 授权服务器元数据（RFC 8414）
                 );
     }
 }
