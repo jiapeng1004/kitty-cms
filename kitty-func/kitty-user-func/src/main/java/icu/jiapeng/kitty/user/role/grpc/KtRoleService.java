@@ -35,8 +35,8 @@ public class KtRoleService extends KtRoleServiceGrpc.KtRoleServiceImplBase {
         try {
             RoleCodesResp.Builder builder = RoleCodesResp.newBuilder();
             List<String> roleIdsByUserId = ktUserRoleService.getRoleIdsByUserId(request.getUserId());
-            for (int i = 0; i < roleIdsByUserId.size(); i++) {
-                builder.setRoleCodes(i, roleIdsByUserId.get(i));
+            for (String roleId : roleIdsByUserId) {
+                builder.addRoleCodes(roleId);
             }
             responseObserver.onNext(builder.build());
         } finally {

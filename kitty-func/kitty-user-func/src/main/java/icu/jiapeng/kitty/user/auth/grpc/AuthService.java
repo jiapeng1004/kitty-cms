@@ -11,17 +11,20 @@
  */
 package icu.jiapeng.kitty.user.auth.grpc;
 
+import cn.dev33.satoken.dao.SaTokenDao;
 import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.util.StrUtil;
 import io.grpc.stub.StreamObserver;
 import jakarta.annotation.Resource;
 import net.devh.boot.grpc.server.service.GrpcService;
-import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.context.annotation.Lazy;
 
 @GrpcService
 public class AuthService extends icu.jiapeng.kitty.user.auth.grpc.AuthServiceGrpc.AuthServiceImplBase {
+
     @Resource
-    private StringRedisTemplate stringRedisTemplate;
+    @Lazy
+    private SaTokenDao saTokenDao;
 
     /**
      *
@@ -42,7 +45,7 @@ public class AuthService extends icu.jiapeng.kitty.user.auth.grpc.AuthServiceGrp
     @Override
     public void saTokenDaoGet(icu.jiapeng.kitty.user.auth.grpc.SaTokenDaoGetReq request, StreamObserver<icu.jiapeng.kitty.user.auth.grpc.SaTokenDaoGetResp> responseObserver) {
         try {
-            String value = stringRedisTemplate.opsForValue().get(request.getKey());
+            String value = saTokenDao.get(request.getKey());
             if (StrUtil.isBlank(value)) {
                 value = "";
             }
@@ -57,9 +60,28 @@ public class AuthService extends icu.jiapeng.kitty.user.auth.grpc.AuthServiceGrp
     @Override
     public void saTokenDaoTimeOut(icu.jiapeng.kitty.user.auth.grpc.SaTokenDaoTimeOutReq request, StreamObserver<icu.jiapeng.kitty.user.auth.grpc.SaTokenDaoTimeOutResp> responseObserver) {
         try {
-            long timeout = stringRedisTemplate.getExpire(request.getKey());
+            long timeout = saTokenDao.getTimeout(request.getKey());
             icu.jiapeng.kitty.user.auth.grpc.SaTokenDaoTimeOutResp.Builder builder = icu.jiapeng.kitty.user.auth.grpc.SaTokenDaoTimeOutResp.newBuilder();
             builder.setTimeOut(timeout);
+            responseObserver.onNext(builder.build());
+        } finally {
+            responseObserver.onCompleted();
+        }
+    }
+
+    @Override
+    public void saTokenDaoUpdate(icu.jiapeng.kitty.user.auth.grpc.SaTokenDaoUpdateReq request, StreamObserver<icu.jiapeng.kitty.user.auth.grpc.SaTokenDaoUpdateResp> responseObserver) {
+        try {
+            String key = request.getKey();
+            String value = request.getValue();
+            // 直接调用SaTokenDao实现，避免重复造轮子
+            saTokenDao.update(key, value);
+            icu.jiapeng.kitty.user.auth.grpc.SaTokenDaoUpdateResp.Builder builder = icu.jiapeng.kitty.user.auth.grpc.SaTokenDaoUpdateResp.newBuilder();
+            builder.setSuccess(true);
+            responseObserver.onNext(builder.build());
+        } catch (Exception e) {
+            icu.jiapeng.kitty.user.auth.grpc.SaTokenDaoUpdateResp.Builder builder = icu.jiapeng.kitty.user.auth.grpc.SaTokenDaoUpdateResp.newBuilder();
+            builder.setSuccess(false);
             responseObserver.onNext(builder.build());
         } finally {
             responseObserver.onCompleted();

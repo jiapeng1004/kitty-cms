@@ -13,6 +13,8 @@ service AuthService {
   }
   rpc SaTokenDaoTimeOut (SaTokenDaoTimeOutReq) returns (SaTokenDaoTimeOutResp) {
   }
+  rpc SaTokenDaoUpdate (SaTokenDaoUpdateReq) returns (SaTokenDaoUpdateResp) {
+  }
 }
 
 // token自省
@@ -40,4 +42,13 @@ message SaTokenDaoTimeOutReq {
 }
 message SaTokenDaoTimeOutResp {
   int64 timeOut = 1;
+}
+
+// 更新sa-token的dao key的值
+message SaTokenDaoUpdateReq {
+  string key = 1;
+  string value = 2;
+}
+message SaTokenDaoUpdateResp {
+  bool success = 1;
 }

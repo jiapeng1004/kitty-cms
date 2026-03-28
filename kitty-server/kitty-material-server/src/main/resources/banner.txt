@@ -1,0 +1,11 @@
+  /\_/\
+ ( o.o )    ╭──────────────╮
+  > ^ <     │   KittyMAM   │
+            ╰──────────────╯
+     🌸  Built with purr & code! 🌸
+
+:: App     : ${spring.application.name:kittymam}
+:: Version : ${application.formatted-version:v1.0.0}
+:: Profile : ${spring.profiles.active:default}
+:: Boot    : ${spring-boot.version} | Java ${java.version}
+

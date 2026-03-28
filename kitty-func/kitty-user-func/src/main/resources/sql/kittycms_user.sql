@@ -395,6 +395,40 @@ ON DUPLICATE KEY UPDATE `p_name` =
                             VALUES
                             (`p_desc`);
 
+-- mam的权限
+-- 插入素材模块权限
+INSERT INTO `kt_permission` (`id`, `p_name`, `p_code`, `p_desc`, `create_time`, `creator`, `update_time`, `updater`)
+VALUES ('perm-material-catalog-tree-view', '栏目树查看', 'material:catalog:tree:view', '查看素材栏目树结构', NOW(),
+        'system', NOW(), 'system'),
+       ('perm-material-resource-list-view', '资源列表查看', 'material:resource:list:view', '查看素材资源列表', NOW(),
+        'system', NOW(), 'system'),
+       ('perm-material-resource-create', '资源创建', 'material:resource:create', '创建新的素材资源', NOW(), 'system',
+        NOW(), 'system'),
+       ('perm-material-resource-update', '资源更新', 'material:resource:update', '更新素材资源信息', NOW(), 'system',
+        NOW(), 'system'),
+       ('perm-material-metadata-template-manage', '编目模板管理', 'material:metadata:template:manage',
+        '创建/绑定/启停编目模板', NOW(), 'system', NOW(), 'system'),
+       ('perm-material-metadata-field-manage', '编目字段定义管理', 'material:metadata:field:manage', '管理编目字段定义',
+        NOW(), 'system', NOW(), 'system'),
+       ('perm-material-transcode-policy-manage', '转码策略与栏目绑定管理', 'material:transcode:policy:manage',
+        '管理转码策略与栏目绑定', NOW(), 'system', NOW(), 'system'),
+       ('perm-material-message-send', '站内信发送', 'material:message:send', '发送站内消息', NOW(), 'system', NOW(),
+        'system'),
+       ('perm-material-message-read', '站内信查看', 'material:message:read', '查看收件箱和SSE消息', NOW(), 'system',
+        NOW(), 'system'),
+       ('perm-material-review-submit', '通用审核提交', 'material:review:submit', '提交审核请求', NOW(), 'system', NOW(),
+        'system'),
+       ('perm-material-review-approve', '通用审核处理', 'material:review:approve', '处理审核请求（通过/拒绝）', NOW(),
+        'system', NOW(), 'system'),
+       ('perm-material-catalog-permission-edit', '栏目权限管理', 'material:catalog:permission:edit', '编辑栏目权限',
+        NOW(), 'system', NOW(), 'system'),
+       ('perm-material-catalog-permission-view', '栏目权限查看', 'material:catalog:permission:view', '查看栏目权限',
+        NOW(), 'system', NOW(), 'system'),
+       ('perm-material-catalog-create', '新建栏目', 'material:catalog:create', '创建新的素材栏目', NOW(), 'system',
+        NOW(), 'system')
+ON DUPLICATE KEY UPDATE `p_name` = VALUES(`p_name`),
+                        `p_desc` = VALUES(`p_desc`);
+
 -- 初始化 OAuth2 scope：与 icu.jiapeng.kitty.user.auth.constants.KtOauth2Scope 对应
 INSERT INTO `kt_oauth2_scope` (`id`, `scope_name`, `scope_code`, `scope_desc`, `create_time`, `creator`, `update_time`,
                                `updater`)
@@ -418,23 +452,27 @@ SELECT CONCAT('rp-admin-', p.p_code) AS id,
 FROM kt_permission p
          LEFT JOIN kt_role_permission rp
                    ON rp.role_id = 'role-admin' AND rp.p_code = p.p_code
-WHERE rp.id IS NULL;
+WHERE rp.id IS NULL
+ON DUPLICATE KEY UPDATE `p_code`=VALUES(`p_code`);
 
 
 -- 基线菜单：与当前前端路由对应
-INSERT INTO `kt_menu` (`id`, `parent_id`, `menu_name`, `menu_type`, `menu_key`, `path`, `icon`, `component`, `link_type`,
+INSERT INTO `kt_menu` (`id`, `parent_id`, `menu_name`, `menu_type`, `menu_key`, `path`, `icon`, `component`,
+                       `link_type`,
                        `link_url`, `sort`, `p_codes`, `enabled`,
                        `create_time`, `creator`, `update_time`, `updater`)
 VALUES ('menu-root-dashboard', NULL, '工作台', 'MENU', 'dashboard', '/', 'dashboard', 'Dashboard', NULL, NULL, 10,
         'system:dashboard:view', 1, NOW(), 'system', NOW(), 'system'),
-       ('menu-root-system', NULL, '系统管理', 'DIR', 'system-root', NULL, 'setting', NULL, NULL, NULL, 15, NULL, 1, NOW(),
+       ('menu-root-system', NULL, '系统管理', 'DIR', 'system-root', NULL, 'setting', NULL, NULL, NULL, 15, NULL, 1,
+        NOW(),
         'system', NOW(), 'system'),
        ('menu-root-config', 'menu-root-system', '配置管理', 'MENU', 'config', '/config', 'setting', 'config/ConfigList',
         NULL, NULL, 20, 'config:view', 1, NOW(), 'system', NOW(), 'system'),
        ('menu-root-config-class', 'menu-root-system', '配置分类', 'MENU', 'config-class', '/config-class', 'appstore',
         'config-class/ConfigClassList', NULL, NULL, 30, 'config:view', 1, NOW(), 'system', NOW(), 'system'),
        ('menu-root-oauth2-client', 'menu-root-system', 'OAuth2客户端', 'MENU', 'oauth2-client', '/oauth2-client',
-        'setting', 'oauth2-client/Oauth2ClientList', NULL, NULL, 35, 'oauth2:client:view,oauth2:scope:view', 1, NOW(), 'system', NOW(),
+        'setting', 'oauth2-client/Oauth2ClientList', NULL, NULL, 35, 'oauth2:client:view,oauth2:scope:view', 1, NOW(),
+        'system', NOW(),
         'system'),
        ('menu-root-tenant', NULL, '租户管理', 'MENU', 'tenant', '/tenant', 'team', 'tenant/TenantList', NULL, NULL, 40,
         'tenant:view', 1, NOW(), 'system', NOW(), 'system'),

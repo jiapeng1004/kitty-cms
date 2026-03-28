@@ -79,7 +79,8 @@ public enum ResultStatus {
     /**
      * 参数错误
      */
-    PARAM_ERROR(10012, "param.error"), CONFIG_NOT_EXIST(10013, "config.not.exist");
+    PARAM_ERROR(10012, "param.error"), CONFIG_NOT_EXIST(10013, "config.not.exist"),
+    CATALOG_PARENT_FOUND(10014, "catalog.parent.not.exist"), CATALOG_NAME_EXISTS(10015, "catalog.name.exists");
 
     /**
      * 状态码

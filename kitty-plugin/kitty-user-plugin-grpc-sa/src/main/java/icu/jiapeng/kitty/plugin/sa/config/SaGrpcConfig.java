@@ -19,12 +19,11 @@ import net.devh.boot.grpc.client.inject.GrpcClientBean;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
 
 @Configuration
-@Import(SaGrpcInterface.class)
 @GrpcClientBean(client = @GrpcClient("kitty-user"), clazz = AuthServiceGrpc.AuthServiceBlockingStub.class)
 @GrpcClientBean(client = @GrpcClient("kitty-user"), clazz = KtRoleServiceGrpc.KtRoleServiceBlockingStub.class)
+@GrpcClientBean(client = @GrpcClient("kitty-user"), clazz = KtPermissionSvcGrpc.KtPermissionSvcBlockingStub.class)
 public class SaGrpcConfig {
 
     @Bean

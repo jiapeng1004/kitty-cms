@@ -1,0 +1,30 @@
+{
+  "name": "mam",
+  "version": "1.0.0",
+  "description": "MAM frontend for Kitty CMS",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "ant-design-vue": "^4.1.0",
+    "axios": "^1.6.2",
+    "pinia": "^2.1.7",
+    "vue": "^3.5.18",
+    "vue-router": "^4.2.5"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^4.5.2",
+    "unplugin-vue-components": "^0.26.0",
+    "unplugin-auto-import": "^0.17.3",
+    "vite": "7.1.11",
+    "@vitejs/plugin-vue-jsx": "^3.1.0",
+    "less": "^4.2.0",
+    "eslint": "^8.55.0",
+    "eslint-plugin-vue": "^9.19.2",
+    "@typescript-eslint/eslint-plugin": "^6.13.2",
+    "@typescript-eslint/parser": "^6.13.2"
+  }
+}

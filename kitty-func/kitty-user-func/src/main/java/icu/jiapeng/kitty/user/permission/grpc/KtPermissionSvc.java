@@ -35,9 +35,10 @@ public class KtPermissionSvc extends icu.jiapeng.kitty.user.permission.grpc.KtPe
         try {
             icu.jiapeng.kitty.user.permission.grpc.PermissionCodesResp.Builder builder = icu.jiapeng.kitty.user.permission.grpc.PermissionCodesResp.newBuilder();
             List<String> permissionCodes = ktPermissionService.getUserPermissionCodeList(request.getUserId());
-            for (int i = 0; i < permissionCodes.size(); i++) {
-                builder.setPCodes(i, permissionCodes.get(i));
+            for (String permissionCode : permissionCodes) {
+                builder.addPCodes(permissionCode);
             }
+            responseObserver.onNext(builder.build());
         } finally {
             responseObserver.onCompleted();
         }

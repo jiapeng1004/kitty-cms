@@ -36,7 +36,10 @@ public class SaTokenDaoKittyUser implements SaTokenDao {
     }
 
     public void update(String key, String value) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        SaTokenDaoUpdateResp _ = authServiceBlockingStub.saTokenDaoUpdate(SaTokenDaoUpdateReq.newBuilder()
+                .setKey(key)
+                .setValue(value)
+                .build());
     }
 
     public void delete(String key) {

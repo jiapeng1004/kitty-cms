@@ -1,0 +1,109 @@
+server:
+  port: 9703
+  tomcat:
+    threads:
+      max: 200
+      min-spare: 10
+    max-connections: 8192
+    accept-count: 100
+    connection-timeout: 6000
+  servlet:
+    context-path: /${spring.application.name}
+
+grpc:
+  server:
+    port: 9803
+  client:
+    kitty-user:
+      address: "static://127.0.0.1:9801"
+      negotiation-type: plaintext
+
+spring:
+  mvc:
+    format:
+      date-time: yyyy-MM-dd HH:mm:ss
+      date: yyyy-MM-dd
+  jackson:
+    date-format: "yyyy-MM-dd HH:mm:ss"
+    time-zone: Asia/Shanghai
+  profiles:
+    active: loc
+  application:
+    name: kitty-mam
+    version: "@project.version@"
+  data:
+    redis:
+      host: localhost
+      password: "123456"
+      port: 6379
+      database: 8
+  elasticsearch:
+    uris: "http://localhost:9200"
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: kitty-mam-search-sync
+      auto-offset-reset: earliest
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/kitty_mam?useUnicode=true&characterEncoding=utf-8&useSSL=false&allowPublicKeyRetrieval=true&allowMultiQueries=true&zeroDateTimeBehavior=convertToNull&transformedBitIsBoolean=true&tinyInt1isBit=false&allowLoadLocalInfile=true&allowLocalInfile=true&databaseTerm=schema
+    username: root
+    password: 123456
+    hikari:
+      # 连接池名称（方便监控区分）
+      pool-name: HikariPool-DB
+      # 最大连接数（根据数据库性能调整，默认 10）
+      maximum-pool-size: 20
+      # 最小空闲连接（建议与 maximum-pool-size 相同，避免频繁创建销毁）
+      minimum-idle: 8
+      # 连接最大生命周期（毫秒，必须小于数据库 wait_timeout，默认 30 分钟）
+      max-lifetime: 1800000
+      # 空闲连接超时时间（毫秒，默认 10 分钟）
+      idle-timeout: 600000
+      # 获取连接的最大等待时间（毫秒，默认 30 秒）
+      connection-timeout: 30000
+      # 心跳检测 SQL（验证连接是否有效）
+      connection-test-query: SELECT 1
+      # 自动提交（默认 true，事务场景可关闭）
+      auto-commit: true
+      # 连接泄漏检测阈值（毫秒，超过未归还则打印警告，排查慢查询神器）
+      leak-detection-threshold: 2000
+    type: com.zaxxer.hikari.HikariDataSource
+  threads:
+    virtual:
+      enabled: true
+  main:
+    allow-circular-references: true
+
+
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    path: /openapi.html
+    tags-sorter: alpha
+  default-produces-media-type: application/json
+  default-consumes-media-type: application/json
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+  global-config:
+    db-config:
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+  mapper-locations: classpath*:/mapper/**/*.xml
+logging:
+  level:
+    com.baomidou.mybatisplus: false
+sa-token:
+  token-name: token
+  timeout: 72000
+  active-timeout: 7200
+  dynamic-active-timeout: true
+  isConcurrent: false
+  is-share: false
+  is-read-body: false
+  is-write-header: true
+  check-same-token: true
