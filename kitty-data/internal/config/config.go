@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/spf13/viper"
@@ -40,6 +41,7 @@ func Load(path string) (*Config, error) {
 		viper.SetConfigFile(path)
 		viper.SetConfigType("yaml")
 		viper.AutomaticEnv()
+		viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
 		if err = viper.ReadInConfig(); err != nil {
 			err = fmt.Errorf("failed to read config: %w", err)
