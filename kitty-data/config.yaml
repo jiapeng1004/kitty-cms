@@ -1,0 +1,12 @@
+server:
+  address: ":9704"
+
+mongo:
+  uri: "mongodb://localhost:27017"
+  database: "kitty_data"
+  eventsCollection: "events"
+  akskCollection: "ak_sk"
+
+auth:
+  akskRefreshIntervalSeconds: 10
+  timestampDriftSeconds: 300
