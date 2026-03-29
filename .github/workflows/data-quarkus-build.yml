@@ -105,7 +105,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ./kitty-data-quarkus
-          file: ./kitty-data-quarkus/src/main/docker/Dockerfile.native-alpine
+          file: ./kitty-data-quarkus/src/main/docker/Dockerfile.native-micro
           push: true
           tags: |
             registry.cn-hangzhou.aliyuncs.com/jp-java/kitty-data-quarkus:${{ github.ref_type == 'tag' && github.ref_name || github.sha }}
