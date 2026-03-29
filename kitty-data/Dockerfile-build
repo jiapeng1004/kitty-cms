@@ -1,0 +1,23 @@
+FROM golang:1.23-alpine AS builder
+
+WORKDIR /build
+
+COPY kitty-data/go.mod kitty-data/go.sum ./
+RUN go mod download
+
+COPY kitty-data/ .
+
+RUN CGO_ENABLED=0 GOOS=linux go build -o kitty-data .
+
+FROM alpine:latest
+
+RUN apk --no-cache add ca-certificates
+
+WORKDIR /app
+
+COPY --from=builder /build/kitty-data .
+COPY --from=builder /build/config.yaml .
+
+EXPOSE 9704
+
+CMD ["./kitty-data"]
