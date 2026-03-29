@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  kitty-data:
+    build: .
+    ports:
+      - "9704:9704"
+    volumes:
+      - ./config.yaml:/app/config.yaml
+    environment:
+      - MONGO_URI=mongodb://mongo:27017
+    depends_on:
+      - mongo
+
+  mongo:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  mongo_data:
