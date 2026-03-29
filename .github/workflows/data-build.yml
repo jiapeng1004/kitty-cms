@@ -1,0 +1,80 @@
+name: kitty-data Build
+
+on:
+  push:
+    branches: [ main, develop ]
+    tags: [ '*' ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    if: |
+      (startsWith(github.ref, 'refs/tags/') && endsWith(github.ref_name, '_data')) ||
+      (!startsWith(github.ref, 'refs/tags/') && github.event.head_commit != null && (contains(github.event.head_commit.message, '_data') || contains(github.event.head_commit.message, 'kitty-data')))
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: go-kitty-data-${{ runner.os }}-${{ hashFiles('kitty-data/go.sum') }}
+          restore-keys: |
+            go-kitty-data-${{ runner.os }}-
+
+      - name: Build kitty-data
+        run: |
+          cd kitty-data
+          go build -o kitty-data .
+
+      - name: Verify binary
+        run: |
+          test -f kitty-data/kitty-data || (echo "binary not found" && exit 1)
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kitty-data-binary
+          path: kitty-data/kitty-data
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: [ build ]
+    if: |
+      (startsWith(github.ref, 'refs/tags/') && endsWith(github.ref_name, '_data')) ||
+      (!startsWith(github.ref, 'refs/tags/') && github.event.head_commit != null && (contains(github.event.head_commit.message, '_data') || contains(github.event.head_commit.message, 'kitty-data')))
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download binary artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: kitty-data-binary
+          path: kitty-data
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Alibaba ACR
+        uses: docker/login-action@v3
+        with:
+          registry: registry.cn-hangzhou.aliyuncs.com
+          username: aliyun7248933279
+          password: ${{ secrets.ALIYUN_ACR_PASSWORD }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./kitty-data
+          file: ./kitty-data/Dockerfile
+          push: true
+          tags: |
+            registry.cn-hangzhou.aliyuncs.com/jp-java/kitty-data:${{ github.ref_type == 'tag' && github.ref_name || github.sha }}
+            registry.cn-hangzhou.aliyuncs.com/jp-java/kitty-data:latest
