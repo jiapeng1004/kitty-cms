@@ -1,0 +1,6 @@
+FROM alpine:3.19
+WORKDIR /work/
+RUN apk add --no-cache gcompat
+COPY --chmod=0755 target/*-runner /work/application
+EXPOSE 9704
+ENTRYPOINT ["./application", "-Dquarkus.http.host=0.0.0.0"]
