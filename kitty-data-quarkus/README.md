@@ -48,6 +48,7 @@ Or, if you don't have GraalVM installed, you can run the native executable build
 
 ```shell script
 ./mvnw package -Dnative -Dquarkus.native.container-build=true
+./mvnw clean package -DskipTests "-Dquarkus.package.jar.type=uber-jar" "-Dquarkus.native.container-build=true" "-Dquarkus.native.additional-build-args=--static" 
 ```
 
 You can then execute your native executable with: `./target/kitty-data-quarkus-1.0-SNAPSHOT-runner`

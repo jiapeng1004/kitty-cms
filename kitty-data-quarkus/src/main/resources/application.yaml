@@ -1,6 +1,7 @@
 quarkus:
   native:
-    additional-build-args: --static,--libc=musl
+#    additional-build-args: --static,--libc=musl
+#    container-build: true
   http:
     # true 时整条 HTTP 管线跑在虚拟线程上；与 Mongo 等阻塞栈、部分依赖的 ThreadLocal 假设叠加时可能不稳定。需要时在具体 JAX-RS 方法上使用 @RunOnVirtualThread。
     virtual: false

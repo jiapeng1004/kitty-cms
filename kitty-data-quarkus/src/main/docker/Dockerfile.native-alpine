@@ -1,6 +1,9 @@
-FROM alpine:3.19
+FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/frolvlad/alpine-glibc:alpine-3.22_glibc-2.42
+
+# 换阿里源代
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
+
 WORKDIR /work/
-RUN apk add --no-cache gcompat
 COPY --chmod=0755 target/*-runner /work/application
 EXPOSE 9704
 ENTRYPOINT ["./application", "-Dquarkus.http.host=0.0.0.0"]
