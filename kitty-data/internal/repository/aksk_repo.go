@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 
 	"github.com/kitty-cms/kitty-data/internal/db"
 	"github.com/kitty-cms/kitty-data/internal/model"
@@ -63,8 +63,7 @@ func (r *AkskRepo) Upsert(ctx context.Context, ak *model.AccessKey) error {
 			"createTime": time.Now(),
 		},
 	}
-	opts := &options.UpdateOptions{Upsert: new(bool)}
-	*opts.Upsert = true
+	opts := options.UpdateOne().SetUpsert(true)
 	_, err := r.collection.UpdateOne(ctx, filter, update, opts)
 	return err
 }

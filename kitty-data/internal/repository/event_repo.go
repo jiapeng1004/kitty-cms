@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 
 	"github.com/kitty-cms/kitty-data/internal/db"
 	"github.com/kitty-cms/kitty-data/internal/model"
@@ -53,8 +53,7 @@ func (r *EventRepo) Aggregate(ctx context.Context, pipeline mongo.Pipeline) (*mo
 	return r.collection.Aggregate(ctx, pipeline)
 }
 
-func (r *EventRepo) Watch(ctx context.Context) *mongo.ChangeStream {
+func (r *EventRepo) Watch(ctx context.Context) (*mongo.ChangeStream, error) {
 	opts := options.ChangeStream().SetFullDocument(options.UpdateLookup)
-	stream, _ := r.collection.Watch(ctx, mongo.Pipeline{}, opts)
-	return stream
+	return r.collection.Watch(ctx, mongo.Pipeline{}, opts)
 }

@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
+	"go.mongodb.org/mongo-driver/v2/mongo/readpref"
 	"go.uber.org/zap"
 
 	"github.com/kitty-cms/kitty-data/internal/config"
@@ -24,12 +25,12 @@ func Init(cfg *config.Config, logger *zap.Logger) error {
 	defer cancel()
 
 	clientOpts := options.Client().ApplyURI(cfg.Mongo.URI)
-	client, err := mongo.Connect(ctx, clientOpts)
+	client, err := mongo.Connect(clientOpts)
 	if err != nil {
 		return fmt.Errorf("failed to connect to mongo: %w", err)
 	}
 
-	if err := client.Ping(ctx, nil); err != nil {
+	if err := client.Ping(ctx, readpref.Primary()); err != nil {
 		return fmt.Errorf("failed to ping mongo: %w", err)
 	}
 
