@@ -158,9 +158,15 @@ func (s *EventService) GetEventRanking(ctx context.Context, eventTypes []string,
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(ctx)
-
 	var results []EventRankingStats
+	defer func(cursor *mongo.Cursor, ctx context.Context) {
+		errDefer := cursor.Close(ctx)
+		if errDefer != nil {
+			err = errDefer
+			results = nil
+		}
+	}(cursor, ctx)
+
 	if err := cursor.All(ctx, &results); err != nil {
 		return nil, err
 	}
