@@ -1,5 +1,6 @@
 package icu.jiapeng.kitty.material.upload.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import icu.jiapeng.kitty.common.core.constant.ResultStatus;
 import icu.jiapeng.kitty.common.core.exceptions.BizException;
@@ -7,8 +8,8 @@ import icu.jiapeng.kitty.material.resource.constants.ResourceTypeEnum;
 import icu.jiapeng.kitty.material.resource.entity.KtFileStorage;
 import icu.jiapeng.kitty.material.resource.entity.KtResource;
 import icu.jiapeng.kitty.material.resource.fingerprint.ResourceFingerprintSupport;
-import icu.jiapeng.kitty.material.resource.mapper.KtResourceMapper;
 import icu.jiapeng.kitty.material.resource.mapper.KtFileStorageMapper;
+import icu.jiapeng.kitty.material.resource.mapper.KtResourceMapper;
 import icu.jiapeng.kitty.material.resource.service.MaterialResourceService;
 import icu.jiapeng.kitty.material.storage.StorageDriver;
 import icu.jiapeng.kitty.material.storage.StorageDriverFactory;
@@ -16,21 +17,14 @@ import icu.jiapeng.kitty.material.upload.ChunkUploadSessionCreateSpec;
 import icu.jiapeng.kitty.material.upload.ChunkUploadSessionStatus;
 import icu.jiapeng.kitty.material.upload.entity.KtChunkUploadPart;
 import icu.jiapeng.kitty.material.upload.entity.KtChunkUploadSession;
-import icu.jiapeng.kitty.material.upload.mapper.KtChunkUploadSessionMapper;
 import icu.jiapeng.kitty.material.upload.mapper.KtChunkUploadPartMapper;
+import icu.jiapeng.kitty.material.upload.mapper.KtChunkUploadSessionMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
-
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import org.springframework.util.StringUtils;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
-import java.util.stream.Collectors;
-import java.util.HashMap;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -152,11 +146,9 @@ public class ChunkUploadSessionServiceImpl extends ServiceImpl<KtChunkUploadSess
         r.setType(spec.getResourceType());
         r.setFileSize(spec.getTotalSize());
         if (chunkCount == 0) {
-            r.setChunkCrc32List("");
             r.setFingerprint(ResourceFingerprintSupport.format(0L, List.of()));
         } else {
             List<Long> crcNonNull = Objects.requireNonNull(crcs);
-            r.setChunkCrc32List(crcNonNull.stream().map(String::valueOf).collect(Collectors.joining(",")));
             r.setFingerprint(ResourceFingerprintSupport.format(spec.getTotalSize(), crcNonNull));
         }
         resourceMapper.insert(r);

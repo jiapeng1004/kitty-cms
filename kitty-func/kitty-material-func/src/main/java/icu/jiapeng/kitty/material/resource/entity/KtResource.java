@@ -54,12 +54,6 @@ public class KtResource extends CommonEntity {
     private Long fileSize;
 
     /**
-     * 分段 CRC32 列表（逗号分隔）。
-     */
-    @TableField("chunk_crc32_list")
-    private String chunkCrc32List;
-
-    /**
      * 文件指纹（大小 + 分段 CRC 归一化串）。
      */
     @TableField("fingerprint")

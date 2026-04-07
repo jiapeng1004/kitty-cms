@@ -293,9 +293,7 @@ public class MaterialResourceServiceImpl extends ServiceImpl<KtResourceMapper, K
         KtResource resource = findById(req.getResourceId())
                 .orElseThrow(() -> BizException.of(ResultStatus.PARAM_ERROR));
         catalogService.requireOnCatalog(resource.getCatalogId(), MaterialPermissionCode.MATERIAL_RESOURCE_UPDATE);
-        String chunkList = req.getChunkCrc32List().stream().map(String::valueOf).collect(Collectors.joining(","));
         resource.setFileSize(req.getFileSize());
-        resource.setChunkCrc32List(chunkList);
         resource.setFingerprint(ResourceFingerprintSupport.format(req.getFileSize(), req.getChunkCrc32List()));
         save(resource);
         KtResource latest = findById(resource.getId()).orElse(resource);
@@ -401,7 +399,6 @@ public class MaterialResourceServiceImpl extends ServiceImpl<KtResourceMapper, K
         vo.setCatalogId(resource.getCatalogId());
         vo.setParentId(resource.getParentId());
         vo.setFileSize(resource.getFileSize());
-        vo.setChunkCrc32List(resource.getChunkCrc32List());
         vo.setFingerprint(resource.getFingerprint());
         vo.setType(resource.getType());
         return vo;
