@@ -5,7 +5,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 /**
  * S3兼容层本地测试启动类
- * 使用默认本地实现：内存锁+本地文件存储+内存元数据
+ * 使用默认本地实现：LocalS3Service（本地文件元数据 + 对象内容）
  * 无需任何外部依赖，直接运行即可
  */
 @SpringBootApplication
@@ -21,7 +21,7 @@ public class S3LocalTestApplication {
                 AccessKey: minioadmin
                 SecretKey: minioadmin
                 存储类型: 本地文件系统（临时目录）
-                元数据存储: 内存
+                元数据存储: 本地 JSON（.s3meta）
                 分布式锁: 本地内存锁
                 ==============================================
                 测试命令:

@@ -5,7 +5,7 @@ import icu.jiapeng.kitty.plugin.s3.model.dto.ListObjectsRequest;
 import icu.jiapeng.kitty.plugin.s3.model.dto.PutObjectRequest;
 import icu.jiapeng.kitty.plugin.s3.model.dto.UploadPartRequest;
 import icu.jiapeng.kitty.plugin.s3.model.response.*;
-import icu.jiapeng.kitty.plugin.s3.port.StorageBackendPort;
+import icu.jiapeng.kitty.plugin.s3.model.dto.S3ObjectInfo;
 import icu.jiapeng.kitty.plugin.s3.service.S3ObjectService;
 import icu.jiapeng.kitty.plugin.s3.util.JaxbXmlMapper;
 import jakarta.servlet.http.HttpServletRequest;
@@ -97,7 +97,7 @@ public class S3Controller {
         String keyPrefix = Optional.ofNullable(prefix).orElse("");
         int limit = maxKeys != null ? maxKeys : 1000;
 
-        List<StorageBackendPort.ObjectInfo> objects = s3ObjectService.listObjects(ListObjectsRequest.builder()
+        List<S3ObjectInfo> objects = s3ObjectService.listObjects(ListObjectsRequest.builder()
                 .bucketName(bucket)
                 .prefix(keyPrefix)
                 .delimiter(delimiter)
@@ -150,7 +150,7 @@ public class S3Controller {
         String keyPrefix = Optional.ofNullable(prefix).orElse("");
         int limit = maxKeys != null ? maxKeys : 1000;
 
-        List<StorageBackendPort.ObjectInfo> objects = s3ObjectService.listObjects(ListObjectsRequest.builder()
+        List<S3ObjectInfo> objects = s3ObjectService.listObjects(ListObjectsRequest.builder()
                 .bucketName(bucket)
                 .prefix(keyPrefix)
                 .delimiter(delimiter)
@@ -273,7 +273,11 @@ public class S3Controller {
             response.setHeader("x-amz-meta-%s".formatted(k), v);
         });
 
-        try (InputStream inputStream = s3Object.getContent()) {
+        InputStream content = s3Object.openContentStream();
+        if (content == null) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+        try (InputStream inputStream = content) {
             inputStream.transferTo(response.getOutputStream());
             response.flushBuffer();
         }

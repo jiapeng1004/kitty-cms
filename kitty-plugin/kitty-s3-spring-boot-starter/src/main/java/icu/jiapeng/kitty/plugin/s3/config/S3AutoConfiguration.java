@@ -1,8 +1,10 @@
 package icu.jiapeng.kitty.plugin.s3.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import icu.jiapeng.kitty.plugin.s3.controller.S3Controller;
 import icu.jiapeng.kitty.plugin.s3.service.S3ObjectService;
 import icu.jiapeng.kitty.plugin.s3.util.JaxbXmlMapper;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -26,5 +28,11 @@ public class S3AutoConfiguration {
     @Bean
     public S3Controller s3Controller(S3ObjectService s3ObjectService, JaxbXmlMapper jaxbXmlMapper) {
         return new S3Controller(s3ObjectService, jaxbXmlMapper);
+    }
+
+    @ConditionalOnMissingBean(ObjectMapper.class)
+    @Bean
+    public ObjectMapper objectMapper() {
+        return new ObjectMapper();
     }
 }

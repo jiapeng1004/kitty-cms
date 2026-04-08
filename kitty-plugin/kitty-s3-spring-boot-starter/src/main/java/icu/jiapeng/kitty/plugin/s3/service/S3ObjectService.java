@@ -4,7 +4,7 @@ import icu.jiapeng.kitty.plugin.s3.domain.S3Object;
 import icu.jiapeng.kitty.plugin.s3.model.dto.ListObjectsRequest;
 import icu.jiapeng.kitty.plugin.s3.model.dto.PutObjectRequest;
 import icu.jiapeng.kitty.plugin.s3.model.dto.UploadPartRequest;
-import icu.jiapeng.kitty.plugin.s3.port.StorageBackendPort;
+import icu.jiapeng.kitty.plugin.s3.model.dto.S3ObjectInfo;
 
 import java.util.List;
 import java.util.Optional;
@@ -122,7 +122,8 @@ public interface S3ObjectService {
     String putObject(PutObjectRequest request);
 
     /**
-     * 获取对象（包含内容流及元数据）。
+     * 获取对象（元数据 + 懒打开内容流的 {@link icu.jiapeng.kitty.plugin.s3.domain.S3Object#getContentStreamSupplier()}）。
+     * 不在此层打开存储流；调用方通过 {@link icu.jiapeng.kitty.plugin.s3.domain.S3Object#openContentStream()} 获取流并负责关闭。
      *
      * @param bucketName 桶名
      * @param key        对象键
@@ -198,5 +199,5 @@ public interface S3ObjectService {
      * @param request 列表查询请求（前缀、分页、marker 等）
      * @return 对象信息列表
      */
-    List<StorageBackendPort.ObjectInfo> listObjects(ListObjectsRequest request);
+    List<S3ObjectInfo> listObjects(ListObjectsRequest request);
 }
