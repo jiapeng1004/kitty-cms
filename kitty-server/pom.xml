@@ -16,7 +16,6 @@
 
     <modules>
         <module>kitty-user-server</module>
-        <module>kitty-cms-server</module>
         <module>kitty-transcoder-server</module>
         <module>kitty-material-server</module>
     </modules>

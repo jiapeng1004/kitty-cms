@@ -16,7 +16,6 @@
         <module>kitty-user-func</module>
         <module>kitty-transcoder-func</module>
         <module>kitty-material-func</module>
-        <module>kitty-cms-func</module>
     </modules>
 
 
