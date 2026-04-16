@@ -1,399 +1,474 @@
 <script setup lang="ts">
-import { reactive, ref, onMounted, computed } from 'vue'
-import { message, UploadProps } from 'ant-design-vue'
+import { computed, ref, watch, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { message } from 'ant-design-vue'
+import type { UploadProps } from 'ant-design-vue'
 import {
-  listResources,
-  type MaterialResourceVO,
-  createFolder
+  DownOutlined,
+  ReloadOutlined
+} from '@ant-design/icons-vue'
+import MaterialCatalogTreePanel from '@/components/MaterialCatalogTreePanel.vue'
+import {
+  createFolder,
+  materialApiAbsoluteUrl,
+  pageResources,
+  updateResource,
+  type MaterialResourceVO
 } from '@/api/mam_resource_api'
-import { queryCatalogTree, type MaterialCatalogNode } from '@/api/mam_catalog_api'
+import type { MaterialCatalogNode } from '@/api/mam_catalog_api'
+import { useMaterialFileUpload } from '@/composables/useMaterialFileUpload'
 
-// 状态定义
+// 删除之前的强制注入样式，用原生布局适配
+
+const route = useRoute()
+const router = useRouter()
+
+const selectedCatalogId = ref<string>()
+const currentCatalog = ref<MaterialCatalogNode | undefined>()
+const catalogPanelRef = ref<InstanceType<typeof MaterialCatalogTreePanel>>()
+
 const loading = ref(false)
 const resources = ref<MaterialResourceVO[]>([])
-const selectedKeys = ref<string[]>([])
-const expandedKeys = ref<string[]>(['0'])
 const searchKeyword = ref('')
-const fileType = ref<string>('all')
-const currentPath = ref('素材库 / 全部文件')
-const form = reactive({
-  catalogId: '',
-  parentId: '0'
-})
 
-// 目录树数据
-const treeData = ref<MaterialCatalogNode[]>([])
+const folderModalVisible = ref(false)
+const folderName = ref('')
+const folderCreating = ref(false)
 
-// 加载栏目树
-async function loadCatalogTree() {
-  try {
-    treeData.value = await queryCatalogTree()
-  } catch (e: any) {
-    message.error(e?.response?.data?.message || e?.message || '加载栏目树失败')
+const renameModalVisible = ref(false)
+const renameTitle = ref('')
+const renameRow = ref<MaterialResourceVO>()
+const renameLoading = ref(false)
+
+function onCatalogSelect(node: MaterialCatalogNode | undefined) {
+  currentCatalog.value = node
+}
+
+async function loadList() {
+  const cid = selectedCatalogId.value
+  if (!cid) {
+    resources.value = []
+    return
   }
-}
-
-// 筛选后的资源
-const filteredResources = computed(() => {
-  let list = resources.value
-  if (searchKeyword.value) {
-    const keyword = searchKeyword.value.toLowerCase()
-    list = list.filter(item => 
-      item.title.toLowerCase().includes(keyword) || 
-      item.path?.toLowerCase().includes(keyword)
-    )
-  }
-  if (fileType.value !== 'all') {
-    list = list.filter(item => item.type === parseInt(fileType.value))
-  }
-  return list
-})
-
-// 获取文件图标，暂时用文字代替
-const getFileIcon = (type: number) => {
-  return null
-}
-
-// 获取文件类型标签
-const getFileTypeLabel = (type: number) => {
-  switch(type) {
-    case 1: return '视频'
-    case 2: return '音频'
-    case 3: return '图片'
-    case 4: return '文档'
-    default: return '其他'
-  }
-}
-
-// 获取文件类型颜色
-const getFileTypeColor = (type: number) => {
-  switch(type) {
-    case 1: return '#1890ff'
-    case 2: return '#52c41a'
-    case 3: return '#faad14'
-    case 4: return '#f5222d'
-    default: return '#8c8c8c'
-  }
-}
-
-// 格式化文件大小
-const formatFileSize = (size?: number) => {
-  if (!size) return '-'
-  if (size < 1024) return size + ' B'
-  if (size < 1024 * 1024) return (size / 1024).toFixed(1) + ' KB'
-  if (size < 1024 * 1024 * 1024) return (size / (1024 * 1024)).toFixed(1) + ' MB'
-  return (size / (1024 * 1024 * 1024)).toFixed(1) + ' GB'
-}
-
-// 格式化时间
-const formatTime = (time?: string) => {
-  if (!time) return '-'
-  return time.substring(0, 10)
-}
-
-// 查询资源列表
-async function queryList() {
   loading.value = true
+  resources.value = []
   try {
-    resources.value = await listResources({
-      catalogId: form.catalogId || undefined,
-      parentId: form.parentId || undefined,
-      keyword: searchKeyword.value || undefined
+    const kw = searchKeyword.value.trim()
+    const resp = await pageResources({
+      catalogId: cid,
+      parentId: '0',
+      page: 1,
+      size: 500,
+      ...(kw ? { keyword: kw } : {})
     })
-  } catch (e: any) {
-    message.error(e?.response?.data?.message || e?.message || '查询失败')
+    resources.value = resp.records ?? []
+  } catch (e: unknown) {
+    const err = e as { response?: { data?: { message?: string } }; message?: string }
+    message.error(err?.response?.data?.message || err?.message || '加载失败')
   } finally {
     loading.value = false
   }
 }
 
-// 目录树点击事件
-function onTreeSelect(keys: string[]) {
-  selectedKeys.value = keys
-  if (keys.length > 0) {
-    form.catalogId = keys[0]
-    const node = findNodeByKey(treeData.value, keys[0])
-    if (node) {
-      currentPath.value = `素材库 / ${node.name}`
-    }
-  }
-  queryList()
+watch(selectedCatalogId, () => {
+  loadList()
+})
+
+const { uploading, progressText, uploadFiles } = useMaterialFileUpload({
+  getCatalogId: () => selectedCatalogId.value,
+  getParentId: () => '0',
+  onFinished: () => loadList()
+})
+
+const uploadRequest: UploadProps['customRequest'] = (opt) => {
+  const raw = opt.file as File | Blob
+  const file = raw instanceof File ? raw : new File([raw], (opt.file as { name?: string }).name || 'upload.bin', { type: raw.type })
+  uploadFiles([file]).then(
+    () => opt.onSuccess?.({}, opt.file),
+    () => opt.onError?.(new Error('upload failed'))
+  )
 }
 
-// 递归查找树节点
-function findNodeByKey(nodes: any[], key: string): any {
-  for (const node of nodes) {
-    if (node.key === key) return node
-    if (node.children) {
-      const found = findNodeByKey(node.children, key)
-      if (found) return found
-    }
+async function submitCreateFolder() {
+  const name = folderName.value.trim()
+  const cid = selectedCatalogId.value
+  if (!cid) {
+    message.warning('请先选择栏目')
+    return
   }
-  return null
-}
-
-// 上传配置
-const uploadProps: UploadProps = {
-  action: '/api/mam/resource/upload',
-  headers: {
-    Authorization: 'Bearer ' + localStorage.getItem('token')
-  },
-  beforeUpload(file) {
-    const isLt5G = file.size / 1024 / 1024 / 1024 < 5
-    if (!isLt5G) {
-      message.error('文件大小不能超过 5GB!')
-    }
-    return isLt5G
-  },
-  success() {
-    message.success('上传成功')
-    queryList()
-  },
-  error() {
-    message.error('上传失败')
-  }
-}
-
-// 创建文件夹
-const folderName = ref('')
-const folderModalVisible = ref(false)
-async function handleCreateFolder() {
-  if (!folderName.value) {
+  if (!name) {
     message.warning('请输入文件夹名称')
     return
   }
+  folderCreating.value = true
   try {
-    await createFolder({
-      title: folderName.value,
-      catalogId: selectedKeys.value[0] || '0',
-      parentId: '0'
-    })
-    message.success('文件夹创建成功')
+    await createFolder({ title: name, catalogId: cid, parentId: '0' })
+    message.success('已创建')
     folderModalVisible.value = false
     folderName.value = ''
-    queryList()
-  } catch (e: any) {
-    message.error(e?.response?.data?.message || e?.message || '创建失败')
+    await loadList()
+  } catch (e: unknown) {
+    const err = e as { response?: { data?: { message?: string } }; message?: string }
+    message.error(err?.response?.data?.message || err?.message || '创建失败')
+  } finally {
+    folderCreating.value = false
   }
 }
 
-onMounted(async () => {
-  await loadCatalogTree()
-  await queryList()
+function openRename(row: MaterialResourceVO) {
+  renameRow.value = row
+  renameTitle.value = row.title
+  renameModalVisible.value = true
+}
+
+async function submitRename() {
+  const row = renameRow.value
+  const title = renameTitle.value.trim()
+  if (!row || !title) {
+    message.warning('请输入标题')
+    return
+  }
+  renameLoading.value = true
+  try {
+    await updateResource({
+      id: row.id,
+      title,
+      catalogId: row.catalogId,
+      type: row.type
+    })
+    message.success('已更新')
+    renameModalVisible.value = false
+    await loadList()
+  } catch (e: unknown) {
+    const err = e as { response?: { data?: { message?: string } }; message?: string }
+    message.error(err?.response?.data?.message || err?.message || '更新失败')
+  } finally {
+    renameLoading.value = false
+  }
+}
+
+function resourceDetailPath(id: string) {
+  return route.path.startsWith('/embed') ? `/embed/material/resource/${id}` : `/material/resource/${id}`
+}
+
+function openDetail(row: MaterialResourceVO) {
+  router.push(resourceDetailPath(row.id))
+}
+
+function formatSize(size?: number) {
+  if (size == null) return '—'
+  if (size < 1024) return `${size} B`
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`
+  if (size < 1024 * 1024 * 1024) return `${(size / (1024 * 1024)).toFixed(1)} MB`
+  return `${(size / (1024 * 1024 * 1024)).toFixed(1)} GB`
+}
+
+function typeLabel(t: number) {
+  switch (t) {
+    case 1:
+      return '视频'
+    case 2:
+      return '音频'
+    case 3:
+      return '图片'
+    case 4:
+      return '文本'
+    case 5:
+      return 'Office'
+    case 6:
+      return '其他'
+    case 7:
+      return '文件夹'
+    default:
+      return String(t)
+  }
+}
+
+const filteredRows = computed(() => {
+  const kw = searchKeyword.value.trim().toLowerCase()
+  if (!kw) {
+    return resources.value
+  }
+  return resources.value.filter(
+    (r) =>
+      (r.title && r.title.toLowerCase().includes(kw)) ||
+      (r.previewUrl && r.previewUrl.toLowerCase().includes(kw)) ||
+      (r.coverUrl && r.coverUrl.toLowerCase().includes(kw)) ||
+      (r.keyframeUrl && r.keyframeUrl.toLowerCase().includes(kw)) ||
+      (r.srcUrl && r.srcUrl.toLowerCase().includes(kw))
+  )
 })
+
+async function refresh() {
+  await catalogPanelRef.value?.load()
+  await loadList()
+}
 </script>
 
 <template>
   <div class="resource-manage-page">
-    <!-- 顶部导航栏 -->
-    <div class="top-bar">
-      <div class="top-bar-left">
-        <a-input
-          v-model:value="searchKeyword"
-          placeholder="搜索素材..."
-          style="width: 300px; margin-right: 16px;"
-          @keyup.enter="queryList"
+    <div class="resource-page-head">
+      <h1 class="resource-page-title">资源管理</h1>
+      <span class="resource-page-sub">当前栏目：{{ currentCatalog?.name || '未选择' }}</span>
+    </div>
+
+    <div class="resource-manage-body">
+      <aside class="resource-manage-catalog">
+        <MaterialCatalogTreePanel
+          ref="catalogPanelRef"
+          v-model:selected-catalog-id="selectedCatalogId"
+          @catalog-select="onCatalogSelect"
         />
-        <a-select v-model:value="fileType" style="width: 120px; margin-right: 16px;">
-          <a-select-option value="all">全部</a-select-option>
-          <a-select-option value="3">图片</a-select-option>
-          <a-select-option value="1">视频</a-select-option>
-          <a-select-option value="2">音频</a-select-option>
-          <a-select-option value="4">文档</a-select-option>
-          <a-select-option value="7">其他</a-select-option>
-        </a-select>
-        <a-button @click="queryList">搜索</a-button>
-      </div>
-      <div class="top-bar-right">
-        <a-button type="primary" @click="folderModalVisible = true">
-          新建文件夹
-        </a-button>
-        <a-upload v-bind="uploadProps" :show-upload-list="false">
-          <a-button type="primary" style="margin-left: 8px;">
-            上传
+      </aside>
+
+      <main class="resource-manage-main">
+        <div class="resource-toolbar">
+          <a-input
+            v-model:value="searchKeyword"
+            allow-clear
+            placeholder="筛选标题、预览或原链（本地）"
+            style="width: 240px"
+            @press-enter="loadList"
+          />
+          <a-button @click="loadList">检索后端</a-button>
+          <a-button :loading="loading" @click="refresh">
+            <template #icon>
+              <reload-outlined />
+            </template>
+            刷新
           </a-button>
-        </a-upload>
-      </div>
-    </div>
-
-    <!-- 主体内容区 -->
-    <div class="content-wrapper">
-      <!-- 左侧目录树 -->
-      <div class="sidebar">
-        <div class="sidebar-title">
-          素材分类
+          <span v-if="progressText" class="upload-progress">{{ progressText }}</span>
+          <a-dropdown :trigger="['click']">
+            <a-button type="primary" danger :loading="uploading" :disabled="!selectedCatalogId">
+              上传
+              <down-outlined />
+            </a-button>
+            <template #overlay>
+              <a-menu>
+                <a-menu-item key="file" @click.stop>
+                  <a-upload
+                    :custom-request="uploadRequest"
+                    :multiple="true"
+                    :show-upload-list="false"
+                    :disabled="uploading || !selectedCatalogId"
+                    :before-upload="(file) => {
+                      const ok = file.size / 1024 / 1024 / 1024 < 5
+                      if (!ok) message.error('单文件不能超过 5GB')
+                      return ok
+                    }"
+                  >
+                    <span>上传文件</span>
+                  </a-upload>
+                </a-menu-item>
+                <a-menu-item key="folder" :disabled="!selectedCatalogId" @click="folderModalVisible = true">
+                  新建文件夹
+                </a-menu-item>
+              </a-menu>
+            </template>
+          </a-dropdown>
         </div>
-        <a-tree
-          v-model:selectedKeys="selectedKeys"
-          v-model:expandedKeys="expandedKeys"
-          :tree-data="treeData"
-          :show-icon="true"
-          @select="onTreeSelect"
-        />
-      </div>
 
-      <!-- 右侧内容区 -->
-      <div class="main-content">
-        <!-- 路径导航 -->
-        <div class="path-nav">
-          {{ currentPath }}
-          <span style="margin-left: 16px; color: #999; font-size: 13px;">共 {{ filteredResources.length }} 项</span>
-        </div>
-
-        <!-- 素材网格 -->
-        <div class="resource-grid" v-loading="loading">
-          <a-card
-            v-for="item in filteredResources"
-            :key="item.id"
-            hoverable
-            class="resource-card"
+        <!-- 列表容器占满剩余高度，内部滚动，让分页留在底部 -->
+        <div class="resource-list-container">
+          <a-table
+            :data-source="filteredRows"
+            :loading="loading"
+            row-key="id"
+            size="small"
+            :pagination="{ pageSize: 50, showSizeChanger: true }"
+            :scroll="{ x: 1200 }"
           >
-            <div class="card-thumbnail">
-              <span style="font-size: 24px; color: #666;">{{ getFileTypeLabel(item.type) }}</span>
-              <div class="type-tag" :style="{ background: getFileTypeColor(item.type) }">
-                {{ getFileTypeLabel(item.type) }}
-              </div>
-            </div>
-            <div class="card-info">
-              <div class="file-name" :title="item.title">{{ item.title }}</div>
-              <div class="file-meta">
-                <span class="file-size">{{ formatFileSize(item.fileSize) }}</span>
-                <span class="file-time">{{ formatTime(item.createTime) }}</span>
-              </div>
-            </div>
-          </a-card>
-        </div>
-      </div>
+          <a-table-column title="标题" data-index="title" key="title" :ellipsis="true" />
+          <a-table-column title="类型" key="type" :width="100">
+            <template #default="{ record }">
+              {{ typeLabel(record.type) }}
+            </template>
+          </a-table-column>
+          <a-table-column title="大小" key="size" :width="108">
+            <template #default="{ record }">
+              {{ formatSize(record.fileSize) }}
+            </template>
+          </a-table-column>
+          <a-table-column title="预览" key="previewUrl" :width="120">
+            <template #default="{ record }">
+              <a
+                v-if="record.previewUrl"
+                :href="materialApiAbsoluteUrl(record.previewUrl)"
+                target="_blank"
+                rel="noopener noreferrer"
+              >打开</a>
+              <span v-else>—</span>
+            </template>
+          </a-table-column>
+          <a-table-column title="封面" key="coverUrl" :width="88">
+            <template #default="{ record }">
+              <a
+                v-if="record.coverUrl"
+                :href="materialApiAbsoluteUrl(record.coverUrl)"
+                target="_blank"
+                rel="noopener noreferrer"
+              >打开</a>
+              <span v-else>—</span>
+            </template>
+          </a-table-column>
+          <a-table-column title="关键帧" key="keyframeUrl" :width="88">
+            <template #default="{ record }">
+              <a
+                v-if="record.keyframeUrl"
+                :href="materialApiAbsoluteUrl(record.keyframeUrl)"
+                target="_blank"
+                rel="noopener noreferrer"
+              >打开</a>
+              <span v-else>—</span>
+            </template>
+          </a-table-column>
+          <a-table-column title="原文件" key="srcUrl" :ellipsis="true">
+            <template #default="{ record }">
+              <a v-if="record.srcUrl" :href="record.srcUrl" target="_blank" rel="noopener noreferrer">{{ record.srcUrl }}</a>
+              <span v-else>—</span>
+            </template>
+          </a-table-column>
+          <a-table-column title="操作" key="act" :width="200" fixed="right">
+            <template #default="{ record }">
+              <a-button type="link" size="small" @click="openDetail(record)">详情</a-button>
+              <a-button type="link" size="small" @click="openRename(record)">重命名</a-button>
+            </template>
+          </a-table-column>
+        </a-table>
+      </div> <!-- 结束列表滚动容器 -->
+    </main>
     </div>
 
-    <!-- 新建文件夹弹窗 -->
     <a-modal
       v-model:open="folderModalVisible"
       title="新建文件夹"
-      @ok="handleCreateFolder"
+      :confirm-loading="folderCreating"
+      @ok="submitCreateFolder"
       @cancel="folderModalVisible = false"
     >
-      <a-form layout="vertical">
-        <a-form-item label="文件夹名称">
-          <a-input v-model:value="folderName" placeholder="请输入文件夹名称" />
-        </a-form-item>
-      </a-form>
+      <a-input v-model:value="folderName" placeholder="文件夹名称" maxlength="200" @press-enter="submitCreateFolder" />
     </a-modal>
+
+    <a-modal
+      v-model:open="renameModalVisible"
+      title="重命名"
+      :confirm-loading="renameLoading"
+      @ok="submitRename"
+      @cancel="renameModalVisible = false"
+    >
+      <a-input v-model:value="renameTitle" placeholder="标题" maxlength="200" />
+    </a-modal>
+
   </div>
 </template>
 
-<style scoped>
+<style scoped lang="less">
+/* 完全适配全局100%高度flex布局 */
 .resource-manage-page {
-  height: calc(100vh - 64px);
+  height: 100%; /* 继承全局的height:100%，不需要硬编码calc */
   display: flex;
   flex-direction: column;
-  background: #f5f5f5;
+  padding: 20px 20px 0 20px;
+  box-sizing: border-box;
 }
 
-.top-bar {
-  height: 60px;
-  padding: 0 20px;
-  background: #fff;
-  border-bottom: 1px solid #e8e8e8;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.top-bar-left,
-.top-bar-right {
-  display: flex;
-  align-items: center;
-}
-
-.content-wrapper {
-  flex: 1;
-  display: flex;
-  overflow: hidden;
-}
-
-.sidebar {
-  width: 260px;
-  background: #fff;
-  border-right: 1px solid #e8e8e8;
-  overflow-y: auto;
-}
-
-.sidebar-title {
-  height: 48px;
-  padding: 0 16px;
-  line-height: 48px;
-  font-weight: 500;
-  border-bottom: 1px solid #e8e8e8;
-}
-
-.main-content {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px;
-}
-
-.path-nav {
-  height: 40px;
-  line-height: 40px;
-  padding: 0 12px;
-  background: #fff;
-  border-radius: 4px;
+.resource-page-head {
   margin-bottom: 16px;
-  font-size: 14px;
-  color: #666;
+  flex-shrink: 0;
 }
 
-.resource-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+.resource-page-title {
+  margin: 0 0 4px;
+  font-size: 20px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.resource-page-sub {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.resource-manage-body {
+  flex: 1;
+  display: flex;
   gap: 16px;
+  min-height: 0; /* 关键：防止flex布局溢出，App.vue里特意加的规则 */
 }
 
-.resource-card {
-  height: 220px;
+.resource-manage-catalog {
+  width: 240px; /* 适配你截图里的窄侧边栏宽度 */
+  flex-shrink: 0;
+  background: #fff;
+  border-radius: 12px;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+  overflow-y: auto;
+}
+
+.resource-manage-main {
+  flex: 1;
+  min-width: 0;
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* 关键：和全局规则对齐 */
+}
+
+.resource-toolbar {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+/* 表格容器占满剩余高度，内部滚动 */
+:deep(.ant-table-wrapper) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+:deep(.ant-table) {
+  flex: 1;
   display: flex;
   flex-direction: column;
 }
 
-.card-thumbnail {
-  height: 120px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #fafafa;
-  border-radius: 4px 4px 0 0;
-  position: relative;
-}
-
-.type-tag {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  padding: 2px 6px;
-  border-radius: 2px;
-  color: #fff;
-  font-size: 12px;
-}
-
-.card-info {
+:deep(.ant-table-container) {
   flex: 1;
-  padding: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
-.file-name {
-  font-size: 14px;
-  color: #333;
+:deep(.ant-table-body) {
+  flex: 1;
+  overflow-y: auto !important;
+}
+
+/* 分页栏自动吸附到底部，完全符合全局布局规则 */
+::v-deep .ant-pagination {
+  margin-top: auto !important;
+  padding: 12px 0 !important;
+  margin-bottom: 0 !important;
+  border-top: 1px solid #f0f0f0 !important;
+  flex-shrink: 0;
+}
+
+.upload-progress {
+  font-size: 12px;
+  color: #6b7280;
+  max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  margin-bottom: 8px;
 }
 
-.file-meta {
-  font-size: 12px;
-  color: #999;
-  display: flex;
-  justify-content: space-between;
-}
 </style>

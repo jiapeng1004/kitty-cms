@@ -1,6 +1,8 @@
 package icu.jiapeng.kitty.material.resource.api;
 
+import icu.jiapeng.kitty.common.core.page.PageRespVo;
 import icu.jiapeng.kitty.material.resource.dto.MaterialMetaFileBindDTO;
+import icu.jiapeng.kitty.material.resource.dto.MaterialResourceListPageQueryDTO;
 import icu.jiapeng.kitty.material.resource.dto.MaterialResourceListQueryDTO;
 import icu.jiapeng.kitty.material.resource.dto.MaterialResourceUpsertDTO;
 import icu.jiapeng.kitty.material.resource.dto.MaterialFolderCreateDTO;
@@ -33,9 +35,21 @@ public interface MaterialResourceApi {
     @GetMapping("/api/material/resource/list")
     List<MaterialResourceVO> list(@ModelAttribute MaterialResourceListQueryDTO query);
 
+    @Operation(summary = "资源分页列表（未传 keyword/semantic 时走数据库分页；传了则与 list 同检索逻辑后在内存切片，总条数受检索条数上限影响）")
+    @GetMapping("/api/material/resource/page")
+    PageRespVo<MaterialResourceVO> page(@ModelAttribute MaterialResourceListPageQueryDTO query);
+
     @Operation(summary = "资源详情（含编目最新快照）")
     @GetMapping("/api/material/resource/detail")
     MaterialResourceDetailVO detail(@RequestParam("resourceId") String resourceId);
+
+    @Operation(summary = "预览资源文件（鉴权通过后 302 至源文件地址；列表 previewUrl 指向本接口）")
+    @GetMapping("/api/material/resource/preview")
+    ResponseEntity<Void> preview(@RequestParam("resourceId") String resourceId);
+
+    @Operation(summary = "视频关键帧图（抽帧/转码产物就绪后 302；未就绪时 404）")
+    @GetMapping("/api/material/resource/keyframe")
+    ResponseEntity<Void> keyframe(@RequestParam("resourceId") String resourceId);
 
     @Operation(summary = "新增资源")
     @PostMapping("/api/material/resource")

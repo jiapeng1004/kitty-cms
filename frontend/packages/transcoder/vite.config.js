@@ -5,10 +5,10 @@ import vue from '@vitejs/plugin-vue'
 export default defineConfig({
     plugins: [vue()],
     server: {
-        port: 3002,
+        port: 3004,
         proxy: {
             '/api': {
-                target: 'http://127.0.0.1:9703',
+                target: 'http://127.0.0.1:9704',
                 changeOrigin: true,
                 rewrite: (path) => path
             }

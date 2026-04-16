@@ -7,6 +7,7 @@ import {
   type MaterialCatalogNode,
   upsertCatalogPermission
 } from '@/api/mam_catalog_api'
+import { CATALOG_DIMENSION_PERMISSION_CODES } from '@/constants/material_permission_code'
 
 const route = useRoute()
 const router = useRouter()
@@ -120,12 +121,9 @@ function toggleAll(checked: boolean) {
   }
 }
 
+/** 全选时授予的权限码集合，与后端 `CatalogPermission` / `MaterialPermissionCode` 一致 */
 function getAllPermissionCodes(): string[] {
-  const permSet = new Set<string>()
-  checkedCatalogs.value.forEach(perms => {
-    perms.forEach(p => permSet.add(p))
-  })
-  return Array.from(permSet)
+  return [...CATALOG_DIMENSION_PERMISSION_CODES]
 }
 
 const allChecked = computed(() => {

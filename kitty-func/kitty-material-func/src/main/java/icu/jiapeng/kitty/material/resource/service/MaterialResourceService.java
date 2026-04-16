@@ -1,6 +1,7 @@
 package icu.jiapeng.kitty.material.resource.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import icu.jiapeng.kitty.common.core.page.PageRespVo;
 import icu.jiapeng.kitty.material.resource.dto.*;
 import icu.jiapeng.kitty.material.resource.entity.KtResource;
 import icu.jiapeng.kitty.material.resource.vo.*;
@@ -26,6 +27,8 @@ public interface MaterialResourceService extends IService<KtResource> {
 
     List<MaterialResourceVO> list(MaterialResourceListQueryDTO query);
 
+    PageRespVo<MaterialResourceVO> page(MaterialResourceListPageQueryDTO query);
+
     MaterialResourceVO create(MaterialResourceUpsertDTO req);
 
     MaterialResourceVO update(MaterialResourceUpsertDTO req);
@@ -43,4 +46,12 @@ public interface MaterialResourceService extends IService<KtResource> {
     MaterialMetaFileVO bindMetaFile(MaterialMetaFileBindDTO req);
 
     MaterialResourceFingerprintPrecheckVO precheckFingerprint(MaterialResourceFingerprintDTO req);
+
+    /**
+     * 预览重定向目标：对象存储上的源文件绝对 URL（供 preview 接口 302）。
+     */
+    String resolvePreviewRedirectUrl(String resourceId);
+
+    /** 视频关键帧：未产出时 empty */
+    Optional<String> resolveKeyframeRedirectUrl(String resourceId);
 }

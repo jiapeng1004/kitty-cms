@@ -4,28 +4,36 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import icu.jiapeng.kitty.common.core.constant.ResultStatus;
 import icu.jiapeng.kitty.common.core.exceptions.BizException;
+import icu.jiapeng.kitty.material.resource.constants.FileEngineTypeEnum;
 import icu.jiapeng.kitty.material.resource.constants.ResourceTypeEnum;
 import icu.jiapeng.kitty.material.resource.entity.KtFileStorage;
 import icu.jiapeng.kitty.material.resource.entity.KtResource;
 import icu.jiapeng.kitty.material.resource.fingerprint.ResourceFingerprintSupport;
 import icu.jiapeng.kitty.material.resource.mapper.KtFileStorageMapper;
+import icu.jiapeng.kitty.material.storage.service.KtFileStorageService;
 import icu.jiapeng.kitty.material.resource.mapper.KtResourceMapper;
 import icu.jiapeng.kitty.material.resource.service.MaterialResourceService;
 import icu.jiapeng.kitty.material.storage.StorageDriver;
 import icu.jiapeng.kitty.material.storage.StorageDriverFactory;
+import icu.jiapeng.kitty.material.storage.StorageMimeTypes;
 import icu.jiapeng.kitty.material.upload.ChunkUploadSessionCreateSpec;
 import icu.jiapeng.kitty.material.upload.ChunkUploadSessionStatus;
 import icu.jiapeng.kitty.material.upload.entity.KtChunkUploadPart;
 import icu.jiapeng.kitty.material.upload.entity.KtChunkUploadSession;
+import icu.jiapeng.kitty.material.upload.cache.ChunkUploadSessionHotCache;
 import icu.jiapeng.kitty.material.upload.mapper.KtChunkUploadPartMapper;
 import icu.jiapeng.kitty.material.upload.mapper.KtChunkUploadSessionMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.io.IOException;
 import java.util.*;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ChunkUploadSessionServiceImpl extends ServiceImpl<KtChunkUploadSessionMapper, KtChunkUploadSession> implements ChunkUploadSessionService {
@@ -34,9 +42,11 @@ public class ChunkUploadSessionServiceImpl extends ServiceImpl<KtChunkUploadSess
 
     private final KtResourceMapper resourceMapper;
     private final KtFileStorageMapper fileStorageMapper;
+    private final KtFileStorageService ktFileStorageService;
     private final MaterialResourceService resourceFolderService;
     private final KtChunkUploadPartMapper partMapper;
     private final StorageDriverFactory storageDriverFactory;
+    private final ChunkUploadSessionHotCache chunkUploadSessionHotCache;
 
     /**
      * 创建分块上传会话
@@ -45,9 +55,15 @@ public class ChunkUploadSessionServiceImpl extends ServiceImpl<KtChunkUploadSess
      * @return 创建的分块上传会话
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public KtChunkUploadSession create(ChunkUploadSessionCreateSpec spec) {
-        if (spec == null || !StringUtils.hasText(spec.getStorageId()) || !StringUtils.hasText(spec.getObjectKey())) {
+        if (spec == null || !StringUtils.hasText(spec.getObjectKey())) {
             throw BizException.of(ResultStatus.PARAM_ERROR);
+        }
+        String storageId = spec.getStorageId();
+        if (!StringUtils.hasText(storageId)) {
+            storageId = ktFileStorageService.requirePrimaryStorageId();
+            spec.setStorageId(storageId);
         }
         long totalSize = spec.getTotalSize();
         long chunkSize = spec.getChunkSize();
@@ -99,6 +115,17 @@ public class ChunkUploadSessionServiceImpl extends ServiceImpl<KtChunkUploadSess
         }
 
         save(session);
+        if (chunkCount > 0 && FileEngineTypeEnum.OBJECT_STORAGE.getType().equals(storage.getStorageType())) {
+            try {
+                String contentType = StorageMimeTypes.resolveFromTitleAndObjectKey(session.getTitle(), normalizedKey);
+                String uploadId = driver.initiateMultipartUpload(storage, normalizedKey, contentType);
+                session.setMultipartUploadId(uploadId);
+                updateById(session);
+            } catch (IOException e) {
+                throw new java.io.UncheckedIOException(e);
+            }
+        }
+        chunkUploadSessionHotCache.putSessionSnapshot(session);
         return session;
     }
 
@@ -165,10 +192,17 @@ public class ChunkUploadSessionServiceImpl extends ServiceImpl<KtChunkUploadSess
      * @param sessionId  会话ID
      * @param chunkIndex 分块索引
      * @param byteSize   字节大小
+     * @param partEtag   对象存储分片 ETag（磁盘引擎可为 null）
      */
     @Override
-    public void registerPart(String sessionId, int chunkIndex, long byteSize) {
-        KtChunkUploadSession session = getById(sessionId);
+    public void registerPart(String sessionId, int chunkIndex, long byteSize, String partEtag) {
+        KtChunkUploadSession session = chunkUploadSessionHotCache.getSessionSnapshot(sessionId);
+        if (session == null) {
+            session = getById(sessionId);
+            if (session != null) {
+                chunkUploadSessionHotCache.putSessionSnapshot(session);
+            }
+        }
         if (session == null) {
             throw BizException.of(ResultStatus.PARAM_ERROR);
         }
@@ -187,6 +221,50 @@ public class ChunkUploadSessionServiceImpl extends ServiceImpl<KtChunkUploadSess
             throw BizException.of(ResultStatus.PARAM_ERROR);
         }
 
+        KtFileStorage storage = fileStorageMapper.selectById(session.getStorageId());
+        if (storage == null) {
+            throw BizException.of(ResultStatus.PARAM_ERROR);
+        }
+        boolean objectStorage = FileEngineTypeEnum.OBJECT_STORAGE.getType().equals(storage.getStorageType());
+
+        if (objectStorage && (partEtag == null || partEtag.isBlank())) {
+            String entry = chunkUploadSessionHotCache.getPartEntry(sessionId, chunkIndex);
+            if (entry != null && entry.contains("|")) {
+                long sz = ChunkUploadSessionHotCache.parseByteSizeFromPartEntry(entry);
+                if (sz == byteSize) {
+                    return;
+                }
+            }
+            KtChunkUploadPart dbPart = partMapper.selectOne(
+                    new QueryWrapper<KtChunkUploadPart>()
+                            .eq("session_id", sessionId)
+                            .eq("chunk_index", chunkIndex)
+            );
+            if (dbPart != null && StringUtils.hasText(dbPart.getPartEtag()) && dbPart.getByteSize().equals(byteSize)) {
+                return;
+            }
+            throw BizException.of(ResultStatus.PARAM_ERROR);
+        }
+
+        String redisEntry = chunkUploadSessionHotCache.getPartEntry(sessionId, chunkIndex);
+        if (redisEntry != null) {
+            long existingSz = ChunkUploadSessionHotCache.parseByteSizeFromPartEntry(redisEntry);
+            if (existingSz != byteSize) {
+                throw BizException.of(ResultStatus.PARAM_ERROR);
+            }
+            if (objectStorage) {
+                String existingEtag = ChunkUploadSessionHotCache.parseEtagFromPartEntry(redisEntry);
+                if (StringUtils.hasText(partEtag) && StringUtils.hasText(existingEtag) && existingEtag.equals(partEtag)) {
+                    return;
+                }
+                if (StringUtils.hasText(existingEtag) && StringUtils.hasText(partEtag) && !existingEtag.equals(partEtag)) {
+                    throw BizException.of(ResultStatus.PARAM_ERROR);
+                }
+            } else {
+                return;
+            }
+        }
+
         KtChunkUploadPart existing = partMapper.selectOne(
                 new QueryWrapper<KtChunkUploadPart>()
                         .eq("session_id", sessionId)
@@ -197,27 +275,47 @@ public class ChunkUploadSessionServiceImpl extends ServiceImpl<KtChunkUploadSess
             if (!existing.getByteSize().equals(byteSize)) {
                 throw BizException.of(ResultStatus.PARAM_ERROR);
             }
+            if (objectStorage && StringUtils.hasText(existing.getPartEtag()) && StringUtils.hasText(partEtag)
+                    && !existing.getPartEtag().equals(partEtag)) {
+                throw BizException.of(ResultStatus.PARAM_ERROR);
+            }
             return;
         }
 
-        KtChunkUploadPart part = new KtChunkUploadPart();
-        part.setId(UUID.randomUUID().toString());
-        part.setSessionId(sessionId);
-        part.setChunkIndex(chunkIndex);
-        part.setByteSize(byteSize);
-        try {
-            partMapper.insert(part);
-        } catch (DataIntegrityViolationException ex) {
-            KtChunkUploadPart retryExisting = partMapper.selectOne(
+        chunkUploadSessionHotCache.recordPart(sessionId, chunkIndex, byteSize, objectStorage ? partEtag : null);
+    }
+
+    @Override
+    public void flushUploadPartsFromCacheToDb(String sessionId) {
+        if (!StringUtils.hasText(sessionId)) {
+            return;
+        }
+        Map<String, String> entries = chunkUploadSessionHotCache.loadPartEntries(sessionId);
+        if (entries.isEmpty()) {
+            return;
+        }
+        for (Map.Entry<String, String> e : entries.entrySet()) {
+            int idx = Integer.parseInt(e.getKey());
+            long sz = ChunkUploadSessionHotCache.parseByteSizeFromPartEntry(e.getValue());
+            String etag = ChunkUploadSessionHotCache.parseEtagFromPartEntry(e.getValue());
+            KtChunkUploadPart existing = partMapper.selectOne(
                     new QueryWrapper<KtChunkUploadPart>()
                             .eq("session_id", sessionId)
-                            .eq("chunk_index", chunkIndex)
+                            .eq("chunk_index", idx)
             );
-            if (retryExisting == null) {
-                throw ex;
+            if (existing != null) {
+                continue;
             }
-            if (!retryExisting.getByteSize().equals(byteSize)) {
-                throw BizException.of(ResultStatus.PARAM_ERROR);
+            KtChunkUploadPart part = new KtChunkUploadPart();
+            part.setId(UUID.randomUUID().toString());
+            part.setSessionId(sessionId);
+            part.setChunkIndex(idx);
+            part.setByteSize(sz);
+            part.setPartEtag(etag);
+            try {
+                partMapper.insert(part);
+            } catch (DataIntegrityViolationException ex) {
+                // 并发完成时可能重复插入，忽略
             }
         }
     }
@@ -269,8 +367,11 @@ public class ChunkUploadSessionServiceImpl extends ServiceImpl<KtChunkUploadSess
             }
             session.setStatus(ChunkUploadSessionStatus.COMPLETED);
             updateById(session);
+            chunkUploadSessionHotCache.deleteUploadState(sessionId);
             return session;
         }
+
+        flushUploadPartsFromCacheToDb(sessionId);
 
         List<KtChunkUploadPart> parts = partMapper.selectList(
                 new QueryWrapper<KtChunkUploadPart>().eq("session_id", sessionId)
@@ -291,6 +392,7 @@ public class ChunkUploadSessionServiceImpl extends ServiceImpl<KtChunkUploadSess
         }
         session.setStatus(ChunkUploadSessionStatus.COMPLETED);
         updateById(session);
+        chunkUploadSessionHotCache.deleteUploadState(sessionId);
         return session;
     }
 
@@ -301,6 +403,7 @@ public class ChunkUploadSessionServiceImpl extends ServiceImpl<KtChunkUploadSess
      * @return 取消后的分块上传会话
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public KtChunkUploadSession cancel(String sessionId) {
         KtChunkUploadSession session = getById(sessionId);
         if (session == null) {
@@ -309,9 +412,21 @@ public class ChunkUploadSessionServiceImpl extends ServiceImpl<KtChunkUploadSess
         if (!ChunkUploadSessionStatus.UPLOADING.equals(session.getStatus())) {
             throw BizException.of(ResultStatus.PARAM_ERROR);
         }
+        KtFileStorage storage = fileStorageMapper.selectById(session.getStorageId());
+        if (storage != null
+                && FileEngineTypeEnum.OBJECT_STORAGE.getType().equals(storage.getStorageType())
+                && StringUtils.hasText(session.getMultipartUploadId())) {
+            try {
+                StorageDriver driver = storageDriverFactory.resolve(storage.getStorageType());
+                driver.abortMultipartUpload(storage, session.getObjectKey(), session.getMultipartUploadId());
+            } catch (IOException e) {
+                log.warn("abort multipart upload failed sessionId={}", sessionId, e);
+            }
+        }
         partMapper.delete(new QueryWrapper<KtChunkUploadPart>().eq("session_id", sessionId));
         session.setStatus(ChunkUploadSessionStatus.CANCELLED);
         updateById(session);
+        chunkUploadSessionHotCache.deleteUploadState(sessionId);
         return session;
     }
 

@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * 栏目权限服务实现。
@@ -48,6 +49,10 @@ public class CatalogPermissionServiceImpl extends ServiceImpl<KtCatalogPermissio
 
     @Override
     public boolean hasPermission(String catalogId, String permissionCode, List<String> roleIds) {
+        if (roleIds == null) {
+            roleIds = new ArrayList<>();
+        }
+        roleIds = Stream.concat(roleIds.stream().filter(StringUtils::hasText).map(String::trim), Stream.of("public")).distinct().toList();
         if (CollectionUtils.isEmpty(roleIds) || !StringUtils.hasText(permissionCode)) {
             return false;
         }

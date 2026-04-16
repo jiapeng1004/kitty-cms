@@ -3,6 +3,7 @@ package icu.jiapeng.kitty.material.resource.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import icu.jiapeng.kitty.material.resource.entity.KtMetaFile;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -13,4 +14,9 @@ public interface MetaFileService extends IService<KtMetaFile> {
     List<KtMetaFile> findAll();
 
     Optional<KtMetaFile> findByResourceId(String resourceId);
+
+    /**
+     * 批量按资源 ID 查询物理文件记录（列表补全 srcUrl）。
+     */
+    List<KtMetaFile> listByResourceIds(Collection<String> resourceIds);
 }

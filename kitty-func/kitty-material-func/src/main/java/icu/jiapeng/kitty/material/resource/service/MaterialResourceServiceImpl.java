@@ -1,19 +1,26 @@
 package icu.jiapeng.kitty.material.resource.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import icu.jiapeng.kitty.common.core.constant.ResultStatus;
 import icu.jiapeng.kitty.common.core.exceptions.BizException;
+import icu.jiapeng.kitty.common.core.page.PageRespVo;
 import icu.jiapeng.kitty.material.catalog.service.CatalogService;
 import icu.jiapeng.kitty.material.metadata.service.MaterialMetadataInstanceService;
 import icu.jiapeng.kitty.material.metadata.vo.MaterialMetadataSnapshotVO;
-import icu.jiapeng.kitty.material.permission.constants.MaterialPermissionCode;
+import icu.jiapeng.kitty.material.catalog.constants.CatalogPermission;
 import icu.jiapeng.kitty.material.resource.constants.ResourceTypeEnum;
 import icu.jiapeng.kitty.material.resource.dto.*;
+import icu.jiapeng.kitty.material.resource.entity.KtFileStorage;
 import icu.jiapeng.kitty.material.resource.entity.KtMetaFile;
 import icu.jiapeng.kitty.material.resource.entity.KtResource;
 import icu.jiapeng.kitty.material.resource.fingerprint.ResourceFingerprintSupport;
+import icu.jiapeng.kitty.material.resource.mapper.KtFileStorageMapper;
 import icu.jiapeng.kitty.material.resource.mapper.KtResourceMapper;
+import icu.jiapeng.kitty.material.resource.support.MaterialResourcePreviewLinkBuilder;
+import icu.jiapeng.kitty.material.resource.support.MaterialStoragePublicUrlBuilder;
 import icu.jiapeng.kitty.material.resource.vo.MaterialMetaFileVO;
 import icu.jiapeng.kitty.material.resource.vo.MaterialResourceDetailVO;
 import icu.jiapeng.kitty.material.resource.vo.MaterialResourceFingerprintPrecheckVO;
@@ -67,6 +74,12 @@ public class MaterialResourceServiceImpl extends ServiceImpl<KtResourceMapper, K
     private MaterialSearchQueryPort materialSearchQueryPort;
     @Resource
     private KtEmbeddingPort materialVectorEmbeddingPort;
+    @Resource
+    private MaterialStoragePublicUrlBuilder materialStoragePublicUrlBuilder;
+    @Resource
+    private MaterialResourcePreviewLinkBuilder materialResourcePreviewLinkBuilder;
+    @Resource
+    private KtFileStorageMapper ktFileStorageMapper;
 
     @Override
     public Optional<KtResource> findById(String id) {
@@ -89,6 +102,7 @@ public class MaterialResourceServiceImpl extends ServiceImpl<KtResourceMapper, K
         if (!StringUtils.hasText(title) || !StringUtils.hasText(catalogId)) {
             throw BizException.of(ResultStatus.PARAM_ERROR);
         }
+        String normalizedCatalogId = normalizeCatalogId(catalogId);
         String normalizedParentId = !StringUtils.hasText(parentId) ? ROOT_PARENT_ID : parentId;
         if (!ROOT_PARENT_ID.equals(normalizedParentId)) {
             KtResource parent = getById(normalizedParentId);
@@ -102,7 +116,7 @@ public class MaterialResourceServiceImpl extends ServiceImpl<KtResourceMapper, K
         KtResource folder = new KtResource();
         folder.setId(UUID.randomUUID().toString());
         folder.setTitle(title);
-        folder.setCatalogId(catalogId);
+        folder.setCatalogId(normalizedCatalogId);
         folder.setParentId(normalizedParentId);
         folder.setType(ResourceTypeEnum.FOLDER.getType());
         save(folder);
@@ -119,9 +133,10 @@ public class MaterialResourceServiceImpl extends ServiceImpl<KtResourceMapper, K
         if (!StringUtils.hasText(catalogId) || relativePaths == null || relativePaths.isEmpty()) {
             throw BizException.of(ResultStatus.PARAM_ERROR);
         }
+        String normalizedCatalogId = normalizeCatalogId(catalogId);
         String rootParentId = !StringUtils.hasText(parentId) ? ROOT_PARENT_ID : parentId;
         List<KtResource> all = list(
-                new QueryWrapper<KtResource>().eq("catalog_id", catalogId)
+                new QueryWrapper<KtResource>().eq("catalog_id", normalizedCatalogId)
         );
         Map<String, KtResource> byId = all.stream().collect(Collectors.toMap(KtResource::getId, Function.identity()));
         Map<String, KtResource> byParentAndTitle = all.stream()
@@ -151,7 +166,7 @@ public class MaterialResourceServiceImpl extends ServiceImpl<KtResourceMapper, K
                 KtResource node = new KtResource();
                 node.setId(UUID.randomUUID().toString());
                 node.setTitle(name);
-                node.setCatalogId(catalogId);
+                node.setCatalogId(normalizedCatalogId);
                 node.setParentId(currentParentId);
                 node.setType(isFolder ? ResourceTypeEnum.FOLDER.getType() : inferType(name).getType());
                 save(node);
@@ -171,9 +186,9 @@ public class MaterialResourceServiceImpl extends ServiceImpl<KtResourceMapper, K
         }
         KtResource resource = findById(resourceId)
                 .orElseThrow(() -> BizException.of(ResultStatus.PARAM_ERROR));
-        catalogService.requireOnCatalog(resource.getCatalogId(), MaterialPermissionCode.MATERIAL_RESOURCE_LIST_VIEW);
+        catalogService.requireOnCatalog(resource.getCatalogId(), CatalogPermission.RESOURCE_LIST_VIEW);
         MaterialResourceDetailVO vo = new MaterialResourceDetailVO();
-        vo.setResource(toVo(resource));
+        vo.setResource(enrichSingle(toVo(resource)));
         List<MaterialMetadataSnapshotVO> metadataSnapshots =
                 metadataInstanceService.snapshotsForResourceDetail(resourceId);
         vo.setMetadata(metadataSnapshots);
@@ -189,11 +204,13 @@ public class MaterialResourceServiceImpl extends ServiceImpl<KtResourceMapper, K
     @Override
     public List<MaterialResourceVO> list(MaterialResourceListQueryDTO query) {
         int size = normalizeListLimit(query == null ? null : query.getLimit());
+        String normalizedCatalogId = query == null ? null : normalizeCatalogIdNullable(query.getCatalogId());
+        List<MaterialResourceVO> result;
         if (query != null && StringUtils.hasText(query.getSemanticText())) {
-            if (!StringUtils.hasText(query.getCatalogId())) {
+            if (!StringUtils.hasText(normalizedCatalogId)) {
                 throw BizException.of(ResultStatus.PARAM_ERROR);
             }
-            catalogService.requireOnCatalog(query.getCatalogId(), MaterialPermissionCode.MATERIAL_RESOURCE_LIST_VIEW);
+            catalogService.requireOnCatalog(normalizedCatalogId, CatalogPermission.RESOURCE_LIST_VIEW);
             KtEmbeddingRequest embedReq = KtEmbeddingRequest.builder()
                     .sourceKey(MaterialVectorSourceKey.none())
                     .text(query.getSemanticText().trim())
@@ -201,39 +218,98 @@ public class MaterialResourceServiceImpl extends ServiceImpl<KtResourceMapper, K
                     .build();
             KtEmbeddingDTO emb = materialVectorEmbeddingPort.embed(embedReq);
             List<String> ids = materialSearchQueryPort.searchIdsByKnn(
-                    emb.values(), query.getCatalogId(), query.getParentId(), size);
-            return loadVosByIdsOrdered(ids);
-        }
-        if (query != null && StringUtils.hasText(query.getKeyword())) {
-            if (!StringUtils.hasText(query.getCatalogId())) {
+                    emb.values(), normalizedCatalogId, query.getParentId(), size);
+            result = loadVosByIdsOrdered(ids);
+        } else if (query != null && StringUtils.hasText(query.getKeyword())) {
+            if (!StringUtils.hasText(normalizedCatalogId)) {
                 throw BizException.of(ResultStatus.PARAM_ERROR);
             }
-            catalogService.requireOnCatalog(query.getCatalogId(), MaterialPermissionCode.MATERIAL_RESOURCE_LIST_VIEW);
+            catalogService.requireOnCatalog(normalizedCatalogId, CatalogPermission.RESOURCE_LIST_VIEW);
             List<String> ids = materialSearchQueryPort.searchIdsByFullText(
-                    query.getKeyword().trim(), query.getCatalogId(), query.getParentId(), size);
-            return loadVosByIdsOrdered(ids);
+                    query.getKeyword().trim(), normalizedCatalogId, query.getParentId(), size);
+            result = loadVosByIdsOrdered(ids);
+        } else {
+            if (StringUtils.hasText(normalizedCatalogId)) {
+                catalogService.requireOnCatalog(normalizedCatalogId, CatalogPermission.RESOURCE_LIST_VIEW);
+            }
+            result = listDb(query, normalizedCatalogId);
         }
-        if (query != null && StringUtils.hasText(query.getCatalogId())) {
-            catalogService.requireOnCatalog(query.getCatalogId(), MaterialPermissionCode.MATERIAL_RESOURCE_LIST_VIEW);
+        enrichSrcUrls(result);
+        return result;
+    }
+
+    @Override
+    public PageRespVo<MaterialResourceVO> page(MaterialResourceListPageQueryDTO query) {
+        if (query == null) {
+            throw BizException.of(ResultStatus.PARAM_ERROR);
         }
-        return listDb(query);
+        long page = Math.max(1L, query.getPage());
+        long size = Math.min(200L, Math.max(1L, query.getSize()));
+        String normalizedCatalogId = normalizeCatalogIdNullable(query.getCatalogId());
+        if (!StringUtils.hasText(normalizedCatalogId)) {
+            throw BizException.of(ResultStatus.PARAM_ERROR);
+        }
+        catalogService.requireOnCatalog(normalizedCatalogId, CatalogPermission.RESOURCE_LIST_VIEW);
+
+        if (StringUtils.hasText(query.getKeyword()) || StringUtils.hasText(query.getSemanticText())) {
+            MaterialResourceListQueryDTO lq = new MaterialResourceListQueryDTO();
+            lq.setCatalogId(query.getCatalogId());
+            lq.setParentId(query.getParentId());
+            lq.setKeyword(query.getKeyword());
+            lq.setSemanticText(query.getSemanticText());
+            int need = (int) Math.min(200L, page * size);
+            lq.setLimit(Math.max(need, 1));
+            List<MaterialResourceVO> fetched = list(lq);
+            long total = fetched.size();
+            int from = (int) ((page - 1) * size);
+            List<MaterialResourceVO> records;
+            if (from >= fetched.size()) {
+                records = List.of();
+            } else {
+                int to = (int) Math.min(from + size, fetched.size());
+                records = new ArrayList<>(fetched.subList(from, to));
+            }
+            return PageRespVo.<MaterialResourceVO>builder()
+                    .page(page)
+                    .size(size)
+                    .total(total)
+                    .records(records)
+                    .build();
+        }
+
+        LambdaQueryWrapper<KtResource> w = new LambdaQueryWrapper<KtResource>()
+                .eq(KtResource::getCatalogId, normalizedCatalogId);
+        if (StringUtils.hasText(query.getParentId())) {
+            w.eq(KtResource::getParentId, query.getParentId());
+        }
+        Page<KtResource> mpPage = new Page<>(page, size);
+        Page<KtResource> mpResult = page(mpPage, w);
+        List<MaterialResourceVO> records = mpResult.getRecords().stream().map(this::toVo).collect(Collectors.toList());
+        enrichSrcUrls(records);
+        return PageRespVo.<MaterialResourceVO>builder()
+                .page(mpResult.getCurrent())
+                .size(mpResult.getSize())
+                .total(mpResult.getTotal())
+                .records(records)
+                .build();
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public MaterialResourceVO create(MaterialResourceUpsertDTO req) {
         validate(req, false);
-        catalogService.requireOnCatalog(req.getCatalogId(), MaterialPermissionCode.MATERIAL_RESOURCE_CREATE);
+        String normalizedCatalogId = normalizeCatalogId(req.getCatalogId());
+        catalogService.requireOnCatalog(normalizedCatalogId, CatalogPermission.RESOURCE_CREATE);
         KtResource resource = new KtResource();
         resource.setId(UUID.randomUUID().toString());
         resource.setTitle(req.getTitle());
-        resource.setCatalogId(req.getCatalogId());
+        resource.setCatalogId(normalizedCatalogId);
         resource.setParentId(normalizeParentId(req.getParentId()));
         resource.setType(req.getType());
         save(resource);
         KtResource latest = findById(resource.getId()).orElse(resource);
         materialSearchSyncTrigger.publishFullDocument(latest);
-        return toVo(latest);
+        return enrichSingle(toVo(latest));
     }
 
     @Override
@@ -243,26 +319,28 @@ public class MaterialResourceServiceImpl extends ServiceImpl<KtResourceMapper, K
         KtResource resource = findById(req.getId())
                 .orElseThrow(() -> BizException.of(ResultStatus.PARAM_ERROR));
         String oldCatalogId = resource.getCatalogId();
-        catalogService.requireOnCatalog(oldCatalogId, MaterialPermissionCode.MATERIAL_RESOURCE_UPDATE);
-        if (!oldCatalogId.equals(req.getCatalogId())) {
-            catalogService.requireOnCatalog(req.getCatalogId(), MaterialPermissionCode.MATERIAL_RESOURCE_UPDATE);
+        String normalizedCatalogId = normalizeCatalogId(req.getCatalogId());
+        catalogService.requireOnCatalog(oldCatalogId, CatalogPermission.RESOURCE_UPDATE);
+        if (!oldCatalogId.equals(normalizedCatalogId)) {
+            catalogService.requireOnCatalog(normalizedCatalogId, CatalogPermission.RESOURCE_UPDATE);
         }
         resource.setTitle(req.getTitle());
-        resource.setCatalogId(req.getCatalogId());
+        resource.setCatalogId(normalizedCatalogId);
         resource.setParentId(normalizeParentId(req.getParentId()));
         resource.setType(req.getType());
         save(resource);
-        rebuildPaths(req.getCatalogId());
-        return toVo(resource);
+        rebuildPaths(normalizedCatalogId);
+        return enrichSingle(toVo(resource));
     }
 
     @Override
     public MaterialResourceVO createFolder(MaterialFolderCreateDTO req) {
-        catalogService.requireOnCatalog(req.getCatalogId(), MaterialPermissionCode.MATERIAL_RESOURCE_CREATE);
-        KtResource folder = createFolder(req.getTitle(), req.getCatalogId(), req.getParentId());
+        String normalizedCatalogId = normalizeCatalogId(req.getCatalogId());
+        catalogService.requireOnCatalog(normalizedCatalogId, CatalogPermission.RESOURCE_CREATE);
+        KtResource folder = createFolder(req.getTitle(), normalizedCatalogId, req.getParentId());
         KtResource latest = findById(folder.getId()).orElse(folder);
         materialSearchSyncTrigger.publishFullDocument(latest);
-        return toVo(latest);
+        return enrichSingle(toVo(latest));
     }
 
     @Override
@@ -276,12 +354,15 @@ public class MaterialResourceServiceImpl extends ServiceImpl<KtResourceMapper, K
         if (req == null || !StringUtils.hasText(req.getCatalogId())) {
             throw BizException.of(ResultStatus.PARAM_ERROR);
         }
-        catalogService.requireOnCatalog(req.getCatalogId(), MaterialPermissionCode.MATERIAL_RESOURCE_CREATE);
-        List<KtResource> created = planFolderUpload(req.getCatalogId(), req.getParentId(), req.getRelativePaths());
+        String normalizedCatalogId = normalizeCatalogId(req.getCatalogId());
+        catalogService.requireOnCatalog(normalizedCatalogId, CatalogPermission.RESOURCE_CREATE);
+        List<KtResource> created = planFolderUpload(normalizedCatalogId, req.getParentId(), req.getRelativePaths());
         for (KtResource r : created) {
             findById(r.getId()).ifPresent(materialSearchSyncTrigger::publishFullDocument);
         }
-        return created.stream().map(this::toVo).toList();
+        List<MaterialResourceVO> out = created.stream().map(this::toVo).collect(Collectors.toCollection(ArrayList::new));
+        enrichSrcUrls(out);
+        return out;
     }
 
     @Override
@@ -292,13 +373,13 @@ public class MaterialResourceServiceImpl extends ServiceImpl<KtResourceMapper, K
         }
         KtResource resource = findById(req.getResourceId())
                 .orElseThrow(() -> BizException.of(ResultStatus.PARAM_ERROR));
-        catalogService.requireOnCatalog(resource.getCatalogId(), MaterialPermissionCode.MATERIAL_RESOURCE_UPDATE);
+        catalogService.requireOnCatalog(resource.getCatalogId(), CatalogPermission.RESOURCE_UPDATE);
         resource.setFileSize(req.getFileSize());
         resource.setFingerprint(ResourceFingerprintSupport.format(req.getFileSize(), req.getChunkCrc32List()));
         save(resource);
         KtResource latest = findById(resource.getId()).orElse(resource);
         materialSearchSyncTrigger.publishFullDocument(latest);
-        return toVo(latest);
+        return enrichSingle(toVo(latest));
     }
 
     @Override
@@ -307,7 +388,7 @@ public class MaterialResourceServiceImpl extends ServiceImpl<KtResourceMapper, K
             throw BizException.of(ResultStatus.PARAM_ERROR);
         }
         KtResource resource = findById(resourceId).orElseThrow(() -> BizException.of(ResultStatus.PARAM_ERROR));
-        catalogService.requireOnCatalog(resource.getCatalogId(), MaterialPermissionCode.MATERIAL_RESOURCE_LIST_VIEW);
+        catalogService.requireOnCatalog(resource.getCatalogId(), CatalogPermission.RESOURCE_LIST_VIEW);
         return metaFileService.findByResourceId(resourceId).map(this::toMetaFileVo);
     }
 
@@ -319,7 +400,7 @@ public class MaterialResourceServiceImpl extends ServiceImpl<KtResourceMapper, K
         }
         KtResource resource = findById(req.getResourceId())
                 .orElseThrow(() -> BizException.of(ResultStatus.PARAM_ERROR));
-        catalogService.requireOnCatalog(resource.getCatalogId(), MaterialPermissionCode.MATERIAL_RESOURCE_UPDATE);
+        catalogService.requireOnCatalog(resource.getCatalogId(), CatalogPermission.RESOURCE_UPDATE);
         KtMetaFile meta = metaFileStorageBindService.bind(req.getResourceId(), req.getStorageId(), req.getObjectKey(), req.getName());
         MaterialMetaFileVO vo = toMetaFileVo(meta);
         KtResource latest = findById(req.getResourceId()).orElse(resource);
@@ -337,7 +418,8 @@ public class MaterialResourceServiceImpl extends ServiceImpl<KtResourceMapper, K
         List<MaterialResourceVO> matched = findAll().stream()
                 .filter(item -> fingerprint.equals(item.getFingerprint()))
                 .map(this::toVo)
-                .toList();
+                .collect(Collectors.toCollection(ArrayList::new));
+        enrichSrcUrls(matched);
         MaterialResourceFingerprintPrecheckVO vo = new MaterialResourceFingerprintPrecheckVO();
         vo.setHit(!matched.isEmpty());
         vo.setMatchedResources(matched);
@@ -376,9 +458,102 @@ public class MaterialResourceServiceImpl extends ServiceImpl<KtResourceMapper, K
         return Math.min(limit, 200);
     }
 
-    private List<MaterialResourceVO> listDb(MaterialResourceListQueryDTO query) {
+    /**
+     * srcUrl/coverUrl 依赖 kt_meta_file 与存储 endpoint/bucket；无元数据或存储不可用时可能为 null。
+     * previewUrl 对非文件夹资源始终返回应用内预览路径；视频另返回 keyframe 接口相对路径（未产出时访问可能 404）。
+     */
+    private void enrichSrcUrls(List<MaterialResourceVO> vos) {
+        if (vos == null || vos.isEmpty()) {
+            return;
+        }
+        List<String> ids = vos.stream().map(MaterialResourceVO::getId).filter(StringUtils::hasText).distinct().toList();
+        if (ids.isEmpty()) {
+            return;
+        }
+        List<KtMetaFile> metas = metaFileService.listByResourceIds(ids);
+        Map<String, KtMetaFile> byResource = metas.stream()
+                .collect(Collectors.toMap(KtMetaFile::getResourceId, Function.identity(), (a, b) -> a));
+        Set<String> storageIds = metas.stream().map(KtMetaFile::getStorageId).filter(StringUtils::hasText).collect(Collectors.toSet());
+        Map<String, KtFileStorage> storageById = new HashMap<>();
+        for (String sid : storageIds) {
+            KtFileStorage st = ktFileStorageMapper.selectById(sid);
+            if (st != null) {
+                storageById.put(sid, st);
+            }
+        }
+        for (MaterialResourceVO vo : vos) {
+            vo.setSrcUrl(null);
+            vo.setPreviewUrl(null);
+            vo.setCoverUrl(null);
+            vo.setKeyframeUrl(null);
+            if (vo.getType() != null && ResourceTypeEnum.isFolder(vo.getType())) {
+                continue;
+            }
+            KtMetaFile m = byResource.get(vo.getId());
+            if (m != null) {
+                KtFileStorage st = storageById.get(m.getStorageId());
+                vo.setSrcUrl(materialStoragePublicUrlBuilder.build(st, m.getObjectKey()));
+            }
+            vo.setPreviewUrl(materialResourcePreviewLinkBuilder.buildRelativePreviewPath(vo.getId()));
+            applyCoverAndKeyframeUrls(vo);
+        }
+    }
+
+    /** 封面：图片使用原图直链；视频：关键帧接口相对路径（抽帧产物就绪前可能 404） */
+    private void applyCoverAndKeyframeUrls(MaterialResourceVO vo) {
+        Integer t = vo.getType();
+        if (t != null && ResourceTypeEnum.IMAGE.getType().equals(t) && StringUtils.hasText(vo.getSrcUrl())) {
+            vo.setCoverUrl(vo.getSrcUrl());
+        }
+        if (t != null && ResourceTypeEnum.VIDEO.getType().equals(t)) {
+            vo.setKeyframeUrl(materialResourcePreviewLinkBuilder.buildRelativeKeyframePath(vo.getId()));
+        }
+    }
+
+    @Override
+    public String resolvePreviewRedirectUrl(String resourceId) {
+        if (!StringUtils.hasText(resourceId)) {
+            throw BizException.of(ResultStatus.PARAM_ERROR);
+        }
+        String rid = resourceId.trim();
+        KtResource resource = findById(rid).orElseThrow(() -> BizException.of(ResultStatus.PARAM_ERROR));
+        catalogService.requireOnCatalog(resource.getCatalogId(), CatalogPermission.RESOURCE_LIST_VIEW);
+        KtMetaFile meta = metaFileService.findByResourceId(rid)
+                .orElseThrow(() -> BizException.of(ResultStatus.PARAM_ERROR));
+        KtFileStorage st = ktFileStorageMapper.selectById(meta.getStorageId());
+        String url = materialStoragePublicUrlBuilder.build(st, meta.getObjectKey());
+        if (!StringUtils.hasText(url)) {
+            throw BizException.of(ResultStatus.PARAM_ERROR);
+        }
+        return url;
+    }
+
+    @Override
+    public Optional<String> resolveKeyframeRedirectUrl(String resourceId) {
+        if (!StringUtils.hasText(resourceId)) {
+            return Optional.empty();
+        }
+        String rid = resourceId.trim();
+        KtResource resource = findById(rid).orElse(null);
+        if (resource == null || !ResourceTypeEnum.VIDEO.getType().equals(resource.getType())) {
+            return Optional.empty();
+        }
+        catalogService.requireOnCatalog(resource.getCatalogId(), CatalogPermission.RESOURCE_LIST_VIEW);
+        // 关键帧对象写入存储后在此解析 URL；当前无持久化字段
+        return Optional.empty();
+    }
+
+    private MaterialResourceVO enrichSingle(MaterialResourceVO vo) {
+        if (vo == null) {
+            return null;
+        }
+        enrichSrcUrls(List.of(vo));
+        return vo;
+    }
+
+    private List<MaterialResourceVO> listDb(MaterialResourceListQueryDTO query, String normalizedCatalogId) {
         return findAll().stream()
-                .filter(resource -> query == null || !StringUtils.hasText(query.getCatalogId()) || query.getCatalogId().equals(resource.getCatalogId()))
+                .filter(resource -> query == null || !StringUtils.hasText(normalizedCatalogId) || normalizedCatalogId.equals(resource.getCatalogId()))
                 .filter(resource -> query == null || !StringUtils.hasText(query.getParentId()) || query.getParentId().equals(resource.getParentId()))
                 .map(this::toVo)
                 .toList();
@@ -429,6 +604,17 @@ public class MaterialResourceServiceImpl extends ServiceImpl<KtResourceMapper, K
 
     private String normalizeParentId(String parentId) {
         return !StringUtils.hasText(parentId) ? "0" : parentId;
+    }
+
+    private String normalizeCatalogId(String catalogId) {
+        return catalogService.normalizeResourceCatalogId(catalogId);
+    }
+
+    private String normalizeCatalogIdNullable(String catalogId) {
+        if (!StringUtils.hasText(catalogId)) {
+            return null;
+        }
+        return normalizeCatalogId(catalogId);
     }
 
     private ResourceTypeEnum inferType(String filename) {

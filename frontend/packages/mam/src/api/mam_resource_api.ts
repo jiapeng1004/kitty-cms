@@ -12,11 +12,36 @@ export interface MaterialResourceVO {
   title: string
   catalogId: string
   parentId: string
-  path: string
   fileSize?: number
   chunkCrc32List?: string
   fingerprint?: string
   type: number
+  /** 预览用相对路径（走 /api/material/resource/preview，带鉴权；img/video 应用此字段） */
+  previewUrl?: string
+  /** 对象存储原文件直链（下载/转码；列表避免用作 img 直链） */
+  srcUrl?: string
+  /** 封面（图片默认同 srcUrl 原图直链） */
+  coverUrl?: string
+  /** 视频关键帧（/keyframe；未产出为 null） */
+  keyframeUrl?: string
+}
+
+/** 后端返回的 previewUrl 多为以 / 开头的相对路径，拼上 VITE_API_BASEURL 供 img/video src 使用 */
+export function materialApiAbsoluteUrl(relativeOrAbsolute: string | undefined | null): string {
+  if (!relativeOrAbsolute) return ''
+  if (/^https?:\/\//i.test(relativeOrAbsolute)) return relativeOrAbsolute
+  const base = (import.meta.env.VITE_API_BASEURL || '').replace(/\/$/, '')
+  const p = relativeOrAbsolute.startsWith('/') ? relativeOrAbsolute : `/${relativeOrAbsolute}`
+  return `${base}${p}`
+}
+
+/** 与 {@link icu.jiapeng.kitty.common.core.page.PageRespVo} 对齐 */
+export interface PageRespVo<T> {
+  size: number
+  page: number
+  total: number
+  records: T[]
+  pages?: number
 }
 
 export interface FingerprintPrecheckResult {
@@ -35,13 +60,25 @@ export interface MaterialResourceUpsertDTO {
 export function listResources(params: {
   catalogId?: string
   parentId?: string
-  /** 全文检索（走 ES，须带 catalogId） */
+  /** 关键词（须带 catalogId；具体走 DB 条件还是检索由后端实现） */
   keyword?: string
-  /** 语义检索（走 ES kNN，须带 catalogId） */
+  /** 语义检索文本（须带 catalogId；由后端实现） */
   semanticText?: string
   limit?: number
 }): Promise<MaterialResourceVO[]> {
   return api.get(`${PREFIX}/list`, { params })
+}
+
+/** 分页列表（DB 路径为真分页；带 keyword/semantic 时与 list 同检索逻辑后内存切片） */
+export function pageResources(params: {
+  catalogId?: string
+  parentId?: string
+  keyword?: string
+  semanticText?: string
+  page?: number
+  size?: number
+}): Promise<PageRespVo<MaterialResourceVO>> {
+  return api.get(`${PREFIX}/page`, { params })
 }
 
 export function createResource(data: MaterialResourceUpsertDTO): Promise<MaterialResourceVO> {

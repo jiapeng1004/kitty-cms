@@ -1,14 +1,17 @@
 import {createRouter, createWebHistory} from 'vue-router'
 import Layout from '@/layouts/Layout.vue'
 import CatalogPermissionPage from '@/views/CatalogPermissionPage.vue'
-import ResourceManagePage from '@/views/ResourceManagePage.vue'
 import StorageRoutePage from '@/views/StorageRoutePage.vue'
+import StorageManagePage from '@/views/StorageManagePage.vue'
 import MetadataManagePage from '@/views/MetadataManagePage.vue'
 import CatalogTreePage from '@/views/CatalogTreePage.vue'
+import MaterialWorkspacePage from '@/views/MaterialWorkspacePage.vue'
 import TaskCenterPage from '@/views/TaskCenterPage.vue'
 import TranscodePolicyPage from '@/views/TranscodePolicyPage.vue'
 import InternalMessagePage from '@/views/InternalMessagePage.vue'
 import ReviewWorkflowPage from '@/views/ReviewWorkflowPage.vue'
+import ResourceManagePage from '@/views/ResourceManagePage.vue'
+import ResourceDetailPage from '@/views/ResourceDetailPage.vue'
 
 const router = createRouter({
     history: createWebHistory(),
@@ -16,8 +19,20 @@ const router = createRouter({
         {
             path: '/',
             component: Layout,
-            redirect: '/catalog-tree',
+            redirect: '/material',
             children: [
+                {
+                    path: 'material',
+                    name: 'MaterialWorkspacePage',
+                    component: MaterialWorkspacePage,
+                    meta: { flush: true, immersive: true }
+                },
+                {
+                    path: 'material/resource/:resourceId',
+                    name: 'ResourceDetailPage',
+                    component: ResourceDetailPage,
+                    meta: { flush: true, immersive: true }
+                },
                 {
                     path: 'catalog-tree',
                     name: 'CatalogTreePage',
@@ -37,6 +52,13 @@ const router = createRouter({
                     path: 'storage-route',
                     name: 'StorageRoutePage',
                     component: StorageRoutePage
+                },
+                {
+                    path: 'storage-manage',
+                    name: 'StorageManagePage',
+                    component: StorageManagePage,
+                    /** 与素材库一致：隐藏全局顶栏，由页面内返回条导航，避免「从素材进来仍顶着整站导航」 */
+                    meta: { flush: true, immersive: true }
                 },
                 {
                     path: 'metadata',
@@ -69,6 +91,18 @@ const router = createRouter({
             path: '/embed',
             children: [
                 {
+                    path: 'material',
+                    name: 'EmbedMaterialWorkspacePage',
+                    component: MaterialWorkspacePage,
+                    meta: { flush: true, immersive: true }
+                },
+                {
+                    path: 'material/resource/:resourceId',
+                    name: 'EmbedResourceDetailPage',
+                    component: ResourceDetailPage,
+                    meta: { flush: true, immersive: true }
+                },
+                {
                     path: 'catalog-tree',
                     name: 'EmbedCatalogTreePage',
                     component: CatalogTreePage
@@ -87,6 +121,12 @@ const router = createRouter({
                     path: 'storage-route',
                     name: 'EmbedStorageRoutePage',
                     component: StorageRoutePage
+                },
+                {
+                    path: 'storage-manage',
+                    name: 'EmbedStorageManagePage',
+                    component: StorageManagePage,
+                    meta: { flush: true, immersive: true }
                 },
                 {
                     path: 'metadata',

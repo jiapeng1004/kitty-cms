@@ -36,6 +36,10 @@ public class KtChunkUploadSession extends CommonEntity {
     @TableField("object_key")
     private String objectKey;
 
+    /** 对象存储 multipart upload id（仅 s3 且分片数大于 0） */
+    @TableField("multipart_upload_id")
+    private String multipartUploadId;
+
     @TableField("total_size")
     private Long totalSize;
 

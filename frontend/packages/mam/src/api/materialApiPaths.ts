@@ -12,6 +12,8 @@ export const MaterialApiPaths = {
   /** GET …/permission/tree/role/{roleId} */
   catalogTreeRolePermission: `${MATERIAL_SERVICE_PATH}/api/catalog/permission/tree/role`,
   resourceList: `${M}/resource/list`,
+  resourcePreview: `${M}/resource/preview`,
+  resourceKeyframe: `${M}/resource/keyframe`,
   resourceDetail: `${M}/resource/detail`,
   resource: `${M}/resource`,
   resourceFolder: `${M}/resource/folder`,

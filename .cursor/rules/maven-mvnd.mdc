@@ -1,0 +1,12 @@
+---
+description: 本仓库 Maven 构建优先使用 mvnd（Maven Daemon），编译更快
+alwaysApply: true
+---
+
+# Maven：使用 mvnd
+
+本机已安装 **Maven Daemon** 时，在本仓库执行 Maven **一律优先用 `mvnd`**，不要用 `mvn`，以利用常驻 daemon、加快重复编译。
+
+- 示例：`mvnd compile`、`mvnd -q test`、`mvnd -pl kitty-func/kitty-material-func -am clean package -DskipTests`
+- 参数与 `mvn` 相同；首次或 daemon 未启动时 `mvnd` 会自动拉起。
+- 仅在确认环境未安装 `mvnd` 或命令不存在时，再回退为 `mvn`。

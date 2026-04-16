@@ -30,7 +30,7 @@ public class MaterialChunkUploadSessionCreateDTO {
     @Schema(description = "可选：预编目，合并成功后写入元数据")
     private MaterialPrecatalogPayloadDTO precatalog;
 
-    @Schema(description = "存储ID", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Schema(description = "存储记录 ID（kt_file_storage.id）；不传则使用主存储，若未设置主存储则失败")
     private String storageId;
 
     @Schema(description = "对象键", requiredMode = Schema.RequiredMode.REQUIRED)

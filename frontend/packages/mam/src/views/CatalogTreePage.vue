@@ -1,45 +1,83 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { message } from 'ant-design-vue'
-import type { TreeProps } from 'ant-design-vue'
-import { queryCatalogTree, type MaterialCatalogNode } from '@/api/mam_catalog_api'
+import { ref } from 'vue'
+import type { MaterialCatalogNode } from '@/api/mam_catalog_api'
+import MaterialCatalogTreePanel from '@/components/MaterialCatalogTreePanel.vue'
 
-const loading = ref(false)
-const treeData = ref<TreeProps['treeData']>([])
+const selectedCatalogId = ref<string>()
+const panelRef = ref<InstanceType<typeof MaterialCatalogTreePanel>>()
+const currentCatalog = ref<MaterialCatalogNode | undefined>()
 
-function buildTree(nodes: MaterialCatalogNode[]): TreeProps['treeData'] {
-  return nodes.map((n) => ({
-    key: n.id,
-    title: `${n.name}${n.virtualRoot ? '（虚拟根）' : ''}`,
-    children: n.children?.length ? buildTree(n.children) : undefined
-  }))
+function onCatalogSelect(node: MaterialCatalogNode | undefined) {
+  currentCatalog.value = node
 }
 
-async function load() {
-  loading.value = true
+const refreshing = ref(false)
+async function refresh() {
+  refreshing.value = true
   try {
-    const nodes = await queryCatalogTree()
-    treeData.value = buildTree(nodes)
-  } catch (e: unknown) {
-    const err = e as { response?: { data?: { message?: string } }; message?: string }
-    message.error(err?.response?.data?.message || err?.message || '加载栏目树失败')
+    await panelRef.value?.load()
   } finally {
-    loading.value = false
+    refreshing.value = false
   }
 }
-
-onMounted(load)
 </script>
 
 <template>
-  <div style="padding: 20px;">
-    <a-typography-title :level="4">栏目树（全量）</a-typography-title>
-    <a-space style="margin-bottom: 12px;">
-      <a-button type="primary" :loading="loading" @click="load">刷新</a-button>
-    </a-space>
-    <a-spin :spinning="loading">
-      <a-tree v-if="treeData?.length" :tree-data="treeData" default-expand-all block-node />
-      <a-empty v-else description="无数据或加载中" />
-    </a-spin>
+  <div class="catalog-tree-page">
+    <div class="catalog-page-title">栏目树（全量）</div>
+
+    <div class="catalog-tree-shell">
+      <div class="catalog-tree-toolbar">
+        <a-button class="catalog-refresh-btn" :loading="refreshing" @click="refresh">刷新</a-button>
+        <span class="catalog-current-label">当前栏目：{{ currentCatalog?.name || '未选择' }}</span>
+      </div>
+
+      <MaterialCatalogTreePanel
+        ref="panelRef"
+        v-model:selected-catalog-id="selectedCatalogId"
+        @catalog-select="onCatalogSelect"
+      />
+    </div>
   </div>
 </template>
+
+<style scoped lang="less">
+.catalog-tree-page {
+  padding: 20px;
+  min-height: calc(100vh - 64px);
+}
+
+.catalog-page-title {
+  margin-bottom: 12px;
+  color: #111827;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.catalog-tree-shell {
+  width: 340px;
+  flex-shrink: 0;
+}
+
+.catalog-tree-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+  min-height: 28px;
+}
+
+.catalog-refresh-btn {
+  border-color: #d0d7de;
+  color: #155eef;
+  height: 28px;
+  padding: 0 12px;
+}
+
+.catalog-current-label {
+  color: #4b5563;
+  font-size: 13px;
+  line-height: 28px;
+}
+</style>

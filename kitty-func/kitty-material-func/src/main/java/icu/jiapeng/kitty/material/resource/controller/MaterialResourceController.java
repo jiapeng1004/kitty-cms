@@ -8,6 +8,8 @@ import icu.jiapeng.kitty.material.resource.dto.MaterialMetaFileBindDTO;
 import icu.jiapeng.kitty.material.resource.dto.MaterialFolderCreateDTO;
 import icu.jiapeng.kitty.material.resource.dto.MaterialFolderUploadPlanDTO;
 import icu.jiapeng.kitty.material.resource.dto.MaterialResourceFingerprintDTO;
+import icu.jiapeng.kitty.common.core.page.PageRespVo;
+import icu.jiapeng.kitty.material.resource.dto.MaterialResourceListPageQueryDTO;
 import icu.jiapeng.kitty.material.resource.dto.MaterialResourceListQueryDTO;
 import icu.jiapeng.kitty.material.resource.dto.MaterialResourceUpsertDTO;
 import icu.jiapeng.kitty.material.resource.vo.MaterialMetaFileVO;
@@ -15,10 +17,12 @@ import icu.jiapeng.kitty.material.resource.vo.MaterialResourceDetailVO;
 import icu.jiapeng.kitty.material.resource.vo.MaterialResourceFingerprintPrecheckVO;
 import icu.jiapeng.kitty.material.resource.vo.MaterialResourceVO;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.net.URI;
 import java.util.List;
 
 /**
@@ -39,8 +43,29 @@ public class MaterialResourceController implements MaterialResourceApi {
 
     @Override
     @SaCheckPermission(MaterialPermissionCode.MATERIAL_RESOURCE_LIST_VIEW)
+    public PageRespVo<MaterialResourceVO> page(MaterialResourceListPageQueryDTO query) {
+        return materialResourceService.page(query);
+    }
+
+    @Override
+    @SaCheckPermission(MaterialPermissionCode.MATERIAL_RESOURCE_LIST_VIEW)
     public MaterialResourceDetailVO detail(String resourceId) {
         return materialResourceService.detail(resourceId);
+    }
+
+    @Override
+    @SaCheckPermission(MaterialPermissionCode.MATERIAL_RESOURCE_LIST_VIEW)
+    public ResponseEntity<Void> preview(String resourceId) {
+        String target = materialResourceService.resolvePreviewRedirectUrl(resourceId);
+        return ResponseEntity.status(HttpStatus.FOUND).location(URI.create(target)).build();
+    }
+
+    @Override
+    @SaCheckPermission(MaterialPermissionCode.MATERIAL_RESOURCE_LIST_VIEW)
+    public ResponseEntity<Void> keyframe(String resourceId) {
+        return materialResourceService.resolveKeyframeRedirectUrl(resourceId)
+                .<ResponseEntity.HeadersBuilder<?>>map(url -> ResponseEntity.status(HttpStatus.FOUND).location(URI.create(url)))
+                .orElse(ResponseEntity.notFound()).build();
     }
 
     @Override

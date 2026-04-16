@@ -1,0 +1,25 @@
+/**
+ * MAM 管理页表格：单击单元格复制完整内容（与 useMamTableCellCopy 配合）
+ * 在可复制的单元格外包一层：class="mam-table-cell-copy" @click="copyCell(...)"
+ */
+
+.mam-table-cell-copy {
+  cursor: copy;
+  display: inline-block;
+  max-width: 100%;
+  vertical-align: top;
+  border-radius: 4px;
+  padding: 2px 4px;
+  margin: -2px -4px;
+  box-sizing: border-box;
+  transition: background 0.12s ease;
+}
+
+.mam-table-cell-copy:hover {
+  background: rgba(59, 130, 246, 0.09);
+}
+
+/* 避免 Tag 抢点击，由外层统一触发复制 */
+.mam-table-cell-copy .ant-tag {
+  pointer-events: none;
+}

@@ -79,8 +79,20 @@ public enum ResultStatus {
     /**
      * 参数错误
      */
-    PARAM_ERROR(10012, "param.error"), CONFIG_NOT_EXIST(10013, "config.not.exist"),
-    CATALOG_PARENT_FOUND(10014, "catalog.parent.not.exist"), CATALOG_NAME_EXISTS(10015, "catalog.name.exists");
+    PARAM_ERROR(10012, "param.error"),
+    CONFIG_NOT_EXIST(10013, "config.not.exist"),
+    CATALOG_PARENT_FOUND(10014, "catalog.parent.not.exist"),
+    CATALOG_NAME_EXISTS(10015, "catalog.name.exists"),
+
+    /**
+     * 未配置主存储（分片上传等未显式指定 storageId 时依赖主存储）
+     */
+    MATERIAL_PRIMARY_STORAGE_NOT_SET(10016, "material.primary.storage.not.set"),
+
+    /**
+     * 当前用户对目标栏目无所需权限（含个人栏目非本人、角色在栏目下无该权限位等），非参数非法
+     */
+    MATERIAL_CATALOG_PERMISSION_DENIED(10017, "material.catalog.permission.denied");
 
     /**
      * 状态码

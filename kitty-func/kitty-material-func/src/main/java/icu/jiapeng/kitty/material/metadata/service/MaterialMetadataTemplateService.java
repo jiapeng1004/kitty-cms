@@ -12,7 +12,7 @@ import icu.jiapeng.kitty.material.metadata.entity.KtMetadataTemplate;
 import icu.jiapeng.kitty.material.metadata.entity.KtMetadataTemplateFieldBinding;
 import icu.jiapeng.kitty.material.metadata.vo.MaterialMetadataFormFieldVO;
 import icu.jiapeng.kitty.material.metadata.vo.MaterialMetadataTemplateVO;
-import icu.jiapeng.kitty.material.permission.constants.MaterialPermissionCode;
+import icu.jiapeng.kitty.material.catalog.constants.CatalogPermission;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -40,13 +40,13 @@ public class MaterialMetadataTemplateService {
         }
         KtMetadataTemplate t = metadataTemplateService.findById(templateId)
                 .orElseThrow(() -> BizException.of(ResultStatus.PARAM_ERROR));
-        catalogService.requireOnCatalog(t.getCatalogId(), MaterialPermissionCode.MATERIAL_METADATA_TEMPLATE_MANAGE);
+        catalogService.requireOnCatalog(t.getCatalogId(), CatalogPermission.METADATA_TEMPLATE_MANAGE);
         return metadataFormFieldAssembler.orderedFormFields(templateId);
     }
 
     public MaterialMetadataTemplateVO create(MaterialMetadataTemplateUpsertDTO req) {
         validateUpsert(req, false);
-        catalogService.requireOnCatalog(req.getCatalogId(), MaterialPermissionCode.MATERIAL_METADATA_TEMPLATE_MANAGE);
+        catalogService.requireOnCatalog(req.getCatalogId(), CatalogPermission.METADATA_TEMPLATE_MANAGE);
         KtMetadataTemplate t = new KtMetadataTemplate();
         t.setId(UUID.randomUUID().toString());
         applyUpsert(t, req);
@@ -58,9 +58,9 @@ public class MaterialMetadataTemplateService {
         validateUpsert(req, true);
         KtMetadataTemplate existing = metadataTemplateService.findById(req.getId())
                 .orElseThrow(() -> BizException.of(ResultStatus.PARAM_ERROR));
-        catalogService.requireOnCatalog(existing.getCatalogId(), MaterialPermissionCode.MATERIAL_METADATA_TEMPLATE_MANAGE);
+        catalogService.requireOnCatalog(existing.getCatalogId(), CatalogPermission.METADATA_TEMPLATE_MANAGE);
         if (!Objects.equals(existing.getCatalogId(), req.getCatalogId())) {
-            catalogService.requireOnCatalog(req.getCatalogId(), MaterialPermissionCode.MATERIAL_METADATA_TEMPLATE_MANAGE);
+            catalogService.requireOnCatalog(req.getCatalogId(), CatalogPermission.METADATA_TEMPLATE_MANAGE);
         }
         applyUpsert(existing, req);
         metadataTemplateService.saveTemplate(existing);
@@ -73,7 +73,7 @@ public class MaterialMetadataTemplateService {
         }
         KtMetadataTemplate existing = metadataTemplateService.findById(id)
                 .orElseThrow(() -> BizException.of(ResultStatus.PARAM_ERROR));
-        catalogService.requireOnCatalog(existing.getCatalogId(), MaterialPermissionCode.MATERIAL_METADATA_TEMPLATE_MANAGE);
+        catalogService.requireOnCatalog(existing.getCatalogId(), CatalogPermission.METADATA_TEMPLATE_MANAGE);
         metadataTemplateFieldBindingService.replaceBindings(id, List.of());
         KtMetadataTemplate template = metadataTemplateService.findById(id)
                 .orElseThrow(() -> BizException.of(ResultStatus.PARAM_ERROR));
@@ -96,7 +96,7 @@ public class MaterialMetadataTemplateService {
         }
         KtMetadataTemplate template = metadataTemplateService.findById(req.getTemplateId())
                 .orElseThrow(() -> BizException.of(ResultStatus.PARAM_ERROR));
-        catalogService.requireOnCatalog(template.getCatalogId(), MaterialPermissionCode.MATERIAL_METADATA_TEMPLATE_MANAGE);
+        catalogService.requireOnCatalog(template.getCatalogId(), CatalogPermission.METADATA_TEMPLATE_MANAGE);
         List<KtMetadataTemplateFieldBinding> rows = new ArrayList<>();
         for (MaterialMetadataFieldBindItemDTO item : req.getBindings()) {
             if (item == null || isBlank(item.getFieldId())) {

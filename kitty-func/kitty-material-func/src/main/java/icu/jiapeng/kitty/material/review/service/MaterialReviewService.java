@@ -2,8 +2,8 @@ package icu.jiapeng.kitty.material.review.service;
 
 import icu.jiapeng.kitty.common.core.constant.ResultStatus;
 import icu.jiapeng.kitty.common.core.exceptions.BizException;
+import icu.jiapeng.kitty.material.catalog.constants.CatalogPermission;
 import icu.jiapeng.kitty.material.catalog.service.CatalogService;
-import icu.jiapeng.kitty.material.permission.constants.MaterialPermissionCode;
 import icu.jiapeng.kitty.material.resource.entity.KtResource;
 import icu.jiapeng.kitty.material.resource.service.MaterialResourceService;
 import icu.jiapeng.kitty.material.review.ReviewTaskStatuses;
@@ -44,7 +44,7 @@ public class MaterialReviewService {
         }
         String bizType = req.bizType().trim();
         String bizId = req.bizId().trim();
-        guardBizAccess(bizType, bizId, MaterialPermissionCode.MATERIAL_REVIEW_SUBMIT);
+        guardBizAccess(bizType, bizId, CatalogPermission.REVIEW_SUBMIT);
         if (reviewTaskService.existsPending(bizType, bizId)) {
             throw BizException.of(ResultStatus.PARAM_ERROR);
         }
@@ -72,7 +72,7 @@ public class MaterialReviewService {
         }
         KtReviewTask t = reviewTaskService.findById(req.taskId().trim())
                 .orElseThrow(() -> BizException.of(ResultStatus.PARAM_ERROR));
-        guardBizAccess(t.getBizType(), t.getBizId(), MaterialPermissionCode.MATERIAL_REVIEW_APPROVE);
+        guardBizAccess(t.getBizType(), t.getBizId(), CatalogPermission.REVIEW_APPROVE);
         if (!ReviewTaskStatuses.PENDING.equals(t.getStatus())) {
             throw BizException.of(ResultStatus.PARAM_ERROR);
         }
@@ -92,7 +92,7 @@ public class MaterialReviewService {
         }
         KtReviewTask t = reviewTaskService.findById(req.taskId().trim())
                 .orElseThrow(() -> BizException.of(ResultStatus.PARAM_ERROR));
-        guardBizAccess(t.getBizType(), t.getBizId(), MaterialPermissionCode.MATERIAL_REVIEW_APPROVE);
+        guardBizAccess(t.getBizType(), t.getBizId(), CatalogPermission.REVIEW_APPROVE);
         if (!ReviewTaskStatuses.PENDING.equals(t.getStatus())) {
             throw BizException.of(ResultStatus.PARAM_ERROR);
         }
@@ -111,7 +111,7 @@ public class MaterialReviewService {
         }
         String bt = bizType.trim();
         String bid = bizId.trim();
-        guardBizAccess(bt, bid, MaterialPermissionCode.MATERIAL_RESOURCE_LIST_VIEW);
+        guardBizAccess(bt, bid, CatalogPermission.RESOURCE_LIST_VIEW);
         return reviewTaskService.listByBizDesc(bt, bid).stream().map(this::toVo).collect(Collectors.toList());
     }
 
@@ -121,15 +121,15 @@ public class MaterialReviewService {
         }
         KtResource r = resourceService.findById(resourceId)
                 .orElseThrow(() -> BizException.of(ResultStatus.PARAM_ERROR));
-        catalogService.requireOnCatalog(r.getCatalogId(), MaterialPermissionCode.MATERIAL_RESOURCE_LIST_VIEW);
+        catalogService.requireOnCatalog(r.getCatalogId(), CatalogPermission.RESOURCE_LIST_VIEW);
         return reviewTaskService.listByBizDesc(BIZ_TYPE_RESOURCE, resourceId).stream().map(this::toVo).collect(Collectors.toList());
     }
 
-    private void guardBizAccess(String bizType, String bizId, String permissionCode) {
+    private void guardBizAccess(String bizType, String bizId, CatalogPermission permission) {
         if (BIZ_TYPE_RESOURCE.equals(bizType)) {
             KtResource r = resourceService.findById(bizId)
                     .orElseThrow(() -> BizException.of(ResultStatus.PARAM_ERROR));
-            catalogService.requireOnCatalog(r.getCatalogId(), permissionCode);
+            catalogService.requireOnCatalog(r.getCatalogId(), permission);
         }
     }
 

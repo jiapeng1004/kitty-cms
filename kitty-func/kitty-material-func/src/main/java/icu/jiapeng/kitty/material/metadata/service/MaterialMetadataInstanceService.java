@@ -15,7 +15,7 @@ import icu.jiapeng.kitty.material.metadata.entity.KtMetadataTemplateFieldBinding
 import icu.jiapeng.kitty.material.metadata.vo.MaterialMetadataFormFieldVO;
 import icu.jiapeng.kitty.material.metadata.vo.MaterialMetadataInstanceEntryVO;
 import icu.jiapeng.kitty.material.metadata.vo.MaterialMetadataSnapshotVO;
-import icu.jiapeng.kitty.material.permission.constants.MaterialPermissionCode;
+import icu.jiapeng.kitty.material.catalog.constants.CatalogPermission;
 import icu.jiapeng.kitty.material.resource.entity.KtResource;
 import icu.jiapeng.kitty.material.resource.service.MaterialResourceService;
 import icu.jiapeng.kitty.material.searchsync.service.MaterialSearchSyncTrigger;
@@ -63,7 +63,7 @@ public class MaterialMetadataInstanceService {
         }
         KtResource resource = resourceService.findById(resourceId)
                 .orElseThrow(() -> BizException.of(ResultStatus.PARAM_ERROR));
-        catalogService.requireOnCatalog(resource.getCatalogId(), MaterialPermissionCode.MATERIAL_RESOURCE_LIST_VIEW);
+        catalogService.requireOnCatalog(resource.getCatalogId(), CatalogPermission.RESOURCE_LIST_VIEW);
         KtMetadataTemplate template = metadataTemplateService.findById(templateId)
                 .orElseThrow(() -> BizException.of(ResultStatus.PARAM_ERROR));
         assertTemplateApplies(template, resource);
@@ -83,7 +83,7 @@ public class MaterialMetadataInstanceService {
         }
         KtResource resource = resourceService.findById(req.getResourceId())
                 .orElseThrow(() -> BizException.of(ResultStatus.PARAM_ERROR));
-        catalogService.requireOnCatalog(resource.getCatalogId(), MaterialPermissionCode.MATERIAL_RESOURCE_UPDATE);
+        catalogService.requireOnCatalog(resource.getCatalogId(), CatalogPermission.RESOURCE_UPDATE);
         KtMetadataTemplate template = metadataTemplateService.findById(req.getTemplateId())
                 .orElseThrow(() -> BizException.of(ResultStatus.PARAM_ERROR));
         assertTemplateApplies(template, resource);
@@ -132,7 +132,7 @@ public class MaterialMetadataInstanceService {
         }
         KtResource resource = resourceService.findById(query.getResourceId())
                 .orElseThrow(() -> BizException.of(ResultStatus.PARAM_ERROR));
-        catalogService.requireOnCatalog(resource.getCatalogId(), MaterialPermissionCode.MATERIAL_RESOURCE_LIST_VIEW);
+        catalogService.requireOnCatalog(resource.getCatalogId(), CatalogPermission.RESOURCE_LIST_VIEW);
         KtMetadataTemplate template = metadataTemplateService.findById(query.getTemplateId())
                 .orElseThrow(() -> BizException.of(ResultStatus.PARAM_ERROR));
         assertAlignedCatalog(template, resource);
@@ -160,7 +160,7 @@ public class MaterialMetadataInstanceService {
         }
         KtResource resource = resourceService.findById(query.getResourceId())
                 .orElseThrow(() -> BizException.of(ResultStatus.PARAM_ERROR));
-        catalogService.requireOnCatalog(resource.getCatalogId(), MaterialPermissionCode.MATERIAL_RESOURCE_LIST_VIEW);
+        catalogService.requireOnCatalog(resource.getCatalogId(), CatalogPermission.RESOURCE_LIST_VIEW);
         KtMetadataTemplate template = metadataTemplateService.findById(query.getTemplateId())
                 .orElseThrow(() -> BizException.of(ResultStatus.PARAM_ERROR));
         assertAlignedCatalog(template, resource);
@@ -196,7 +196,7 @@ public class MaterialMetadataInstanceService {
         }
         KtResource resource = resourceService.findById(resourceId)
                 .orElseThrow(() -> BizException.of(ResultStatus.PARAM_ERROR));
-        catalogService.requireOnCatalog(resource.getCatalogId(), MaterialPermissionCode.MATERIAL_RESOURCE_LIST_VIEW);
+        catalogService.requireOnCatalog(resource.getCatalogId(), CatalogPermission.RESOURCE_LIST_VIEW);
         List<KtMetadataTemplate> templates = metadataTemplateService.listEnabledByCatalogAndType(resource.getCatalogId(), resource.getType());
         List<MaterialMetadataSnapshotVO> out = new ArrayList<>();
         for (KtMetadataTemplate t : templates) {

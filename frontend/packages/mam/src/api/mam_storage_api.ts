@@ -50,3 +50,62 @@ export function checkStorageConnectivity(data: {
 }): Promise<StorageConnectivityResult> {
   return api.post(`${PREFIX}/connectivity/check`, data)
 }
+
+/** 与后端 FileStorageInstanceCodeEnum 对应的实例编码选项 */
+export interface MaterialStorageInstanceOptionVO {
+  storageType: string
+  code: string
+  label: string
+}
+
+export function listStorageInstanceOptions(): Promise<MaterialStorageInstanceOptionVO[]> {
+  return api.get(`${PREFIX}/config/instance-options`)
+}
+
+/** 管理端：存储配置列表项（需 material:storage:manage，AK/SK 明文便于运维） */
+export interface MaterialFileStorageVO {
+  /** 存储主键，即对外 storageId */
+  id: string
+  storageType: string
+  bucket?: string | null
+  internalEndpoint?: string | null
+  externalEndpoint?: string | null
+  accessKey?: string | null
+  secretKey?: string | null
+  secretConfigured?: boolean | null
+  primaryStorage?: boolean | null
+}
+
+/** 管理端：创建/更新存储配置 */
+export interface MaterialFileStorageUpsertDTO {
+  /** 新建可选：有则作为存储主键；留空则服务端 SecureRandom 生成 */
+  id?: string
+  storageType: string
+  bucket?: string
+  internalEndpoint?: string
+  externalEndpoint?: string
+  accessKey?: string
+  secretKey?: string
+  /** 是否设为主存储（全局唯一） */
+  primaryStorage?: boolean
+}
+
+export function listFileStorageConfigs(): Promise<MaterialFileStorageVO[]> {
+  return api.get(`${PREFIX}/config/list`)
+}
+
+export function createFileStorage(
+  data: MaterialFileStorageUpsertDTO
+): Promise<MaterialFileStorageVO> {
+  return api.post(`${PREFIX}/config`, data)
+}
+
+export function updateFileStorage(
+  data: MaterialFileStorageUpsertDTO
+): Promise<MaterialFileStorageVO> {
+  return api.put(`${PREFIX}/config`, data)
+}
+
+export function deleteFileStorage(storageId: string): Promise<void> {
+  return api.delete(`${PREFIX}/config/${storageId}`)
+}

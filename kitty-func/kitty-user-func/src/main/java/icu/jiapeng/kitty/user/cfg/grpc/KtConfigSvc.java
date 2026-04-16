@@ -19,9 +19,9 @@ public class KtConfigSvc extends KtConfigSvcGrpc.KtConfigSvcImplBase {
     private KtConfigService ktConfigService;
 
     @Override
-    public void getVal(GetValReq request, StreamObserver<GetValResp> responseObserver) {
+    public void getVal(icu.jiapeng.kitty.user.cfg.grpc.GetValReq request, StreamObserver<icu.jiapeng.kitty.user.cfg.grpc.GetValResp> responseObserver) {
         try {
-            GetValResp.Builder builder = GetValResp.newBuilder();
+            icu.jiapeng.kitty.user.cfg.grpc.GetValResp.Builder builder = icu.jiapeng.kitty.user.cfg.grpc.GetValResp.newBuilder();
             builder.setConfigValue(ktConfigService.getVal(new GetValDTO().setConfigKey(request.getConfigKey())));
             responseObserver.onNext(builder.build());
         } finally {

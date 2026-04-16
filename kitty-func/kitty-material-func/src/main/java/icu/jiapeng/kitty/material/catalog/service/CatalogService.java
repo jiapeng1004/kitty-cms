@@ -1,7 +1,9 @@
 package icu.jiapeng.kitty.material.catalog.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import icu.jiapeng.kitty.material.catalog.constants.CatalogPermission;
 import icu.jiapeng.kitty.material.catalog.dto.CatalogCreateDTO;
+import icu.jiapeng.kitty.material.catalog.dto.CatalogUpdateDTO;
 import icu.jiapeng.kitty.material.catalog.entity.KtCatalog;
 import icu.jiapeng.kitty.material.catalog.vo.CatalogNodeVO;
 
@@ -40,6 +42,16 @@ public interface CatalogService extends IService<KtCatalog> {
     String create(CatalogCreateDTO node);
 
     /**
+     * 栏目更新（重命名/移动/排序）。
+     */
+    void update(CatalogUpdateDTO dto);
+
+    /**
+     * 删除栏目。
+     */
+    void delete(String catalogId);
+
+    /**
      * 获取指定角色的权限栏目树
      * （包含不含栏目查看权限的）
      *
@@ -72,5 +84,11 @@ public interface CatalogService extends IService<KtCatalog> {
      * @param catalogId      栏目ID
      * @param permissionCode 权限码
      */
-    void requireOnCatalog(String catalogId, String permissionCode);
+    void requireOnCatalog(String catalogId, CatalogPermission permission);
+
+    /**
+     * 规范化素材资源落库使用的栏目 ID。
+     * 个人栏目根（-1）会映射为 -1_{currentUserId}。
+     */
+    String normalizeResourceCatalogId(String catalogId);
 }

@@ -322,7 +322,8 @@ ON DUPLICATE KEY UPDATE `config_value`   = VALUES(`config_value`),
 -- 初始化系统管理员账号（密码在应用启动时用 BCrypt 计算并写入，此处先留空）
 INSERT INTO `kt_user` (`id`, `real_name`, `nick_name`, `pwd`, `phone`, `email`, `status`, `deleted`, `create_time`,
                        `creator`, `update_time`, `updater`)
-VALUES ('user-admin', '系统管理员', 'admin', '$2b$10$NlOcHDjLXAnZ4bZu6W8ds.bjaXo4GcjTJB/04Kbtn7/ht59UsXR3e', NULL, NULL,
+-- 密码123456aB
+VALUES ('user-admin', '系统管理员', 'admin', '$2b$10$13j1BBe.dWPgXVPVuyOprO1I6U.0Iq5PFRe19GiCJj4kEbai4.5ra', NULL, NULL,
         1, 0, NOW(), 'system', NOW(), 'system')
 ON DUPLICATE KEY UPDATE `nick_name` = VALUES(`nick_name`);
 
@@ -425,7 +426,9 @@ VALUES ('perm-material-catalog-tree-view', '栏目树查看', 'material:catalog:
        ('perm-material-catalog-permission-view', '栏目权限查看', 'material:catalog:permission:view', '查看栏目权限',
         NOW(), 'system', NOW(), 'system'),
        ('perm-material-catalog-create', '新建栏目', 'material:catalog:create', '创建新的素材栏目', NOW(), 'system',
-        NOW(), 'system')
+        NOW(), 'system'),
+       ('perm-material-storage-manage', '文件存储配置', 'material:storage:manage', '管理对象存储/磁盘存储实例（kt_file_storage）',
+        NOW(), 'system', NOW(), 'system')
 ON DUPLICATE KEY UPDATE `p_name` = VALUES(`p_name`),
                         `p_desc` = VALUES(`p_desc`);
 

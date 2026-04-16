@@ -3,7 +3,7 @@ package icu.jiapeng.kitty.material.transcode.service;
 import icu.jiapeng.kitty.common.core.constant.ResultStatus;
 import icu.jiapeng.kitty.common.core.exceptions.BizException;
 import icu.jiapeng.kitty.material.catalog.service.CatalogService;
-import icu.jiapeng.kitty.material.permission.constants.MaterialPermissionCode;
+import icu.jiapeng.kitty.material.catalog.constants.CatalogPermission;
 import icu.jiapeng.kitty.material.resource.entity.KtResource;
 import icu.jiapeng.kitty.material.transcode.TranscodePlatforms;
 import icu.jiapeng.kitty.material.transcode.dto.CatalogTranscodeBindCreateDTO;
@@ -65,7 +65,7 @@ public class MaterialTranscodeStrategyFacade {
         if (isBlank(catalogId)) {
             throw BizException.of(ResultStatus.PARAM_ERROR);
         }
-        catalogService.requireOnCatalog(catalogId, MaterialPermissionCode.MATERIAL_TRANSCODE_POLICY_MANAGE);
+        catalogService.requireOnCatalog(catalogId, CatalogPermission.TRANSCODE_POLICY_MANAGE);
         return bindService.listByCatalogOrderSort(catalogId).stream().map(this::toBindVo).toList();
     }
 
@@ -73,7 +73,7 @@ public class MaterialTranscodeStrategyFacade {
         if (req == null || isBlank(req.getCatalogId()) || isBlank(req.getStrategyId())) {
             throw BizException.of(ResultStatus.PARAM_ERROR);
         }
-        catalogService.requireOnCatalog(req.getCatalogId(), MaterialPermissionCode.MATERIAL_TRANSCODE_POLICY_MANAGE);
+        catalogService.requireOnCatalog(req.getCatalogId(), CatalogPermission.TRANSCODE_POLICY_MANAGE);
         KtMaterialTranscodeStrategy strategy = strategyService.getById(req.getStrategyId());
         if (strategy == null) {
             throw BizException.of(ResultStatus.PARAM_ERROR);
@@ -98,7 +98,7 @@ public class MaterialTranscodeStrategyFacade {
         if (b == null) {
             throw BizException.of(ResultStatus.PARAM_ERROR);
         }
-        catalogService.requireOnCatalog(b.getCatalogId(), MaterialPermissionCode.MATERIAL_TRANSCODE_POLICY_MANAGE);
+        catalogService.requireOnCatalog(b.getCatalogId(), CatalogPermission.TRANSCODE_POLICY_MANAGE);
         bindService.removeById(bindId);
     }
 

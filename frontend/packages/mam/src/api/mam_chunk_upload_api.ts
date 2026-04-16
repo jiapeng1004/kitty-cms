@@ -3,6 +3,9 @@ import { MATERIAL_SERVICE_PATH } from './constants'
 
 const PREFIX = `${MATERIAL_SERVICE_PATH}/api/material/upload/chunk/session`
 
+/** 分片上传耗时较长，避免默认 10s 超时 */
+const UPLOAD_TIMEOUT_MS = 300_000
+
 export interface MaterialChunkUploadPartVO {
   chunkIndex: number
   byteSize: number
@@ -41,14 +44,15 @@ export interface MaterialChunkUploadSessionCreateDTO {
   /** 各分片 CRC32（无符号），条数须等于分片规划；totalSize=0 时不传 */
   chunkCrc32List?: number[]
   precatalog?: MaterialPrecatalogPayloadDTO
-  storageId: string
+  /** 不传则后端使用主存储 */
+  storageId?: string
   objectKey: string
   totalSize: number
   chunkSize: number
 }
 
 export function createChunkSession(data: MaterialChunkUploadSessionCreateDTO): Promise<MaterialChunkUploadSessionVO> {
-  return api.post(PREFIX, data)
+  return api.post(PREFIX, data, { timeout: UPLOAD_TIMEOUT_MS })
 }
 
 export function getChunkSession(sessionId: string): Promise<MaterialChunkUploadSessionVO> {
@@ -59,11 +63,11 @@ export function reportChunkPart(
   sessionId: string,
   data: { chunkIndex: number; byteSize: number }
 ): Promise<MaterialChunkUploadSessionVO> {
-  return api.post(`${PREFIX}/${encodeURIComponent(sessionId)}/part`, data)
+  return api.post(`${PREFIX}/${encodeURIComponent(sessionId)}/part`, data, { timeout: UPLOAD_TIMEOUT_MS })
 }
 
 export function completeChunkSession(sessionId: string): Promise<MaterialChunkUploadSessionVO> {
-  return api.post(`${PREFIX}/${encodeURIComponent(sessionId)}/complete`)
+  return api.post(`${PREFIX}/${encodeURIComponent(sessionId)}/complete`, {}, { timeout: UPLOAD_TIMEOUT_MS })
 }
 
 export function cancelChunkSession(sessionId: string): Promise<MaterialChunkUploadSessionVO> {
@@ -91,5 +95,8 @@ export function uploadChunkWithHttpHeaders(
   } else {
     headers['Content-Length'] = payload.byteLength
   }
-  return api.post(`${PREFIX}/${encodeURIComponent(sessionId)}/chunk`, payload, { headers })
+  return api.post(`${PREFIX}/${encodeURIComponent(sessionId)}/chunk`, payload, {
+    headers,
+    timeout: UPLOAD_TIMEOUT_MS
+  })
 }

@@ -5,7 +5,9 @@ import icu.jiapeng.kitty.common.core.exceptions.BizException;
 import icu.jiapeng.kitty.common.core.util.PathUtil;
 import icu.jiapeng.kitty.material.catalog.service.CatalogService;
 import icu.jiapeng.kitty.material.config.ConfigCenterGateway;
-import icu.jiapeng.kitty.material.permission.constants.MaterialPermissionCode;
+import icu.jiapeng.kitty.material.config.MaterialTranscodeProperties;
+import icu.jiapeng.kitty.material.catalog.constants.CatalogPermission;
+import icu.jiapeng.kitty.material.resource.constants.ResourceTypeEnum;
 import icu.jiapeng.kitty.material.resource.entity.KtMetaFile;
 import icu.jiapeng.kitty.material.resource.entity.KtResource;
 import icu.jiapeng.kitty.material.resource.service.MaterialResourceService;
@@ -44,6 +46,7 @@ public class MaterialResourceTaskService {
     private final MaterialTranscodeStrategyFacade transcodeStrategyFacade;
     private final TranscodeDispatchGateway transcodeDispatchGateway;
     private final ConfigCenterGateway configCenterGateway;
+    private final MaterialTranscodeProperties materialTranscodeProperties;
     private final CatalogService catalogService;
     private final RedissonDistributedLockOperator distributedLockOperator;
 
@@ -59,7 +62,7 @@ public class MaterialResourceTaskService {
         }
         KtResource resource = resourceService.findById(resourceId)
                 .orElseThrow(() -> BizException.of(ResultStatus.PARAM_ERROR));
-        catalogService.requireOnCatalog(resource.getCatalogId(), MaterialPermissionCode.MATERIAL_RESOURCE_LIST_VIEW);
+        catalogService.requireOnCatalog(resource.getCatalogId(), CatalogPermission.RESOURCE_LIST_VIEW);
         return resourceTaskService.findVisibleByResourceId(resourceId).stream().map(this::toVo).toList();
     }
 
@@ -75,7 +78,7 @@ public class MaterialResourceTaskService {
         }
         KtResource resource = resourceService.findById(dto.getResourceId().trim())
                 .orElseThrow(() -> BizException.of(ResultStatus.PARAM_ERROR));
-        catalogService.requireOnCatalog(resource.getCatalogId(), MaterialPermissionCode.MATERIAL_RESOURCE_UPDATE);
+        catalogService.requireOnCatalog(resource.getCatalogId(), CatalogPermission.RESOURCE_UPDATE);
         KtMaterialTranscodeStrategy strategy = transcodeStrategyFacade
                 .resolveForResource(resource, dto.getStrategyId())
                 .orElseThrow(() -> BizException.of(ResultStatus.PARAM_ERROR));
@@ -147,7 +150,7 @@ public class MaterialResourceTaskService {
         }
         KtResource resource = resourceService.findById(task.getResourceId())
                 .orElseThrow(() -> BizException.of(ResultStatus.PARAM_ERROR));
-        catalogService.requireOnCatalog(resource.getCatalogId(), MaterialPermissionCode.MATERIAL_RESOURCE_UPDATE);
+        catalogService.requireOnCatalog(resource.getCatalogId(), CatalogPermission.RESOURCE_UPDATE);
         if (!"failed".equalsIgnoreCase(task.getStatus())) {
             throw BizException.of(ResultStatus.PARAM_ERROR);
         }
@@ -185,15 +188,14 @@ public class MaterialResourceTaskService {
      * @param resourceId 资源ID
      */
     public void tryAutoEnqueueAfterBind(String resourceId) {
-        Optional<String> flag = configCenterGateway.getString("material", CFG_AUTO_AFTER_BIND);
-        if (flag.isEmpty() || !Boolean.parseBoolean(flag.get().trim())) {
+        if (!isAutoTranscodeAfterBindEnabled()) {
             return;
         }
         KtResource r = resourceService.findById(resourceId).orElse(null);
         if (r == null || r.getType() == null) {
             return;
         }
-        if (r.getType() != 1 && r.getType() != 2) {
+        if (!ResourceTypeEnum.VIDEO.getType().equals(r.getType())) {
             return;
         }
         try {
@@ -201,13 +203,32 @@ public class MaterialResourceTaskService {
             dto.setResourceId(resourceId);
             enqueueTranscode(dto);
         } catch (Exception e) {
-            log.debug("auto transcode skipped resourceId={}", resourceId, e);
+            log.warn("auto transcode failed resourceId={}", resourceId, e);
         }
     }
 
+    private boolean isAutoTranscodeAfterBindEnabled() {
+        Optional<String> flag = configCenterGateway.getString("material", CFG_AUTO_AFTER_BIND);
+        if (flag.isPresent()) {
+            return Boolean.parseBoolean(flag.get().trim());
+        }
+        return materialTranscodeProperties.isAutoAfterBind();
+    }
+
+    private Optional<String> resolveHttpInputBase() {
+        Optional<String> fromCenter = configCenterGateway.getString("material", CFG_HTTP_INPUT_BASE);
+        if (fromCenter.isPresent() && StringUtils.hasText(fromCenter.get())) {
+            return Optional.of(fromCenter.get().trim());
+        }
+        if (StringUtils.hasText(materialTranscodeProperties.getHttpInputBase())) {
+            return Optional.of(materialTranscodeProperties.getHttpInputBase().trim());
+        }
+        return Optional.empty();
+    }
+
     private Optional<String> buildHttpInputFromMeta(String resourceId) {
-        Optional<String> base = configCenterGateway.getString("material", CFG_HTTP_INPUT_BASE);
-        if (base.isEmpty() || base.get().isBlank()) {
+        Optional<String> base = resolveHttpInputBase();
+        if (base.isEmpty()) {
             return Optional.empty();
         }
         Optional<KtMetaFile> meta = metaFileService.findByResourceId(resourceId);

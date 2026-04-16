@@ -12,10 +12,15 @@ server:
 
 grpc:
   server:
+    # 与 kitty-transcoder 同机部署时请错开端口（见 client.kitty-transcoder）
     port: 9803
   client:
     kitty-user:
       address: "static://127.0.0.1:9801"
+      negotiation-type: plaintext
+    # kitty-transcoder 进程 gRPC（CreateTask）；与 material 本进程 grpc.server 端口需不同
+    kitty-transcoder:
+      address: "static://127.0.0.1:9804"
       negotiation-type: plaintext
 
 spring:
@@ -38,7 +43,9 @@ spring:
       port: 6379
       database: 8
   elasticsearch:
-    uris: "http://localhost:9200"
+    uris: "http://localhost:30200"
+    username: "elastic"
+    password: "2OLeDS3kdW_pfDu751gH"
   kafka:
     bootstrap-servers: localhost:9092
     consumer:
@@ -94,6 +101,14 @@ mybatis-plus:
       logic-delete-value: 1
       logic-not-delete-value: 0
   mapper-locations: classpath*:/mapper/**/*.xml
+# 素材转码：分片合并绑定 kt_meta_file 后自动调 kitty-transcoder-grpc（仅视频）；可被配置中心 material.transcode.* 覆盖
+kitty:
+  material:
+    transcode:
+      auto-after-bind: true
+      # 转码服务 HTTP 拉源：可访问 URL 前缀 + object_key；请按实际对象存储/网关填写
+      http-input-base: ""
+
 logging:
   level:
     com.baomidou.mybatisplus: false

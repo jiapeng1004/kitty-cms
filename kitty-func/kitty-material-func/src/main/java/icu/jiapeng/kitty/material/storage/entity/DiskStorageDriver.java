@@ -9,6 +9,13 @@ import icu.jiapeng.kitty.material.storage.StorageRouteRequest;
 import icu.jiapeng.kitty.material.storage.StorageRouteResult;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.util.List;
+
 /**
  * 磁盘存储驱动（路由契约实现）。
  */
@@ -18,6 +25,42 @@ public class DiskStorageDriver implements StorageDriver {
     @Override
     public String driverName() {
         return FileEngineTypeEnum.DISK.getType();
+    }
+
+    @Override
+    public void putEmptyObject(KtFileStorage storageConfig, String objectKey, String contentTypeOrNull) throws IOException {
+        Path target = resolveDiskObjectPath(storageConfig.getBucket(), objectKey);
+        Files.createDirectories(target.getParent());
+        Files.write(target, new byte[0]);
+    }
+
+    @Override
+    public void writeSequentialLocalPartFilesToObject(KtFileStorage storageConfig, String objectKey, List<Path> orderedLocalPartPaths) throws IOException {
+        Path target = resolveDiskObjectPath(storageConfig.getBucket(), objectKey);
+        Files.createDirectories(target.getParent());
+        try (OutputStream out = Files.newOutputStream(target, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE)) {
+            for (Path p : orderedLocalPartPaths) {
+                Files.copy(p, out);
+            }
+        }
+    }
+
+    /**
+     * 挂载根（bucket 字段）+ 对象键 → 本地绝对路径。
+     */
+    private Path resolveDiskObjectPath(String storageMount, String objectKey) throws IOException {
+        if (storageMount == null || storageMount.isBlank()) {
+            throw new IOException("disk storage mount (bucket) is blank");
+        }
+        Path t = Path.of(storageMount.trim());
+        if (objectKey != null) {
+            for (String seg : objectKey.split("/")) {
+                if (!seg.isEmpty()) {
+                    t = t.resolve(seg);
+                }
+            }
+        }
+        return t;
     }
 
     @Override

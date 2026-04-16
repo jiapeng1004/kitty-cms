@@ -20,4 +20,8 @@ public class KtChunkUploadPart extends CommonEntity {
 
     @TableField("byte_size")
     private Long byteSize;
+
+    /** 对象存储 UploadPart 返回的 ETag；磁盘引擎为 null */
+    @TableField("part_etag")
+    private String partEtag;
 }

@@ -73,4 +73,19 @@ public interface MaterialPermissionCode {
      * 新建栏目权限
      */
     String MATERIAL_CATALOG_CREATE = "material:catalog:create";
+
+    /**
+     * 栏目信息修改（重命名、移动等）。
+     */
+    String MATERIAL_CATALOG_UPDATE = "material:catalog:update";
+
+    /**
+     * 栏目删除。
+     */
+    String MATERIAL_CATALOG_DELETE = "material:catalog:delete";
+
+    /**
+     * 文件存储配置管理（增删改查 kt_file_storage，含 S3 等引擎）。
+     */
+    String MATERIAL_STORAGE_MANAGE = "material:storage:manage";
 }

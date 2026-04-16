@@ -1,6 +1,7 @@
 package icu.jiapeng.kitty.material.catalog.vo;
 
 import cn.hutool.core.lang.tree.TreeNode;
+import icu.jiapeng.kitty.common.core.util.TreeNodeModel;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -13,7 +14,7 @@ import java.util.List;
 @EqualsAndHashCode(callSuper = true)
 @Data
 @Schema(description = "栏目树节点")
-public class CatalogNodeVO extends TreeNode<String> {
+public class CatalogNodeVO extends TreeNode<String> implements TreeNodeModel<String, CatalogNodeVO> {
 
     @Schema(description = "栏目ID，个人根示例: pri_1001")
     private String id;

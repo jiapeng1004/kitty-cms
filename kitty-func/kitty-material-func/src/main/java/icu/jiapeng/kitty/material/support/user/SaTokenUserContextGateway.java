@@ -7,6 +7,7 @@ import icu.jiapeng.kitty.material.user.UserContextGateway;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.stream.Stream;
 
 /**
  * sa-token 用户上下文实现（6.2：角色/权限列表由 StpUtil 委派至已注册的 {@link cn.dev33.satoken.stp.StpInterface}，通常为 kitty-user gRPC 插件实现）。
@@ -25,7 +26,7 @@ public class SaTokenUserContextGateway implements UserContextGateway {
 
     @Override
     public List<String> currentRoleIds() {
-        return StpUtil.getRoleList();
+        return Stream.concat(StpUtil.getRoleList().stream(), Stream.of("public")).distinct().toList();
     }
 
     @Override

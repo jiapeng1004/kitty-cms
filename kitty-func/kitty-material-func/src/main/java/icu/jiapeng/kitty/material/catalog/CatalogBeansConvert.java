@@ -16,5 +16,5 @@ public interface CatalogBeansConvert {
 
     KtCatalog node2Mp(CatalogCreateDTO node);
 
-    CatalogNodeVO mp2Node(KtCatalog KtCatalog);
+    CatalogNodeVO mp2Node(KtCatalog entity);
 }

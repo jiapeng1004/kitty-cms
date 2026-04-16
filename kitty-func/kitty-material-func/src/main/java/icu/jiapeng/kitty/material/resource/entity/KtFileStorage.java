@@ -23,8 +23,6 @@ public class KtFileStorage extends CommonEntity {
     @TableField("storage_type")
     private String storageType;
 
-
-
     /**
      * 桶/容器/存储挂载点
      */
@@ -54,4 +52,10 @@ public class KtFileStorage extends CommonEntity {
      */
     @TableField("secret_key")
     private String secretKey;
+
+    /**
+     * 是否主存储（全局至多一条为 true；上传未指定 storageId 时使用）
+     */
+    @TableField("primary_flag")
+    private Boolean primaryFlag;
 }

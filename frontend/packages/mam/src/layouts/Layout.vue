@@ -1,6 +1,6 @@
 <template>
   <div class="mam-layout">
-    <a-layout-header class="mam-header" v-if="!isEmbedded">
+    <a-layout-header class="mam-header" v-if="!isEmbedded && !isImmersive">
       <div class="mam-header-content">
         <div class="mam-logo">
           <span>Kitty CMS</span>
@@ -10,6 +10,9 @@
           :selected-keys="[currentRoute]"
           class="mam-nav-menu"
         >
+          <a-menu-item key="material">
+            <router-link to="/material">素材库</router-link>
+          </a-menu-item>
           <a-menu-item key="catalog-tree">
             <router-link to="/catalog-tree">栏目树</router-link>
           </a-menu-item>
@@ -24,6 +27,9 @@
           </a-menu-item>
           <a-menu-item key="storage-route">
             <router-link to="/storage-route">存储路由</router-link>
+          </a-menu-item>
+          <a-menu-item key="storage-manage">
+            <router-link to="/storage-manage">存储管理</router-link>
           </a-menu-item>
           <a-menu-item key="tasks">
             <router-link to="/tasks">任务中心</router-link>
@@ -40,7 +46,7 @@
         </a-menu>
       </div>
     </a-layout-header>
-    <a-layout-content class="mam-content">
+    <a-layout-content :class="['mam-content', { 'mam-content--flush': isFlush }]">
       <router-view />
     </a-layout-content>
   </div>
@@ -53,12 +59,23 @@ import { useRoute } from 'vue-router'
 const route = useRoute()
 
 const isEmbedded = computed(() => route.path.startsWith('/embed/'))
-const currentRoute = computed(() => route.path.replace('/embed/', '').replace('/', ''))
+const currentRoute = computed(() => {
+  const p = route.path.replace('/embed/', '')
+  return p.replace(/^\//, '').split('/')[0] || ''
+})
+const isFlush = computed(() => route.meta.flush === true)
+/** 素材库整页工作台：隐藏顶栏，贴近参考站「仅侧栏 + 主区」 */
+const isImmersive = computed(() => route.meta.immersive === true)
 </script>
 
 <style scoped>
 .mam-layout {
-  min-height: 100vh;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  /* 让 flush 子页面（素材工作台等）能拿到「剩余视口高度」，内部才能把分页栏压到底部 */
+  display: flex;
+  flex-direction: column;
   background: #f0f2f5;
 }
 
@@ -114,5 +131,17 @@ const currentRoute = computed(() => route.path.replace('/embed/', '').replace('/
   padding: 24px;
   max-width: 1440px;
   margin: 0 auto;
+}
+
+.mam-content--flush {
+  padding: 0;
+  max-width: none;
+  margin: 0;
+  flex: 1 1 0;
+  min-height: 0 !important;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 </style>

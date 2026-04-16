@@ -17,23 +17,28 @@ import icu.jiapeng.kitty.material.resource.mapper.KtResourceMapper;
 import icu.jiapeng.kitty.material.resource.service.MetaFileStorageBindService;
 import icu.jiapeng.kitty.material.searchsync.service.MaterialSearchSyncTrigger;
 import icu.jiapeng.kitty.material.task.service.MaterialResourceTaskService;
+import icu.jiapeng.kitty.material.storage.StorageDriver;
+import icu.jiapeng.kitty.material.storage.StorageDriverFactory;
+import icu.jiapeng.kitty.material.storage.StorageMimeTypes;
+import icu.jiapeng.kitty.material.storage.StoragePartEtag;
 import icu.jiapeng.kitty.material.upload.ChunkUploadSessionStatus;
 import icu.jiapeng.kitty.material.upload.chunk.ChunkStagingPort;
 import icu.jiapeng.kitty.material.upload.entity.KtChunkUploadPart;
 import icu.jiapeng.kitty.material.upload.entity.KtChunkUploadSession;
+import icu.jiapeng.kitty.material.upload.entity.chunk.FilesystemChunkStagingService;
 import icu.jiapeng.kitty.material.upload.mapper.KtChunkUploadPartMapper;
 import icu.jiapeng.kitty.material.upload.mapper.KtChunkUploadSessionMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.UncheckedIOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -46,15 +51,20 @@ public class ChunkUploadMergeService {
     private final KtChunkUploadPartMapper partMapper;
     private final ChunkUploadSessionService chunkUploadSessionService;
     private final ChunkStagingPort chunkStagingPort;
+    private final FilesystemChunkStagingService diskChunkStaging;
     private final KtFileStorageMapper fileStorageMapper;
     private final KtResourceMapper resourceMapper;
     private final MetaFileStorageBindService metaFileStorageBindService;
     private final MaterialResourceTaskService materialResourceTaskService;
     private final MaterialMetadataInstanceService metadataInstanceService;
     private final MaterialSearchSyncTrigger materialSearchSyncTrigger;
+    private final StorageDriverFactory storageDriverFactory;
 
+    /**
+     * 校验分片与指纹后落最终对象：磁盘引擎顺序拼接本地分片文件；对象存储引擎 CompleteMultipartUpload（无本地合并临时文件）。
+     */
     @Transactional(rollbackFor = Exception.class)
-    public void mergeDiskVerifyAndComplete(String sessionId) {
+    public void mergeVerifyAndComplete(String sessionId) {
         KtChunkUploadSession session = sessionMapper.selectById(sessionId);
         if (session == null) {
             throw BizException.of(ResultStatus.PARAM_ERROR);
@@ -66,9 +76,7 @@ public class ChunkUploadMergeService {
         if (storage == null) {
             throw BizException.of(ResultStatus.PARAM_ERROR);
         }
-        if (!FileEngineTypeEnum.DISK.getType().equals(storage.getStorageType())) {
-            throw BizException.of(ResultStatus.PARAM_ERROR);
-        }
+        StorageDriver driver = storageDriverFactory.resolve(storage.getStorageType());
         KtResource resource = resourceMapper.selectById(session.getResourceId());
         if (resource == null) {
             throw BizException.of(ResultStatus.PARAM_ERROR);
@@ -80,15 +88,16 @@ public class ChunkUploadMergeService {
                 throw BizException.of(ResultStatus.PARAM_ERROR);
             }
             try {
-                Path target = diskTarget(storage.getBucket(), session.getObjectKey());
-                Files.createDirectories(target.getParent());
-                Files.write(target, new byte[0]);
+                String contentType = StorageMimeTypes.resolveFromTitleAndObjectKey(session.getTitle(), session.getObjectKey());
+                driver.putEmptyObject(storage, session.getObjectKey(), contentType);
             } catch (IOException e) {
                 throw new UncheckedIOException(e);
             }
-            finalizeAfterMergedFileOnDisk(session);
+            finalizeAfterMergedFile(session);
             return;
         }
+
+        chunkUploadSessionService.flushUploadPartsFromCacheToDb(sessionId);
 
         List<KtChunkUploadPart> parts = partMapper.selectList(
                 new QueryWrapper<KtChunkUploadPart>().eq("session_id", sessionId)
@@ -96,22 +105,72 @@ public class ChunkUploadMergeService {
         if (parts.size() != chunkCount) {
             throw BizException.of(ResultStatus.PARAM_ERROR);
         }
+        parts.sort(Comparator.comparingInt(KtChunkUploadPart::getChunkIndex));
 
         if (resource.getFingerprint() == null || resource.getFingerprint().isBlank()) {
             throw BizException.of(ResultStatus.PARAM_ERROR);
         }
 
+        if (FileEngineTypeEnum.OBJECT_STORAGE.getType().equals(storage.getStorageType())) {
+            mergeObjectStorage(session, storage, driver, parts);
+        } else if (FileEngineTypeEnum.DISK.getType().equals(storage.getStorageType())) {
+            mergeDisk(session, storage, driver, resource);
+        } else {
+            throw BizException.of(ResultStatus.PARAM_ERROR);
+        }
+
+        finalizeAfterMergedFile(session);
+    }
+
+    private void mergeObjectStorage(
+            KtChunkUploadSession session,
+            KtFileStorage storage,
+            StorageDriver driver,
+            List<KtChunkUploadPart> parts) {
+        if (!StringUtils.hasText(session.getMultipartUploadId())) {
+            throw BizException.of(ResultStatus.PARAM_ERROR);
+        }
+        int chunkCount = session.getChunkCount();
+        List<StoragePartEtag> completed = new ArrayList<>(chunkCount);
+        for (int i = 0; i < chunkCount; i++) {
+            KtChunkUploadPart p = parts.get(i);
+            if (p.getChunkIndex() != i) {
+                throw BizException.of(ResultStatus.PARAM_ERROR);
+            }
+            long expected = chunkUploadSessionService.expectedChunkByteSize(session, i);
+            if (!p.getByteSize().equals(expected)) {
+                throw BizException.of(ResultStatus.PARAM_ERROR);
+            }
+            if (!StringUtils.hasText(p.getPartEtag())) {
+                throw BizException.of(ResultStatus.PARAM_ERROR);
+            }
+            completed.add(new StoragePartEtag(i + 1, p.getPartEtag()));
+        }
+        try {
+            driver.completeMultipartUpload(storage, session.getObjectKey(), session.getMultipartUploadId(), completed);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    private void mergeDisk(
+            KtChunkUploadSession session,
+            KtFileStorage storage,
+            StorageDriver driver,
+            KtResource resource) {
+        String sessionId = session.getId();
+        int chunkCount = session.getChunkCount();
         List<Long> crcs = new ArrayList<>(chunkCount);
         try {
             for (int i = 0; i < chunkCount; i++) {
-                if (!chunkStagingPort.partExists(sessionId, i)) {
+                if (!diskChunkStaging.partExists(sessionId, i)) {
                     throw BizException.of(ResultStatus.PARAM_ERROR);
                 }
                 long expected = chunkUploadSessionService.expectedChunkByteSize(session, i);
-                if (chunkStagingPort.partByteSize(sessionId, i) != expected) {
+                if (diskChunkStaging.partByteSize(sessionId, i) != expected) {
                     throw BizException.of(ResultStatus.PARAM_ERROR);
                 }
-                Path partPath = chunkStagingPort.resolvePartPath(sessionId, i);
+                Path partPath = diskChunkStaging.resolvePartPath(sessionId, i);
                 crcs.add(ResourceFingerprintSupport.crc32Unsigned(partPath));
             }
         } catch (IOException e) {
@@ -123,26 +182,18 @@ public class ChunkUploadMergeService {
             throw BizException.of(ResultStatus.PARAM_ERROR);
         }
 
+        List<Path> ordered = new ArrayList<>(chunkCount);
         try {
-            Path target = diskTarget(storage.getBucket(), session.getObjectKey());
-            Files.createDirectories(target.getParent());
-            try (OutputStream out = Files.newOutputStream(target)) {
-                for (int i = 0; i < chunkCount; i++) {
-                    Path partPath = chunkStagingPort.resolvePartPath(sessionId, i);
-                    Files.copy(partPath, out);
-                }
+            for (int i = 0; i < chunkCount; i++) {
+                ordered.add(diskChunkStaging.resolvePartPath(sessionId, i));
             }
-            if (Files.size(target) != session.getTotalSize()) {
-                throw BizException.of(ResultStatus.NORMAL_ERROR);
-            }
+            driver.writeSequentialLocalPartFilesToObject(storage, session.getObjectKey(), ordered);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
-
-        finalizeAfterMergedFileOnDisk(session);
     }
 
-    private void finalizeAfterMergedFileOnDisk(KtChunkUploadSession session) {
+    private void finalizeAfterMergedFile(KtChunkUploadSession session) {
         String sessionId = session.getId();
         metaFileStorageBindService.bind(session.getResourceId(), session.getStorageId(), session.getObjectKey(), null);
         KtResource resource = resourceMapper.selectById(session.getResourceId());
@@ -181,20 +232,5 @@ public class ChunkUploadMergeService {
         } catch (Exception ex) {
             log.warn("precatalog skipped after chunk merge, sessionId={}", session.getId(), ex);
         }
-    }
-
-    private Path diskTarget(String storageMount, String objectKey) {
-        if (storageMount == null || storageMount.isBlank()) {
-            throw BizException.of(ResultStatus.PARAM_ERROR);
-        }
-        Path t = Path.of(storageMount.trim());
-        if (objectKey != null) {
-            for (String seg : objectKey.split("/")) {
-                if (!seg.isEmpty()) {
-                    t = t.resolve(seg);
-                }
-            }
-        }
-        return t;
     }
 }

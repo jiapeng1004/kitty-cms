@@ -5,13 +5,14 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import icu.jiapeng.kitty.common.core.constant.ResultStatus;
 import icu.jiapeng.kitty.common.core.exceptions.BizException;
 import icu.jiapeng.kitty.material.catalog.service.CatalogService;
-import icu.jiapeng.kitty.material.permission.constants.MaterialPermissionCode;
+import icu.jiapeng.kitty.material.catalog.constants.CatalogPermission;
 import icu.jiapeng.kitty.material.resource.constants.ResourceTypeEnum;
 import icu.jiapeng.kitty.material.resource.entity.KtResource;
 import icu.jiapeng.kitty.material.resource.mapper.KtResourceMapper;
 import icu.jiapeng.kitty.material.support.lock.RedissonDistributedLockOperator;
 import icu.jiapeng.kitty.material.upload.ChunkUploadSessionCreateSpec;
 import icu.jiapeng.kitty.material.upload.ChunkUploadSessionStatus;
+import icu.jiapeng.kitty.material.upload.cache.ChunkUploadSessionHotCache;
 import icu.jiapeng.kitty.material.upload.chunk.ChunkStagingPort;
 import icu.jiapeng.kitty.material.upload.dto.MaterialChunkUploadPartReportDTO;
 import icu.jiapeng.kitty.material.upload.dto.MaterialChunkUploadSessionCreateDTO;
@@ -28,6 +29,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -48,6 +51,7 @@ public class MaterialChunkUploadService {
     private final ChunkUploadMergeService chunkUploadMergeService;
     private final KtResourceMapper resourceMapper;
     private final CatalogService catalogService;
+    private final ChunkUploadSessionHotCache chunkUploadSessionHotCache;
 
     /**
      * 创建分块上传会话
@@ -61,14 +65,15 @@ public class MaterialChunkUploadService {
         }
         if (!StringUtils.hasText(req.getResourceId())) {
             validateMamSessionCreate(req);
-            catalogService.requireOnCatalog(req.getCatalogId().trim(), MaterialPermissionCode.MATERIAL_RESOURCE_CREATE);
+            String normalizedCatalogId = catalogService.normalizeResourceCatalogId(req.getCatalogId().trim());
+            catalogService.requireOnCatalog(normalizedCatalogId, CatalogPermission.RESOURCE_CREATE);
         } else {
-            guardResourceCatalogForChunk(req.getResourceId().trim(), MaterialPermissionCode.MATERIAL_RESOURCE_CREATE);
+            guardResourceCatalogForChunk(req.getResourceId().trim(), CatalogPermission.RESOURCE_CREATE);
         }
         if (req.getPrecatalog() != null) {
             String catalogForPrecatalog;
             if (!StringUtils.hasText(req.getResourceId())) {
-                catalogForPrecatalog = req.getCatalogId().trim();
+                catalogForPrecatalog = catalogService.normalizeResourceCatalogId(req.getCatalogId().trim());
             } else {
                 KtResource resource = resourceMapper.selectById(req.getResourceId().trim());
                 if (resource == null) {
@@ -76,7 +81,7 @@ public class MaterialChunkUploadService {
                 }
                 catalogForPrecatalog = resource.getCatalogId();
             }
-            catalogService.requireOnCatalog(catalogForPrecatalog, MaterialPermissionCode.MATERIAL_RESOURCE_UPDATE);
+            catalogService.requireOnCatalog(catalogForPrecatalog, CatalogPermission.RESOURCE_UPDATE);
         }
         KtChunkUploadSession created = chunkUploadSessionService.create(toCreateSpec(req));
         return toVo(created, List.of());
@@ -113,7 +118,7 @@ public class MaterialChunkUploadService {
         if (StringUtils.hasText(req.getResourceId())) {
             spec.setExistingResourceId(req.getResourceId().trim());
         } else {
-            spec.setCatalogId(req.getCatalogId().trim());
+            spec.setCatalogId(catalogService.normalizeResourceCatalogId(req.getCatalogId().trim()));
             spec.setParentResourceId(req.getParentId());
             spec.setTitle(req.getTitle().trim());
             spec.setResourceType(req.getType());
@@ -153,10 +158,8 @@ public class MaterialChunkUploadService {
         if (session == null) {
             throw BizException.of(ResultStatus.PARAM_ERROR);
         }
-        guardResourceCatalogForChunk(session.getResourceId(), MaterialPermissionCode.MATERIAL_RESOURCE_LIST_VIEW);
-        List<KtChunkUploadPart> parts = partMapper.selectList(
-                new QueryWrapper<KtChunkUploadPart>().eq("session_id", sessionId)
-        );
+        guardResourceCatalogForChunk(session.getResourceId(), CatalogPermission.RESOURCE_LIST_VIEW);
+        List<KtChunkUploadPart> parts = loadPartsForDisplay(session);
         return toVo(session, parts);
     }
 
@@ -191,7 +194,7 @@ public class MaterialChunkUploadService {
                 "material:upload:finalize:" + sessionId,
                 FINALIZE_LOCK_WAIT_MS,
                 FINALIZE_LOCK_LEASE_SECONDS,
-                () -> chunkUploadMergeService.mergeDiskVerifyAndComplete(sessionId));
+                () -> chunkUploadMergeService.mergeVerifyAndComplete(sessionId));
         return toVo(sessionId);
     }
 
@@ -239,7 +242,10 @@ public class MaterialChunkUploadService {
         ContentByteRange range = ChunkUploadHttpHeadersSupport.parseContentRangeBytes(contentRangeHeader);
         ChunkUploadHttpHeadersSupport.validateRangeContentLengthAndBody(range, contentLength, payload.length);
 
-        KtChunkUploadSession session = sessionMapper.selectById(sessionId);
+        KtChunkUploadSession session = chunkUploadSessionHotCache.getSessionSnapshot(sessionId);
+        if (session == null) {
+            session = sessionMapper.selectById(sessionId);
+        }
         if (session == null) {
             throw BizException.of(ResultStatus.PARAM_ERROR);
         }
@@ -263,24 +269,25 @@ public class MaterialChunkUploadService {
         if (session == null) {
             throw BizException.of(ResultStatus.PARAM_ERROR);
         }
-        guardResourceCatalogForChunk(session.getResourceId(), MaterialPermissionCode.MATERIAL_RESOURCE_UPDATE);
+        guardResourceCatalogForChunk(session.getResourceId(), CatalogPermission.RESOURCE_UPDATE);
     }
 
-    private void guardResourceCatalogForChunk(String resourceId, String permissionCode) {
+    private void guardResourceCatalogForChunk(String resourceId, CatalogPermission permission) {
         KtResource resource = resourceMapper.selectById(resourceId);
         if (resource == null) {
             throw BizException.of(ResultStatus.PARAM_ERROR);
         }
-        catalogService.requireOnCatalog(resource.getCatalogId(), permissionCode);
+        catalogService.requireOnCatalog(resource.getCatalogId(), permission);
     }
 
     private void registerPartUnderChunkLock(String sessionId, int chunkIndex, long byteSize, byte[] stagingPayloadOrNull) {
         String lockKey = "material:upload:chunk:" + sessionId + ":" + chunkIndex;
         distributedLockOperator.executeWithLock(lockKey, CHUNK_LOCK_WAIT_MS, CHUNK_LOCK_LEASE_SECONDS, () -> {
+            String etag = null;
             if (stagingPayloadOrNull != null) {
-                chunkStagingPort.writePart(sessionId, chunkIndex, stagingPayloadOrNull);
+                etag = chunkStagingPort.writePart(sessionId, chunkIndex, stagingPayloadOrNull);
             }
-            chunkUploadSessionService.registerPart(sessionId, chunkIndex, byteSize);
+            chunkUploadSessionService.registerPart(sessionId, chunkIndex, byteSize, etag);
         });
     }
 
@@ -289,10 +296,33 @@ public class MaterialChunkUploadService {
         if (session == null) {
             throw BizException.of(ResultStatus.PARAM_ERROR);
         }
-        List<KtChunkUploadPart> parts = partMapper.selectList(
+        List<KtChunkUploadPart> parts = loadPartsForDisplay(session);
+        return toVo(session, parts);
+    }
+
+    /**
+     * uploading：优先从 Redis Hash 组装分片列表；否则回源 DB（兼容已刷库或旧数据）。
+     */
+    private List<KtChunkUploadPart> loadPartsForDisplay(KtChunkUploadSession session) {
+        String sessionId = session.getId();
+        if (ChunkUploadSessionStatus.UPLOADING.equals(session.getStatus())) {
+            Map<String, String> entries = chunkUploadSessionHotCache.loadPartEntries(sessionId);
+            if (!entries.isEmpty()) {
+                List<KtChunkUploadPart> list = new ArrayList<>(entries.size());
+                for (Map.Entry<String, String> e : entries.entrySet()) {
+                    KtChunkUploadPart p = new KtChunkUploadPart();
+                    p.setSessionId(sessionId);
+                    p.setChunkIndex(Integer.parseInt(e.getKey()));
+                    p.setByteSize(ChunkUploadSessionHotCache.parseByteSizeFromPartEntry(e.getValue()));
+                    list.add(p);
+                }
+                list.sort(Comparator.comparingInt(KtChunkUploadPart::getChunkIndex));
+                return list;
+            }
+        }
+        return partMapper.selectList(
                 new QueryWrapper<KtChunkUploadPart>().eq("session_id", sessionId)
         );
-        return toVo(session, parts);
     }
 
     private MaterialChunkUploadSessionVO toVo(KtChunkUploadSession session, List<KtChunkUploadPart> parts) {

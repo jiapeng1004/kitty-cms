@@ -2,9 +2,8 @@ package icu.jiapeng.kitty.material.upload.entity.chunk;
 
 import icu.jiapeng.kitty.common.core.constant.ResultStatus;
 import icu.jiapeng.kitty.common.core.exceptions.BizException;
-import icu.jiapeng.kitty.material.upload.chunk.ChunkStagingPort;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -18,8 +17,8 @@ import java.util.stream.Stream;
 /**
  * 本地目录暂存分片：{@code {stagingRoot}/{sessionId}/{index}.part}。
  */
-@Service
-public class FilesystemChunkStagingService implements ChunkStagingPort {
+@Component
+public class FilesystemChunkStagingService {
 
     private final Path stagingRoot;
 
@@ -47,8 +46,7 @@ public class FilesystemChunkStagingService implements ChunkStagingPort {
         return sessionId;
     }
 
-    @Override
-    public void writePart(String sessionId, int chunkIndex, byte[] data) {
+    public String writePart(String sessionId, int chunkIndex, byte[] data) {
         if (data == null) {
             throw BizException.of(ResultStatus.PARAM_ERROR);
         }
@@ -62,14 +60,13 @@ public class FilesystemChunkStagingService implements ChunkStagingPort {
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
+        return null;
     }
 
-    @Override
     public boolean partExists(String sessionId, int chunkIndex) {
         return Files.isRegularFile(partPath(sessionId, chunkIndex));
     }
 
-    @Override
     public long partByteSize(String sessionId, int chunkIndex) {
         Path p = partPath(sessionId, chunkIndex);
         try {
@@ -82,12 +79,10 @@ public class FilesystemChunkStagingService implements ChunkStagingPort {
         }
     }
 
-    @Override
     public Path resolvePartPath(String sessionId, int chunkIndex) {
         return partPath(sessionId, chunkIndex);
     }
 
-    @Override
     public void deleteSession(String sessionId) {
         try {
             Path dir = sessionDir(sessionId);

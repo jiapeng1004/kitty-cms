@@ -112,6 +112,12 @@
             <groupId>cn.hutool</groupId>
             <artifactId>hutool-extra</artifactId>
         </dependency>
+        <!-- S3 兼容协议：Multipart 直传分片 / 空对象 PutObject -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+            <version>2.25.70</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -123,13 +129,17 @@
                     <source>${maven.compiler.source}</source>
                     <target>${maven.compiler.source}</target>
                     <annotationProcessorPaths>
-                        <!-- Lombok -->
+                        <!-- 顺序：Lombok → lombok-mapstruct-binding → MapStruct，否则生成类缺失 -->
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
                             <version>${lombok.version}</version>
                         </path>
-                        <!-- MapStruct -->
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok-mapstruct-binding</artifactId>
+                            <version>${lombok-mapstruct-binding.version}</version>
+                        </path>
                         <path>
                             <groupId>org.mapstruct</groupId>
                             <artifactId>mapstruct-processor</artifactId>

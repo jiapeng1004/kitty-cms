@@ -31,10 +31,11 @@ spring:
 
 grpc:
   server:
-    port: 9803
+    # 与 kitty-mam（material）同机时避免与其 grpc.server 冲突；material 客户端默认连 9810
+    port: 9804
 
 server:
-  port: 9703
+  port: 9704
 
 
 springdoc:

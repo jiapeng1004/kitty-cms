@@ -1,0 +1,25 @@
+---
+description: MAM 管理列表表格「单击单元格复制」交互（无复制按钮），新管理页应复用同一套实现
+globs: frontend/packages/mam/**/*.vue
+alwaysApply: false
+---
+
+# MAM 管理页表格：单击复制
+
+已定型效果：**除操作列外，数据列单击即复制该字段完整值**（不受表格省略号影响），悬停淡蓝底 + `cursor: copy`，成功用短 Toast「已复制到剪贴板」。**不要**为每列加独立「复制」按钮。
+
+## 实现要求
+
+1. **逻辑**：使用 composable `useMamTableCellCopy`（`src/composables/useMamTableCellCopy.ts`），解构出 `copyCell`。
+2. **样式**：可复制的单元格外层包 `<span class="mam-table-cell-copy" @click="copyCell(…)">`。全局样式已随 `main.ts` 引入 `styles/mam-admin-table-cell.css`，**勿在页面里重复抄一套 hover 样式**（除非该页需要额外变体）。
+3. **列内 Tag**：放在 `mam-table-cell-copy` 内即可，全局样式已对 `.ant-tag` 设 `pointer-events: none`，点击标签区域仍复制整格。
+4. **空值**：`null` / 空串 / 展示为「—」时调用 `copyCell` 会提示「当前无内容可复制」，不写入剪贴板。
+5. **说明文案**：在页面说明区或表格上方提示一句「单击单元格可复制」即可，保持与 `StorageManagePage.vue` 一致的用户预期。
+
+## 参考
+
+- 完整示例：`frontend/packages/mam/src/views/StorageManagePage.vue`（ID、引擎、主存储、实例编码、桶、Endpoint、AK、SK 等列）。
+
+## 不适用
+
+- 纯操作列（编辑/删除链接）不要包 `mam-table-cell-copy`，避免误触复制。

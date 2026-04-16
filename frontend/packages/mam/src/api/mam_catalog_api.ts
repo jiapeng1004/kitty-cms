@@ -1,4 +1,5 @@
 import api from '../utils/api'
+import type { MaterialPermissionCodeValue } from '@/constants/material_permission_code'
 import { MATERIAL_SERVICE_PATH } from './constants'
 
 const CATALOG_PREFIX = `${MATERIAL_SERVICE_PATH}/api/catalog`
@@ -19,6 +20,13 @@ export interface MaterialCatalogNode {
 export interface CatalogCreateDTO {
   name: string
   parentId: string
+}
+
+export interface CatalogUpdateDTO {
+  id: string
+  name?: string
+  parentId?: string
+  sortNum?: number
 }
 
 /** 与后端 {@code CatalogPermissionNode} 对齐 */
@@ -65,6 +73,16 @@ export function createCatalog(dto: CatalogCreateDTO): Promise<string> {
   return api.post(`${CATALOG_PREFIX}`, dto)
 }
 
+/** 更新栏目（重命名/移动/排序） */
+export function updateCatalog(dto: CatalogUpdateDTO): Promise<void> {
+  return api.put(`${CATALOG_PREFIX}`, dto)
+}
+
+/** 删除栏目 */
+export function deleteCatalog(catalogId: string): Promise<void> {
+  return api.delete(`${CATALOG_PREFIX}/${catalogId}`)
+}
+
 // ========== 权限相关 ==========
 
 /** 与后端 {@code CatalogPermissionUpsertDTO} 对齐：先删 roleIds 下可编辑规则，再写入矩阵 */
@@ -88,8 +106,11 @@ export interface CatalogPermissionCellDTO {
   permissionCode: string
 }
 
-/** 检查当前用户是否在指定栏目上有指定权限 */
-export function checkCatalogPermission(catalogId: string, permissionCode: string): Promise<boolean> {
+/** 检查当前用户是否在指定栏目上有指定权限（permissionCode 为 MaterialPermissionCode 字面量） */
+export function checkCatalogPermission(
+  catalogId: string,
+  permissionCode: MaterialPermissionCodeValue | string
+): Promise<boolean> {
   return api.get(`${PERMISSION_PREFIX}/check`, {
     params: { catalogId, permissionCode }
   })
