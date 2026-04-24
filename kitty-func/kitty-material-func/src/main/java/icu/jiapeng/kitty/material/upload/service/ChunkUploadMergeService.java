@@ -17,6 +17,7 @@ import icu.jiapeng.kitty.material.resource.mapper.KtResourceMapper;
 import icu.jiapeng.kitty.material.resource.service.MetaFileStorageBindService;
 import icu.jiapeng.kitty.material.searchsync.service.MaterialSearchSyncTrigger;
 import icu.jiapeng.kitty.material.task.service.MaterialResourceTaskService;
+import icu.jiapeng.kitty.material.transcode.service.MaterialTranscodeVideoFollowUpService;
 import icu.jiapeng.kitty.material.storage.StorageDriver;
 import icu.jiapeng.kitty.material.storage.StorageDriverFactory;
 import icu.jiapeng.kitty.material.storage.StorageMimeTypes;
@@ -32,6 +33,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.StringUtils;
 
 import java.io.IOException;
@@ -59,6 +62,7 @@ public class ChunkUploadMergeService {
     private final MaterialMetadataInstanceService metadataInstanceService;
     private final MaterialSearchSyncTrigger materialSearchSyncTrigger;
     private final StorageDriverFactory storageDriverFactory;
+    private final MaterialTranscodeVideoFollowUpService materialTranscodeVideoFollowUpService;
 
     /**
      * 校验分片与指纹后落最终对象：磁盘引擎顺序拼接本地分片文件；对象存储引擎 CompleteMultipartUpload（无本地合并临时文件）。
@@ -198,12 +202,23 @@ public class ChunkUploadMergeService {
         metaFileStorageBindService.bind(session.getResourceId(), session.getStorageId(), session.getObjectKey(), null);
         KtResource resource = resourceMapper.selectById(session.getResourceId());
         if (resource != null) {
+            materialResourceTaskService.onUploadFileBound(resource, session.getTranscodeStrategyId());
             materialSearchSyncTrigger.publishFullDocument(resource);
+            final KtResource afterBind = resource;
+            if (TransactionSynchronizationManager.isSynchronizationActive()) {
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        materialTranscodeVideoFollowUpService.scheduleIfVideo(afterBind);
+                    }
+                });
+            } else {
+                materialTranscodeVideoFollowUpService.scheduleIfVideo(afterBind);
+            }
         }
         chunkUploadSessionService.complete(sessionId);
         chunkStagingPort.deleteSession(sessionId);
         applyPrecatalogIfPresent(session);
-        materialResourceTaskService.tryAutoEnqueueAfterBind(session.getResourceId());
     }
 
     private void applyPrecatalogIfPresent(KtChunkUploadSession session) {

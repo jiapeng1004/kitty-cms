@@ -14,4 +14,8 @@ public class TranscodeSubmitCommand {
     String inputPath;
     long externalStrategyId;
     int priority;
+    /**
+     * 与素材侧策略 params_json 对齐，经 gRPC 透传至转码服务（需服务端支持）。
+     */
+    String extraParamsJson;
 }

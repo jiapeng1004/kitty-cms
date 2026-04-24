@@ -34,12 +34,15 @@ public class GrpcKittyTranscodeDispatchGateway implements TranscodeDispatchGatew
             return Optional.empty();
         }
         try {
-            CreateTaskResp resp = transcodeStub.createTask(CreateTaskReq.newBuilder()
+            CreateTaskReq.Builder b = CreateTaskReq.newBuilder()
                     .setInputType(command.getInputType())
                     .setInputPath(command.getInputPath())
                     .setStrategyId(command.getExternalStrategyId())
-                    .setPriority(command.getPriority())
-                    .build());
+                    .setPriority(command.getPriority());
+            if (command.getExtraParamsJson() != null && !command.getExtraParamsJson().isBlank()) {
+                b.setExtraParamsJson(command.getExtraParamsJson());
+            }
+            CreateTaskResp resp = transcodeStub.createTask(b.build());
             String taskId = resp.getTaskId();
             if (taskId.isBlank()) {
                 return Optional.empty();

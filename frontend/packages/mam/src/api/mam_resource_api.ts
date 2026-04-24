@@ -168,6 +168,13 @@ export interface MaterialResourceTaskVO {
   strategyName?: string
 }
 
+export interface MaterialResourceDerivativeVO {
+  destinationType: string
+  available?: boolean
+  accessUrl?: string
+  fileSize?: number
+}
+
 export interface MaterialResourceDetailVO {
   resource: MaterialResourceVO
   metadata: MaterialMetadataSnapshotVO[]
@@ -178,6 +185,27 @@ export interface MaterialResourceDetailVO {
   taggingTasks?: MaterialResourceTaskVO[]
   /** 通用审核任务 */
   reviewTasks?: MaterialReviewTaskVO[]
+  /** 衍生产物（多码率/封面/雪碧等） */
+  derivatives?: MaterialResourceDerivativeVO[]
+}
+
+export interface MaterialDownloadUrlVO {
+  resourceId: string
+  destinationType: string
+  actualDestinationType: string
+  url: string
+  expiresInSec?: number
+}
+
+export interface MaterialDownloadReportItemDTO {
+  resourceId: string
+  destinationType: string
+  resourceTitle?: string
+  actualDestinationType?: string
+}
+
+export interface MaterialDownloadReportBatchDTO {
+  items: MaterialDownloadReportItemDTO[]
 }
 
 /** 无记录时返回 null（HTTP 204） */
@@ -198,4 +226,20 @@ export function bindMetaFile(data: MaterialMetaFileBindDTO): Promise<MaterialMet
 
 export function getResourceDetail(resourceId: string): Promise<MaterialResourceDetailVO> {
   return api.get(`${PREFIX}/detail`, { params: { resourceId } })
+}
+
+/** 按分级解析可下载直链（缺码率时非 COVER/SPRITE 可能降级为 SOURCE） */
+export function getResourceDownloadUrl(params: {
+  resourceId: string
+  destinationType: string
+}): Promise<MaterialDownloadUrlVO> {
+  return api.get(`${PREFIX}/download-url`, { params })
+}
+
+export function reportResourceDownload(body: MaterialDownloadReportItemDTO): Promise<void> {
+  return api.post(`${PREFIX}/download/report`, body)
+}
+
+export function reportResourceDownloadBatch(body: MaterialDownloadReportBatchDTO): Promise<void> {
+  return api.post(`${PREFIX}/download/report/batch`, body)
 }

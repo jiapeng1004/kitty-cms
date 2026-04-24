@@ -20,4 +20,10 @@ public class MaterialTranscodeStrategyUpsertDTO {
     private String paramsJson;
 
     private Integer enabled;
+
+    @Schema(description = "资源类型 ResourceTypeEnum，与全局默认、栏目解析一致；设全局默认时必填")
+    private Integer resourceType;
+
+    @Schema(description = "1=该资源类型下全局默认（同类至多一条）")
+    private Integer isGlobalDefault;
 }

@@ -16,5 +16,5 @@ import icu.jiapeng.kitty.user.oauth2.entity.KtOauth2Client;
 import org.apache.ibatis.annotations.Mapper;
 import org.jspecify.annotations.NonNull;
 
-public interface KtOauth2ClientMapper extends BaseMapper<@NonNull KtOauth2Client> {
+public interface KtOauth2ClientMapper extends BaseMapper<KtOauth2Client> {
 }

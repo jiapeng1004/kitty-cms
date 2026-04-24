@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="icu.jiapeng.kitty.material.catalog.mapper.KtCatalogMapper">
+
+    <select id="listByParentIdOrderBySort" resultType="icu.jiapeng.kitty.material.catalog.entity.KtCatalog">
+        SELECT * FROM kt_catalog
+        WHERE parent_id = #{parentId}
+        ORDER BY COALESCE(sort_num, 0) ASC, name ASC, id ASC
+    </select>
+
+    <select id="selectMinMaxSortInParent" resultType="java.util.HashMap">
+        SELECT
+            IFNULL(MIN(COALESCE(sort_num, 0)), 0) AS minV,
+            IFNULL(MAX(COALESCE(sort_num, 0)), 0) AS maxV
+        FROM kt_catalog
+        WHERE parent_id = #{parentId}
+    </select>
+</mapper>

@@ -1,5 +1,16 @@
 /// <reference types="vite/client" />
 
+/** 与 @vite/client 的 ImportMeta 合并，补充本工程用到的 env 键 */
+interface ImportMetaEnv {
+  readonly VITE_API_BASEURL?: string
+  /** 未登录/401 时跳转的登录页；部署在同域时一般可不配 */
+  readonly VITE_LOGIN_URL?: string
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv
+}
+
 declare module '*.vue' {
   import type { DefineComponent } from 'vue'
   const component: DefineComponent<object, object, unknown>

@@ -1,9 +1,9 @@
 package icu.jiapeng.kitty.material.resource.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import icu.jiapeng.kitty.common.core.constant.ResultStatus;
 import icu.jiapeng.kitty.common.core.exceptions.BizException;
 import icu.jiapeng.kitty.material.resource.constants.ResourceTypeEnum;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import icu.jiapeng.kitty.material.resource.entity.KtFileStorage;
 import icu.jiapeng.kitty.material.resource.entity.KtMetaFile;
 import icu.jiapeng.kitty.material.resource.entity.KtResource;
@@ -14,8 +14,6 @@ import icu.jiapeng.kitty.material.storage.StorageDriver;
 import icu.jiapeng.kitty.material.storage.StorageDriverFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -52,7 +50,6 @@ public class MetaFileStorageBindServiceImpl implements MetaFileStorageBindServic
         );
         if (meta == null) {
             meta = new KtMetaFile();
-            meta.setId(UUID.randomUUID().toString());
         }
         meta.setResourceId(resourceId);
         meta.setStorageId(storageId);
@@ -60,11 +57,7 @@ public class MetaFileStorageBindServiceImpl implements MetaFileStorageBindServic
         String fallbackTitle = resource.getTitle() != null && !resource.getTitle().isBlank() ? resource.getTitle() : "untitled";
         meta.setName(isBlank(overrideName) ? fallbackTitle : overrideName.trim());
         meta.setSize(resource.getFileSize());
-        if (meta.getId() == null) {
-            metaFileMapper.insert(meta);
-        } else {
-            metaFileMapper.updateById(meta);
-        }
+        metaFileMapper.insertOrUpdate(meta);
         return meta;
     }
 

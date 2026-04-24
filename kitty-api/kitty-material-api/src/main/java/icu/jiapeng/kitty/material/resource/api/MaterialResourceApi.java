@@ -1,6 +1,8 @@
 package icu.jiapeng.kitty.material.resource.api;
 
 import icu.jiapeng.kitty.common.core.page.PageRespVo;
+import icu.jiapeng.kitty.material.resource.dto.MaterialDownloadReportBatchDTO;
+import icu.jiapeng.kitty.material.resource.dto.MaterialDownloadReportItemDTO;
 import icu.jiapeng.kitty.material.resource.dto.MaterialMetaFileBindDTO;
 import icu.jiapeng.kitty.material.resource.dto.MaterialResourceListPageQueryDTO;
 import icu.jiapeng.kitty.material.resource.dto.MaterialResourceListQueryDTO;
@@ -11,6 +13,7 @@ import icu.jiapeng.kitty.material.resource.dto.MaterialResourceFingerprintDTO;
 import icu.jiapeng.kitty.material.resource.vo.MaterialMetaFileVO;
 import icu.jiapeng.kitty.material.resource.vo.MaterialResourceDetailVO;
 import icu.jiapeng.kitty.material.resource.vo.MaterialResourceVO;
+import icu.jiapeng.kitty.material.resource.vo.MaterialDownloadUrlVO;
 import icu.jiapeng.kitty.material.resource.vo.MaterialResourceFingerprintPrecheckVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -86,4 +89,19 @@ public interface MaterialResourceApi {
     @Operation(summary = "绑定资源与存储记录、对象键并写入 meta_file")
     @PostMapping("/api/material/resource/meta-file/bind")
     MaterialMetaFileVO bindMetaFile(@Valid @RequestBody MaterialMetaFileBindDTO req);
+
+    @Operation(summary = "按分级解析可下载/直链 URL（SOURCE=源码；其它见衍生产物表）")
+    @GetMapping("/api/material/resource/download-url")
+    MaterialDownloadUrlVO downloadUrl(
+            @RequestParam("resourceId") String resourceId,
+            @RequestParam("destinationType") String destinationType
+    );
+
+    @Operation(summary = "单条下载行为上报（可选转发 kitty-data）")
+    @PostMapping("/api/material/resource/download/report")
+    void reportDownload(@Valid @RequestBody MaterialDownloadReportItemDTO body);
+
+    @Operation(summary = "批量下载行为上报")
+    @PostMapping("/api/material/resource/download/report/batch")
+    void reportDownloadBatch(@Valid @RequestBody MaterialDownloadReportBatchDTO body);
 }

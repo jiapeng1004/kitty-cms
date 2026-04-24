@@ -28,6 +28,9 @@ public class MaterialResourceDetailVO {
     @Schema(description = "该资源关联的通用审核任务（review_task）")
     private List<MaterialReviewTaskVO> reviewTasks;
 
+    @Schema(description = "已登记的多码率/封面/雪碧等衍生产物（下载与展示用）")
+    private List<MaterialResourceDerivativeVO> derivatives;
+
     public MaterialResourceVO getResource() {
         return resource;
     }
@@ -74,5 +77,13 @@ public class MaterialResourceDetailVO {
 
     public void setReviewTasks(List<MaterialReviewTaskVO> reviewTasks) {
         this.reviewTasks = reviewTasks;
+    }
+
+    public List<MaterialResourceDerivativeVO> getDerivatives() {
+        return derivatives;
+    }
+
+    public void setDerivatives(List<MaterialResourceDerivativeVO> derivatives) {
+        this.derivatives = derivatives;
     }
 }

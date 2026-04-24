@@ -35,6 +35,8 @@ message CreateTaskReq {
   string watermark_url = 5;
   string watermark_position = 6;
   repeated NotificationConfig notifications = 7;
+  // 与 MAM 侧 kt_material_transcode_strategy.params_json 透传，供引擎/步骤消费
+  string extra_params_json = 8;
 }
 message NotificationConfig {
   string method = 1;

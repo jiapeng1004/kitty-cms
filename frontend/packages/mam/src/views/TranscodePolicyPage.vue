@@ -13,7 +13,9 @@ const strategyForm = ref<tc.MaterialTranscodeStrategyUpsertDTO>({
   platformCode: 'kitty_transcoder_grpc',
   externalStrategyId: '',
   paramsJson: '',
-  enabled: 1
+  enabled: 1,
+  resourceType: undefined,
+  isGlobalDefault: 0
 })
 
 const bindCatalogId = ref('')
@@ -50,7 +52,9 @@ async function saveStrategy() {
       platformCode: 'kitty_transcoder_grpc',
       externalStrategyId: '',
       paramsJson: '',
-      enabled: 1
+      enabled: 1,
+      resourceType: undefined,
+      isGlobalDefault: 0
     }
     await refreshStrategies()
   } catch (e: unknown) {
@@ -66,7 +70,9 @@ function editStrategy(row: tc.MaterialTranscodeStrategyVO) {
     platformCode: row.platformCode,
     externalStrategyId: row.externalStrategyId,
     paramsJson: row.paramsJson,
-    enabled: row.enabled
+    enabled: row.enabled,
+    resourceType: row.resourceType,
+    isGlobalDefault: row.isGlobalDefault ?? 0
   }
 }
 
@@ -129,7 +135,9 @@ function clearStrategyForm() {
     platformCode: 'kitty_transcoder_grpc',
     externalStrategyId: '',
     paramsJson: '',
-    enabled: 1
+    enabled: 1,
+    resourceType: undefined,
+    isGlobalDefault: 0
   }
 }
 
@@ -137,10 +145,13 @@ onMounted(refreshStrategies)
 </script>
 
 <template>
-  <div style="padding: 20px;">
-    <a-typography-title :level="4">转码策略与栏目绑定</a-typography-title>
+  <div class="mam-page mam-page--padded mam-transcode-policy-page">
+    <header class="mam-page-head">
+      <h1 class="mam-page-title">转码策略与栏目绑定</h1>
+      <p class="mam-page-sub">配置底层转码策略 ID、可选参数 JSON，以及栏目与策略的绑定关系。</p>
+    </header>
 
-    <a-card title="策略" size="small" style="margin-bottom: 16px;">
+    <a-card title="策略" size="small" class="mam-surface-card" style="margin-bottom: 16px">
       <a-space style="margin-bottom: 12px;">
         <a-button type="primary" :loading="loadingSt" @click="refreshStrategies">刷新策略列表</a-button>
       </a-space>
@@ -163,6 +174,12 @@ onMounted(refreshStrategies)
         <a-form-item label="enabled">
           <a-input-number v-model:value="strategyForm.enabled" :min="0" :max="1" />
         </a-form-item>
+        <a-form-item label="resourceType（1视频 2音频 3图片…，设全局默认时必填）">
+          <a-input-number v-model:value="strategyForm.resourceType" :min="1" :max="99" />
+        </a-form-item>
+        <a-form-item label="isGlobalDefault（同类至多一条）">
+          <a-input-number v-model:value="strategyForm.isGlobalDefault" :min="0" :max="1" />
+        </a-form-item>
         <a-space>
           <a-button type="primary" @click="saveStrategy">{{ strategyForm.id ? '更新' : '创建' }}</a-button>
           <a-button v-if="strategyForm.id" @click="clearStrategyForm">清空表单</a-button>
@@ -179,6 +196,8 @@ onMounted(refreshStrategies)
         <a-table-column title="名称" data-index="name" />
         <a-table-column title="平台" data-index="platformCode" />
         <a-table-column title="外部策略 ID" data-index="externalStrategyId" />
+        <a-table-column title="资源类型" data-index="resourceType" />
+        <a-table-column title="全局默认" data-index="isGlobalDefault" />
         <a-table-column title="启用" data-index="enabled" />
         <a-table-column title="操作" key="op">
           <template #default="{ record }">
@@ -189,7 +208,7 @@ onMounted(refreshStrategies)
       </a-table>
     </a-card>
 
-    <a-card title="栏目绑定" size="small">
+    <a-card title="栏目绑定" size="small" class="mam-surface-card mam-table-wrap">
       <a-space wrap style="margin-bottom: 12px;">
         <a-input v-model:value="bindCatalogId" style="width: 280px" placeholder="catalogId" />
         <a-button type="primary" :loading="loadingBd" @click="loadBinds">查询绑定</a-button>
@@ -215,6 +234,7 @@ onMounted(refreshStrategies)
       <a-table :data-source="binds" :loading="loadingBd" row-key="id" size="small" :pagination="false">
         <a-table-column title="栏目" data-index="catalogId" />
         <a-table-column title="策略" data-index="strategyId" />
+        <a-table-column title="策略名" data-index="strategyName" />
         <a-table-column title="资源类型" data-index="resourceType" />
         <a-table-column title="排序" data-index="sortNum" />
         <a-table-column title="操作" key="op">
@@ -226,3 +246,14 @@ onMounted(refreshStrategies)
     </a-card>
   </div>
 </template>
+
+<style scoped lang="less">
+.mam-transcode-policy-page {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.mam-transcode-policy-page :deep(.mam-surface-card .ant-table) {
+  font-size: 13px;
+}
+</style>

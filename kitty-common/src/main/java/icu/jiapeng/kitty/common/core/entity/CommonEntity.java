@@ -12,6 +12,7 @@
 package icu.jiapeng.kitty.common.core.entity;
 
 import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import lombok.Getter;
@@ -27,7 +28,7 @@ import java.util.Date;
 @Setter
 public class CommonEntity {
     @Id
-    @TableId("id")
+    @TableId(value = "id", type = IdType.ASSIGN_ID)
     private String id;
     /**
      * 创建时间

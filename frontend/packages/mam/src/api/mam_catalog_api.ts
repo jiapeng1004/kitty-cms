@@ -22,11 +22,16 @@ export interface CatalogCreateDTO {
   parentId: string
 }
 
+/** 与后端 `CatalogMovePosition` 一致，与 targetId 成对；INSIDE=新父=目标（弹窗选父、拖入目录内） */
+export type CatalogMovePosition = 'BEFORE' | 'AFTER' | 'INSIDE'
+
 export interface CatalogUpdateDTO {
   id: string
   name?: string
-  parentId?: string
   sortNum?: number
+  /** 与 position 成对；INSIDE 时即新父栏目 id，不再传单独的 parentId */
+  targetId?: string
+  position?: CatalogMovePosition
 }
 
 /** 与后端 {@code CatalogPermissionNode} 对齐 */

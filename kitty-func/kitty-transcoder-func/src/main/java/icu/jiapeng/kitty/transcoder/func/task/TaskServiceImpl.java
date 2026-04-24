@@ -84,6 +84,9 @@ public class TaskServiceImpl implements TaskService {
         if (request.getNotifications() != null && !request.getNotifications().isEmpty()) {
             entity.setNotificationConfig(JSON.toJSONString(request.getNotifications()));
         }
+        if (StrUtil.isNotBlank(request.getExtraParamsJson())) {
+            entity.setExtraParamsJson(request.getExtraParamsJson());
+        }
         entity.setStatus(TaskStatus.PENDING);
         entity.setProgress(0);
         entity.setPriority(priority);

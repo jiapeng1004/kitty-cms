@@ -1,0 +1,89 @@
+/**
+ * 媒资库（MAM）全局设计 token 与页面壳层，与素材工作台视觉对齐。
+ * 在 main.ts 中于 ant reset 之后引入。
+ */
+:root {
+  --mam-primary: #1677ff;
+  --mam-primary-hover: #4096ff;
+  --mam-primary-bg: #e6f4ff;
+  --mam-text: #0f172a;
+  --mam-text-secondary: #64748b;
+  --mam-border: #e2e8f0;
+  --mam-surface: #ffffff;
+  --mam-page-bg: #f0f2f5;
+  --mam-muted-bg: #f8fafc;
+  --mam-radius-lg: 12px;
+  --mam-shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06);
+  --mam-shadow-md: 0 4px 16px rgba(15, 23, 42, 0.08);
+}
+
+/* 管理子页：白底卡片内区 + 浅灰页背景 */
+.mam-page {
+  box-sizing: border-box;
+  min-height: 100%;
+  background: linear-gradient(180deg, #f5f7fa 0%, var(--mam-page-bg) 40%);
+  color: var(--mam-text);
+}
+
+.mam-page--padded {
+  padding: 20px 24px 24px;
+}
+
+/* 页头：标题 + 副文案 */
+.mam-page-head {
+  margin-bottom: 16px;
+  flex-shrink: 0;
+}
+
+.mam-page-title {
+  margin: 0 0 6px;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--mam-text);
+}
+
+.mam-page-sub {
+  font-size: 13px;
+  color: var(--mam-text-secondary);
+}
+
+.mam-page-sub strong,
+.mam-page-sub .mam-em {
+  color: var(--mam-primary);
+  font-weight: 600;
+}
+
+/* 白底内容块（表单 / 表格容器） */
+.mam-panel {
+  background: var(--mam-surface);
+  border: 1px solid var(--mam-border);
+  border-radius: var(--mam-radius-lg);
+  box-shadow: var(--mam-shadow-sm);
+}
+
+.mam-panel--padded {
+  padding: 16px 18px 20px;
+}
+
+/* Ant Card 与页面风格统一 */
+.mam-surface-card.ant-card {
+  border-radius: var(--mam-radius-lg);
+  border: 1px solid var(--mam-border);
+  box-shadow: var(--mam-shadow-sm);
+}
+
+.mam-surface-card.ant-card .ant-card-head {
+  border-bottom-color: var(--mam-border);
+  font-weight: 600;
+  color: var(--mam-text);
+}
+
+/* 表格外链色 */
+.mam-table-wrap a:not(.ant-btn) {
+  color: var(--mam-primary);
+}
+
+.mam-table-wrap a:not(.ant-btn):hover {
+  color: var(--mam-primary-hover);
+}

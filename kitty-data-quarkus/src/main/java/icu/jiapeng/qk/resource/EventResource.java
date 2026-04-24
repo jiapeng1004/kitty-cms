@@ -25,9 +25,10 @@ public class EventResource {
     @RunOnVirtualThread
     public EventReportResult report(EventReportRequest request) {
         Event event = new Event();
-        event.eventType = request.eventType();
-        event.operator = request.operator();
-        event.value = request.value();
+        event.eventType = request.eventType;
+        event.operator = request.operator;
+        event.value = request.value;
+        event.detailJson = request.detailJson;
         eventService.report(event);
         return EventReportResult.OK;
     }

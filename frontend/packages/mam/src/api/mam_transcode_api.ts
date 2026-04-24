@@ -10,6 +10,10 @@ export interface MaterialTranscodeStrategyVO {
   externalStrategyId: string
   paramsJson?: string
   enabled?: number
+  /** ResourceTypeEnum，与全局默认、解析链一致 */
+  resourceType?: number
+  /** 1=该资源类型下全局默认 */
+  isGlobalDefault?: number
 }
 
 export interface MaterialTranscodeStrategyUpsertDTO {
@@ -19,12 +23,15 @@ export interface MaterialTranscodeStrategyUpsertDTO {
   externalStrategyId: string
   paramsJson?: string
   enabled?: number
+  resourceType?: number
+  isGlobalDefault?: number
 }
 
 export interface CatalogTranscodeBindVO {
   id: string
   catalogId: string
   strategyId: string
+  strategyName?: string
   resourceType?: number
   sortNum?: number
 }
@@ -36,8 +43,8 @@ export interface CatalogTranscodeBindCreateDTO {
   sortNum?: number
 }
 
-export function listStrategies(): Promise<MaterialTranscodeStrategyVO[]> {
-  return api.get(`${PREFIX}/strategy/list`)
+export function listStrategies(resourceType?: number): Promise<MaterialTranscodeStrategyVO[]> {
+  return api.get(`${PREFIX}/strategy/list`, { params: resourceType != null ? { resourceType } : {} })
 }
 
 export function createStrategy(data: MaterialTranscodeStrategyUpsertDTO): Promise<MaterialTranscodeStrategyVO> {

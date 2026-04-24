@@ -8,7 +8,6 @@ import icu.jiapeng.kitty.material.upload.dto.MaterialChunkUploadPartReportDTO;
 import icu.jiapeng.kitty.material.upload.dto.MaterialChunkUploadSessionCreateDTO;
 import icu.jiapeng.kitty.material.upload.vo.MaterialChunkUploadSessionVO;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpHeaders;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RestController;
 

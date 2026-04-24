@@ -21,7 +21,9 @@ public interface MaterialTranscodePolicyApi {
 
     @Operation(summary = "转码策略列表")
     @GetMapping("/api/material/transcode/strategy/list")
-    List<MaterialTranscodeStrategyVO> listStrategies();
+    List<MaterialTranscodeStrategyVO> listStrategies(
+            @RequestParam(value = "resourceType", required = false) Integer resourceType
+    );
 
     @Operation(summary = "创建转码策略")
     @PostMapping("/api/material/transcode/strategy")

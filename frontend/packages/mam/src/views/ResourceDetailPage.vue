@@ -5,7 +5,9 @@ import { message } from 'ant-design-vue'
 import { ArrowLeftOutlined } from '@ant-design/icons-vue'
 import {
   getResourceDetail,
+  getResourceDownloadUrl,
   materialApiAbsoluteUrl,
+  reportResourceDownload,
   type MaterialResourceDetailVO
 } from '@/api/mam_resource_api'
 
@@ -102,10 +104,30 @@ function goBack() {
     router.push(backPath.value)
   }
 }
+
+/** 打开直链并在后端记录下载行为（含降级码率时的 actualDestinationType） */
+async function openTierDownload(destinationType: string) {
+  const id = resourceId.value
+  const res = r.value
+  if (!id || !res || res.type === 7) return
+  try {
+    const d = await getResourceDownloadUrl({ resourceId: id, destinationType })
+    window.open(d.url, '_blank', 'noopener,noreferrer')
+    await reportResourceDownload({
+      resourceId: id,
+      destinationType: d.destinationType,
+      resourceTitle: res.title,
+      actualDestinationType: d.actualDestinationType
+    })
+  } catch (e: unknown) {
+    const err = e as { response?: { data?: { message?: string } }; message?: string }
+    message.error(err?.response?.data?.message || err?.message || '获取下载地址失败')
+  }
+}
 </script>
 
 <template>
-  <div class="resource-detail-page">
+  <div class="mam-page mam-page--padded resource-detail-page">
     <div class="resource-detail-bar">
       <a-button type="link" class="resource-detail-back" @click="goBack">
         <template #icon>
@@ -116,9 +138,9 @@ function goBack() {
     </div>
 
     <a-spin :spinning="loading">
-      <div v-if="r" class="resource-detail-body">
+      <div v-if="r" class="resource-detail-body mam-panel">
         <header class="resource-detail-head">
-          <h1 class="resource-detail-title">{{ r.title }}</h1>
+          <h1 class="resource-detail-title mam-page-title">{{ r.title }}</h1>
           <div class="resource-detail-meta">
             <span>{{ typeLabel(r.type) }}</span>
             <span>{{ formatSize(r.fileSize) }}</span>
@@ -175,6 +197,71 @@ function goBack() {
           </a-descriptions-item>
         </a-descriptions>
 
+        <div v-if="r.type !== 7" class="detail-block">
+          <div class="detail-block-title">下载</div>
+          <a-space wrap>
+            <a-button type="primary" size="small" :loading="loading" @click="openTierDownload('SOURCE')">
+              源码
+            </a-button>
+            <a-button
+              v-if="r.type === 1"
+              size="small"
+              :loading="loading"
+              @click="openTierDownload('COVER')"
+            >
+              封面
+            </a-button>
+            <a-button
+              v-if="r.type === 1"
+              size="small"
+              :loading="loading"
+              @click="openTierDownload('SPRITE')"
+            >
+              雪碧图
+            </a-button>
+          </a-space>
+        </div>
+
+        <div v-if="detail?.derivatives?.length" class="detail-block mam-table-wrap">
+          <div class="detail-block-title">衍生产物</div>
+          <a-table
+            :data-source="detail!.derivatives!"
+            :pagination="false"
+            :row-key="(row) => row.destinationType"
+            size="small"
+          >
+            <a-table-column title="分级" data-index="destinationType" width="100" />
+            <a-table-column title="大小" key="fs" width="100">
+              <template #default="{ record }">
+                {{ record.fileSize == null ? '—' : formatSize(record.fileSize) }}
+              </template>
+            </a-table-column>
+            <a-table-column title="可访问" key="url" ellipsis>
+              <template #default="{ record }">
+                <a
+                  v-if="record.accessUrl"
+                  :href="record.accessUrl"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >打开</a>
+                <span v-else>—</span>
+              </template>
+            </a-table-column>
+            <a-table-column title="操作" key="op" width="120">
+              <template #default="{ record }">
+                <a-button
+                  type="link"
+                  size="small"
+                  :loading="loading"
+                  @click="openTierDownload(record.destinationType)"
+                >
+                  拉取并上报
+                </a-button>
+              </template>
+            </a-table-column>
+          </a-table>
+        </div>
+
         <div v-if="detail?.transcodeTasks?.length" class="detail-block">
           <div class="detail-block-title">转码任务</div>
           <a-table
@@ -220,27 +307,32 @@ function goBack() {
 
 <style scoped lang="less">
 .resource-detail-page {
-  min-height: 100vh;
-  background: #eef1f6;
-  padding: 16px 20px 32px;
+  min-height: 100dvh;
+  padding-bottom: 8px;
 }
 
 .resource-detail-bar {
-  margin-bottom: 12px;
+  margin-bottom: 14px;
+  max-width: 1000px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .resource-detail-back {
   padding-left: 0;
-  color: #374151;
+  color: var(--mam-text-secondary, #64748b);
+  font-weight: 500;
+}
+
+.resource-detail-back:hover {
+  color: var(--mam-primary, #1677ff) !important;
 }
 
 .resource-detail-body {
-  max-width: 960px;
+  max-width: 1000px;
   margin: 0 auto;
-  background: #fff;
-  border-radius: 12px;
-  padding: 20px 24px;
-  border: 1px solid #e5e7eb;
+  padding: 22px 26px 28px;
+  border-radius: var(--mam-radius-lg, 12px);
 }
 
 .resource-detail-head {
@@ -248,11 +340,12 @@ function goBack() {
 }
 
 .resource-detail-title {
-  margin: 0 0 8px;
+  margin: 0 0 10px;
   font-size: 22px;
   font-weight: 600;
-  color: #111827;
+  color: var(--mam-text, #0f172a);
   word-break: break-all;
+  letter-spacing: 0.02em;
 }
 
 .resource-detail-meta {
@@ -260,7 +353,7 @@ function goBack() {
   flex-wrap: wrap;
   gap: 12px;
   font-size: 13px;
-  color: #6b7280;
+  color: var(--mam-text-secondary, #64748b);
 }
 
 .resource-detail-id {
@@ -270,9 +363,11 @@ function goBack() {
 
 .resource-detail-visual {
   margin-bottom: 20px;
-  border-radius: 8px;
+  border-radius: var(--mam-radius-lg, 12px);
   overflow: hidden;
-  background: #f3f4f6;
+  background: var(--mam-muted-bg, #f8fafc);
+  border: 1px solid var(--mam-border, #e2e8f0);
+  box-shadow: var(--mam-shadow-sm, 0 1px 3px rgba(15, 23, 42, 0.06));
 }
 
 .detail-img-full {
@@ -303,20 +398,23 @@ function goBack() {
 
 .detail-block-title {
   font-weight: 600;
-  margin-bottom: 8px;
-  color: #111827;
+  margin-bottom: 10px;
+  color: var(--mam-text, #0f172a);
+  font-size: 15px;
 }
 
 .detail-meta-card {
   margin-bottom: 12px;
-  padding: 12px;
-  background: #f9fafb;
-  border-radius: 8px;
+  padding: 14px;
+  background: var(--mam-muted-bg, #f8fafc);
+  border-radius: 10px;
+  border: 1px solid var(--mam-border, #e2e8f0);
 }
 
 .detail-meta-h {
   font-size: 13px;
   margin-bottom: 8px;
-  color: #374151;
+  color: var(--mam-text-secondary, #64748b);
+  font-weight: 600;
 }
 </style>

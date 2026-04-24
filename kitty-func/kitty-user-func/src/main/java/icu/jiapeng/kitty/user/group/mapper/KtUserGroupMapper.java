@@ -18,5 +18,5 @@ import org.jspecify.annotations.NonNull;
 /**
  * 租户
  */
-public interface KtUserGroupMapper extends BaseMapper<@NonNull KtUserGroup> {
+public interface KtUserGroupMapper extends BaseMapper<KtUserGroup> {
 }

@@ -38,4 +38,7 @@ public class CreateTaskRequest {
 
     @Schema(description = "水印位置（可选）", example = "bottom-right", allowableValues = {"top-left", "top-right", "bottom-left", "bottom-right"})
     private String watermarkPosition;
+
+    @Schema(description = "与 MAM 侧 params_json 对齐的透传 JSON")
+    private String extraParamsJson;
 }

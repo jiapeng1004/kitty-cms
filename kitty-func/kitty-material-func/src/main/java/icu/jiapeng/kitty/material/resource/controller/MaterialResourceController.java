@@ -7,6 +7,8 @@ import icu.jiapeng.kitty.material.resource.api.MaterialResourceApi;
 import icu.jiapeng.kitty.material.resource.dto.MaterialMetaFileBindDTO;
 import icu.jiapeng.kitty.material.resource.dto.MaterialFolderCreateDTO;
 import icu.jiapeng.kitty.material.resource.dto.MaterialFolderUploadPlanDTO;
+import icu.jiapeng.kitty.material.resource.dto.MaterialDownloadReportBatchDTO;
+import icu.jiapeng.kitty.material.resource.dto.MaterialDownloadReportItemDTO;
 import icu.jiapeng.kitty.material.resource.dto.MaterialResourceFingerprintDTO;
 import icu.jiapeng.kitty.common.core.page.PageRespVo;
 import icu.jiapeng.kitty.material.resource.dto.MaterialResourceListPageQueryDTO;
@@ -14,6 +16,7 @@ import icu.jiapeng.kitty.material.resource.dto.MaterialResourceListQueryDTO;
 import icu.jiapeng.kitty.material.resource.dto.MaterialResourceUpsertDTO;
 import icu.jiapeng.kitty.material.resource.vo.MaterialMetaFileVO;
 import icu.jiapeng.kitty.material.resource.vo.MaterialResourceDetailVO;
+import icu.jiapeng.kitty.material.resource.vo.MaterialDownloadUrlVO;
 import icu.jiapeng.kitty.material.resource.vo.MaterialResourceFingerprintPrecheckVO;
 import icu.jiapeng.kitty.material.resource.vo.MaterialResourceVO;
 import lombok.RequiredArgsConstructor;
@@ -122,5 +125,23 @@ public class MaterialResourceController implements MaterialResourceApi {
     @SaCheckPermission(MaterialPermissionCode.MATERIAL_RESOURCE_UPDATE)
     public MaterialMetaFileVO bindMetaFile(MaterialMetaFileBindDTO req) {
         return materialResourceService.bindMetaFile(req);
+    }
+
+    @Override
+    @SaCheckPermission(MaterialPermissionCode.MATERIAL_RESOURCE_LIST_VIEW)
+    public MaterialDownloadUrlVO downloadUrl(String resourceId, String destinationType) {
+        return materialResourceService.resolveDownloadUrl(resourceId, destinationType);
+    }
+
+    @Override
+    @SaCheckPermission(MaterialPermissionCode.MATERIAL_RESOURCE_LIST_VIEW)
+    public void reportDownload(MaterialDownloadReportItemDTO body) {
+        materialResourceService.reportDownload(body);
+    }
+
+    @Override
+    @SaCheckPermission(MaterialPermissionCode.MATERIAL_RESOURCE_LIST_VIEW)
+    public void reportDownloadBatch(MaterialDownloadReportBatchDTO body) {
+        materialResourceService.reportDownloadBatch(body);
     }
 }

@@ -18,5 +18,5 @@ import org.apache.ibatis.annotations.Mapper;
 import org.jspecify.annotations.NonNull;
 
 
-public interface KtAkSkClientMapper extends BaseMapper<@NonNull KtAkSkClient>{
+public interface KtAkSkClientMapper extends BaseMapper<KtAkSkClient>{
 }

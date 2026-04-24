@@ -17,6 +17,12 @@ import {
 } from '@/api/mam_resource_api'
 import type { MaterialCatalogNode } from '@/api/mam_catalog_api'
 import { useMaterialFileUpload } from '@/composables/useMaterialFileUpload'
+import {
+  MAM_BATCH_TIER_PRESETS,
+  preflightMamBatchDownload,
+  resolveDestinationType,
+  showMamBatchDownloadConfirm
+} from '@/composables/useMamBatchDownload'
 
 // 删除之前的强制注入样式，用原生布局适配
 
@@ -39,6 +45,12 @@ const renameModalVisible = ref(false)
 const renameTitle = ref('')
 const renameRow = ref<MaterialResourceVO>()
 const renameLoading = ref(false)
+
+const selectedRowKeys = ref<string[]>([])
+const batchModalVisible = ref(false)
+const batchSubmitting = ref(false)
+const batchTierPreset = ref('SOURCE')
+const batchCustomTier = ref('')
 
 function onCatalogSelect(node: MaterialCatalogNode | undefined) {
   currentCatalog.value = node
@@ -71,6 +83,7 @@ async function loadList() {
 }
 
 watch(selectedCatalogId, () => {
+  selectedRowKeys.value = []
   loadList()
 })
 
@@ -199,6 +212,49 @@ const filteredRows = computed(() => {
   )
 })
 
+const selectedResources = computed(() =>
+  filteredRows.value.filter((r) => selectedRowKeys.value.includes(r.id))
+)
+
+function onBatchSelectChange(keys: string[]) {
+  selectedRowKeys.value = keys
+}
+
+function openBatchDownloadModal() {
+  if (!selectedRowKeys.value.length) {
+    message.warning('请先勾选资源')
+    return
+  }
+  batchModalVisible.value = true
+}
+
+async function submitBatchDownload() {
+  const dt = resolveDestinationType(batchTierPreset.value, batchCustomTier.value)
+  if (!dt) {
+    message.warning('请选择或输入下载分级（destinationType）')
+    return
+  }
+  batchSubmitting.value = true
+  try {
+    const { toDownload, hardFail } = await preflightMamBatchDownload(selectedResources.value, dt)
+    if (!toDownload.length) {
+      if (hardFail.length) {
+        message.warning('所选资源均无法以该分级下载，请改选分级或检查资源。')
+      } else {
+        message.warning('没有可下载的资源（已排除文件夹）')
+      }
+      return
+    }
+    batchModalVisible.value = false
+    const ok = await showMamBatchDownloadConfirm(toDownload, hardFail)
+    if (ok) {
+      selectedRowKeys.value = []
+    }
+  } finally {
+    batchSubmitting.value = false
+  }
+}
+
 async function refresh() {
   await catalogPanelRef.value?.load()
   await loadList()
@@ -206,10 +262,13 @@ async function refresh() {
 </script>
 
 <template>
-  <div class="resource-manage-page">
-    <div class="resource-page-head">
-      <h1 class="resource-page-title">资源管理</h1>
-      <span class="resource-page-sub">当前栏目：{{ currentCatalog?.name || '未选择' }}</span>
+  <div class="mam-page mam-page--padded resource-manage-page">
+    <div class="mam-page-head resource-page-head">
+      <h1 class="mam-page-title">资源管理</h1>
+      <span class="mam-page-sub"
+        >当前栏目：<span class="mam-em">{{ currentCatalog?.name || '未选择' }}</span
+        > · 共 <span class="mam-em">{{ filteredRows.length }}</span> 条（当前筛选）</span
+      >
     </div>
 
     <div class="resource-manage-body">
@@ -221,13 +280,13 @@ async function refresh() {
         />
       </aside>
 
-      <main class="resource-manage-main">
+      <main class="resource-manage-main mam-panel">
         <div class="resource-toolbar">
           <a-input
             v-model:value="searchKeyword"
             allow-clear
+            class="resource-toolbar-search"
             placeholder="筛选标题、预览或原链（本地）"
-            style="width: 240px"
             @press-enter="loadList"
           />
           <a-button @click="loadList">检索后端</a-button>
@@ -237,9 +296,12 @@ async function refresh() {
             </template>
             刷新
           </a-button>
+          <a-button v-if="selectedRowKeys.length > 0" @click="openBatchDownloadModal">
+            批量下载 ({{ selectedRowKeys.length }})
+          </a-button>
           <span v-if="progressText" class="upload-progress">{{ progressText }}</span>
           <a-dropdown :trigger="['click']">
-            <a-button type="primary" danger :loading="uploading" :disabled="!selectedCatalogId">
+            <a-button type="primary" :loading="uploading" :disabled="!selectedCatalogId">
               上传
               <down-outlined />
             </a-button>
@@ -269,7 +331,7 @@ async function refresh() {
         </div>
 
         <!-- 列表容器占满剩余高度，内部滚动，让分页留在底部 -->
-        <div class="resource-list-container">
+        <div class="resource-list-container mam-table-wrap">
           <a-table
             :data-source="filteredRows"
             :loading="loading"
@@ -277,6 +339,11 @@ async function refresh() {
             size="small"
             :pagination="{ pageSize: 50, showSizeChanger: true }"
             :scroll="{ x: 1200 }"
+            :row-selection="{
+              selectedRowKeys,
+              onChange: onBatchSelectChange,
+              getCheckboxProps: (record) => ({ disabled: record.type === 7 })
+            }"
           >
           <a-table-column title="标题" data-index="title" key="title" :ellipsis="true" />
           <a-table-column title="类型" key="type" :width="100">
@@ -359,34 +426,47 @@ async function refresh() {
       <a-input v-model:value="renameTitle" placeholder="标题" maxlength="200" />
     </a-modal>
 
+    <a-modal
+      v-model:open="batchModalVisible"
+      title="批量下载"
+      ok-text="开始"
+      :confirm-loading="batchSubmitting"
+      @ok="submitBatchDownload"
+      @cancel="batchModalVisible = false"
+    >
+      <a-form layout="vertical">
+        <a-form-item label="下载分级（与后端 destinationType 一致；无该码率时将提示改为源码）">
+          <a-select v-model:value="batchTierPreset" style="width: 100%" placeholder="选择分级">
+            <a-select-option v-for="o in MAM_BATCH_TIER_PRESETS" :key="o.value" :value="o.value">
+              {{ o.label }}
+            </a-select-option>
+          </a-select>
+        </a-form-item>
+        <a-form-item v-if="batchTierPreset === 'CUSTOM'" label="自定义分级">
+          <a-input v-model:value="batchCustomTier" allow-clear placeholder="如 720P、HLS_MAIN" />
+        </a-form-item>
+        <p class="rm-batch-hint">已选 {{ selectedRowKeys.length }} 项。</p>
+      </a-form>
+    </a-modal>
+
   </div>
 </template>
 
 <style scoped lang="less">
-/* 完全适配全局100%高度flex布局 */
 .resource-manage-page {
-  height: 100%; /* 继承全局的height:100%，不需要硬编码calc */
+  height: 100%;
   display: flex;
   flex-direction: column;
-  padding: 20px 20px 0 20px;
   box-sizing: border-box;
 }
 
 .resource-page-head {
-  margin-bottom: 16px;
   flex-shrink: 0;
 }
 
-.resource-page-title {
-  margin: 0 0 4px;
-  font-size: 20px;
+.mam-em {
+  color: var(--mam-primary, #1677ff);
   font-weight: 600;
-  color: #111827;
-}
-
-.resource-page-sub {
-  font-size: 13px;
-  color: #6b7280;
 }
 
 .resource-manage-body {
@@ -397,25 +477,23 @@ async function refresh() {
 }
 
 .resource-manage-catalog {
-  width: 240px; /* 适配你截图里的窄侧边栏宽度 */
+  width: 248px;
   flex-shrink: 0;
-  background: #fff;
-  border-radius: 12px;
-  padding: 12px;
-  border: 1px solid #e5e7eb;
+  background: var(--mam-surface, #fff);
+  border-radius: var(--mam-radius-lg, 12px);
+  padding: 14px 12px 16px;
+  border: 1px solid var(--mam-border, #e2e8f0);
   overflow-y: auto;
+  box-shadow: var(--mam-shadow-sm, 0 1px 3px rgba(15, 23, 42, 0.06));
 }
 
 .resource-manage-main {
   flex: 1;
   min-width: 0;
-  background: #fff;
-  border-radius: 12px;
-  padding: 16px;
-  border: 1px solid #e5e7eb;
+  padding: 16px 18px 12px;
   display: flex;
   flex-direction: column;
-  min-height: 0; /* 关键：和全局规则对齐 */
+  min-height: 0;
 }
 
 .resource-toolbar {
@@ -424,7 +502,14 @@ async function refresh() {
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--mam-border, #e2e8f0);
+}
+
+.resource-toolbar-search {
+  width: 260px;
+  max-width: 100%;
 }
 
 /* 表格容器占满剩余高度，内部滚动 */
@@ -464,11 +549,17 @@ async function refresh() {
 
 .upload-progress {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--mam-text-secondary, #64748b);
   max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.rm-batch-hint {
+  font-size: 12px;
+  color: var(--mam-text-secondary, #64748b);
+  margin: 0;
 }
 
 </style>

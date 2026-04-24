@@ -92,8 +92,25 @@ public enum ResultStatus {
     /**
      * 当前用户对目标栏目无所需权限（含个人栏目非本人、角色在栏目下无该权限位等），非参数非法
      */
-    MATERIAL_CATALOG_PERMISSION_DENIED(10017, "material.catalog.permission.denied");
+    MATERIAL_CATALOG_PERMISSION_DENIED(10017, "material.catalog.permission.denied"),
 
+    /**
+     * 目标栏目不存在
+     */
+    CATALOG_TARGET_NOT_EXIST(10018, "catalog.target.not.exist"),
+
+    /**
+     * 栏目移动位置参数非法
+     */
+    CATALOG_MOVE_POSITION_INVALID(10019, "catalog.move.position.invalid"),
+
+
+    /**
+     * KtMetaFile 文件找不到
+     */
+    MATERIAL_FILE_NOT_FOUND(10020, "material.file.not.found"),
+
+    ;
     /**
      * 状态码
      */

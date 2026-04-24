@@ -61,4 +61,9 @@ public class MamConfigProperties {
      * 忽略的租户迁移表
      */
     private Set<String> tenMigrateIgnore;
+
+    /**
+     * kitty-data 等服务根 URL（如 http://localhost:8081），用于行为/事件上报；空则仅写 MAM 侧日志、不转发
+     */
+    private String dataEventBaseUrl = "";
 }

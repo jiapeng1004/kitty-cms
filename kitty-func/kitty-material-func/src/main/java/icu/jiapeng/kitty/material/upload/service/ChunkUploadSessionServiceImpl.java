@@ -91,6 +91,9 @@ public class ChunkUploadSessionServiceImpl extends ServiceImpl<KtChunkUploadSess
         session.setChunkCount(chunkCount);
         session.setStatus(ChunkUploadSessionStatus.UPLOADING);
         session.setPrecatalogJson(spec.getPrecatalogJson());
+        if (StringUtils.hasText(spec.getTranscodeStrategyId())) {
+            session.setTranscodeStrategyId(spec.getTranscodeStrategyId().trim());
+        }
 
         if (StringUtils.hasText(spec.getExistingResourceId())) {
             resource = resourceMapper.selectById(spec.getExistingResourceId().trim());

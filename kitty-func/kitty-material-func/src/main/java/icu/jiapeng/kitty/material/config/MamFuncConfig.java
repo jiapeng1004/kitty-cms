@@ -27,6 +27,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.core.Ordered;
+import org.springframework.web.client.RestTemplate;
 
 @Configuration
 @EnableConfigurationProperties(MamConfigProperties.class)
@@ -47,6 +48,12 @@ import org.springframework.core.Ordered;
         markerInterface = BaseMapper.class
 )
 public class MamFuncConfig {
+
+    @Bean
+    public RestTemplate mamRestTemplate() {
+        return new RestTemplate();
+    }
+
     /**
      * 添加分页插件
      */

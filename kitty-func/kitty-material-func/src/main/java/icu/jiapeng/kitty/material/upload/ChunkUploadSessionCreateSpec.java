@@ -25,4 +25,6 @@ public class ChunkUploadSessionCreateSpec {
     private long chunkSize;
 
     private String precatalogJson;
+
+    private String transcodeStrategyId;
 }

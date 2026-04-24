@@ -23,8 +23,8 @@ public class MaterialTranscodePolicyController implements MaterialTranscodePolic
 
     @Override
     @SaCheckPermission(MaterialPermissionCode.MATERIAL_TRANSCODE_POLICY_MANAGE)
-    public List<MaterialTranscodeStrategyVO> listStrategies() {
-        return transcodeStrategyService.listStrategies();
+    public List<MaterialTranscodeStrategyVO> listStrategies(Integer resourceType) {
+        return transcodeStrategyService.listStrategies(resourceType);
     }
 
     @Override

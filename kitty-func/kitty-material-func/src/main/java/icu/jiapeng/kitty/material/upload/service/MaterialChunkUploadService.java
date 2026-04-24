@@ -115,6 +115,9 @@ public class MaterialChunkUploadService {
         spec.setTotalSize(req.getTotalSize());
         spec.setChunkSize(req.getChunkSize());
         spec.setPrecatalogJson(serializePrecatalog(req.getPrecatalog()));
+        if (StringUtils.hasText(req.getTranscodeStrategyId())) {
+            spec.setTranscodeStrategyId(req.getTranscodeStrategyId().trim());
+        }
         if (StringUtils.hasText(req.getResourceId())) {
             spec.setExistingResourceId(req.getResourceId().trim());
         } else {

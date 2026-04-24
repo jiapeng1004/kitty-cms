@@ -13,11 +13,9 @@ package icu.jiapeng.kitty.user.user.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import icu.jiapeng.kitty.user.user.entity.KtUserAttr;
-import org.apache.ibatis.annotations.Mapper;
-import org.jspecify.annotations.NonNull;
 
 /**
  * 用户表
  */
-public interface KtUserAttrMapper extends BaseMapper<@NonNull KtUserAttr> {
+public interface KtUserAttrMapper extends BaseMapper<KtUserAttr> {
 }

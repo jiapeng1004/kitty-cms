@@ -46,6 +46,8 @@ export interface MaterialChunkUploadSessionCreateDTO {
   precatalog?: MaterialPrecatalogPayloadDTO
   /** 不传则后端使用主存储 */
   storageId?: string
+  /** 显式转码策略 ID，与后端解析链「显式优先」一致 */
+  transcodeStrategyId?: string
   objectKey: string
   totalSize: number
   chunkSize: number

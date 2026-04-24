@@ -46,6 +46,9 @@ public class TranscodeGrpcServiceImpl extends TranscodeServiceGrpc.TranscodeServ
                         })
                         .collect(Collectors.toList()));
             }
+            if (request.getExtraParamsJson() != null && !request.getExtraParamsJson().isEmpty()) {
+                req.setExtraParamsJson(request.getExtraParamsJson());
+            }
 //            String accessKeyId = TranscoderGrpcAuthInterceptor.ACCESS_KEY_ID_CTX.get();
             String taskId = taskService.createTask(req, null);
             responseObserver.onNext(CreateTaskResp.newBuilder().setTaskId(taskId).build());

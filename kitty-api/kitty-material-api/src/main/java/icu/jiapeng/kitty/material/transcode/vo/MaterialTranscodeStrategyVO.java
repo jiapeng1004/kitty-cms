@@ -12,4 +12,7 @@ public class MaterialTranscodeStrategyVO {
     private String externalStrategyId;
     private String paramsJson;
     private Integer enabled;
+
+    private Integer resourceType;
+    private Integer isGlobalDefault;
 }

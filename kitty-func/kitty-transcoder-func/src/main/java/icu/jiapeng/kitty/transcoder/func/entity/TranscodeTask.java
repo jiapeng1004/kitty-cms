@@ -34,6 +34,8 @@ public class TranscodeTask {
     private Integer retryCount;
     @TableField("notification_config")
     private String notificationConfig;
+    @TableField("extra_params_json")
+    private String extraParamsJson;
     private LocalDateTime createdAt;
     private LocalDateTime startedAt;
     private LocalDateTime completedAt;

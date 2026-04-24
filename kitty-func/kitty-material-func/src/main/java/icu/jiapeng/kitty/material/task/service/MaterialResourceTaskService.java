@@ -7,7 +7,6 @@ import icu.jiapeng.kitty.material.catalog.service.CatalogService;
 import icu.jiapeng.kitty.material.config.ConfigCenterGateway;
 import icu.jiapeng.kitty.material.config.MaterialTranscodeProperties;
 import icu.jiapeng.kitty.material.catalog.constants.CatalogPermission;
-import icu.jiapeng.kitty.material.resource.constants.ResourceTypeEnum;
 import icu.jiapeng.kitty.material.resource.entity.KtMetaFile;
 import icu.jiapeng.kitty.material.resource.entity.KtResource;
 import icu.jiapeng.kitty.material.resource.service.MaterialResourceService;
@@ -20,6 +19,7 @@ import icu.jiapeng.kitty.material.task.vo.MaterialResourceTaskVO;
 import icu.jiapeng.kitty.material.transcode.TranscodeDispatchGateway;
 import icu.jiapeng.kitty.material.transcode.TranscodeSubmitCommand;
 import icu.jiapeng.kitty.material.transcode.entity.KtMaterialTranscodeStrategy;
+import icu.jiapeng.kitty.material.transcode.model.TranscodeStrategyResolution;
 import icu.jiapeng.kitty.material.transcode.service.MaterialTranscodeStrategyFacade;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -84,41 +84,8 @@ public class MaterialResourceTaskService {
                 .orElseThrow(() -> BizException.of(ResultStatus.PARAM_ERROR));
         String inputType = !StringUtils.hasText(dto.getInputType()) ? "HTTP" : dto.getInputType().trim();
         String inputPath = dto.getInputPath();
-        if (!StringUtils.hasText(inputPath)) {
-            inputPath = buildHttpInputFromMeta(resource.getId()).orElse(null);
-        }
-        if (!StringUtils.hasText(inputPath)) {
-            throw BizException.of(ResultStatus.PARAM_ERROR);
-        }
-        long extSid = Long.parseLong(strategy.getExternalStrategyId().trim());
         int pri = dto.getPriority() == null ? 5 : Math.max(1, Math.min(10, dto.getPriority()));
-        Optional<String> extTaskId = transcodeDispatchGateway.submit(
-                strategy.getPlatformCode(),
-                TranscodeSubmitCommand.builder()
-                        .inputType(inputType)
-                        .inputPath(inputPath.trim())
-                        .externalStrategyId(extSid)
-                        .priority(pri)
-                        .build());
-        if (extTaskId.isEmpty()) {
-            throw BizException.of(ResultStatus.NORMAL_ERROR);
-        }
-        KtResourceTask row = new KtResourceTask();
-        row.setId(UUID.randomUUID().toString());
-        row.setResourceId(resource.getId());
-        row.setResourceTitle(resource.getTitle());
-        row.setTaskType(ResourceTaskTypes.TRANSCODE);
-        row.setThirdTaskId(extTaskId.get());
-        row.setProgress(0);
-        row.setStatus("pending");
-        row.setInputType(inputType);
-        row.setInputPath(inputPath.trim());
-        row.setMaterialStrategyId(strategy.getId());
-        row.setDeleted(0);
-        if (!resourceTaskService.save(row)) {
-            throw BizException.of(ResultStatus.NORMAL_ERROR);
-        }
-        return toVo(row);
+        return submitTranscodeWithStrategy(resource, strategy, inputType, inputPath, pri);
     }
 
     /**
@@ -157,18 +124,19 @@ public class MaterialResourceTaskService {
         if (!StringUtils.hasText(task.getMaterialStrategyId()) || !StringUtils.hasText(task.getInputPath())) {
             throw BizException.of(ResultStatus.PARAM_ERROR);
         }
-        KtMaterialTranscodeStrategy st = transcodeStrategyFacade.resolveForResource(null, task.getMaterialStrategyId())
+        KtMaterialTranscodeStrategy st = transcodeStrategyFacade.getEnabledStrategyById(task.getMaterialStrategyId())
                 .orElseThrow(() -> BizException.of(ResultStatus.PARAM_ERROR));
         long ext = Long.parseLong(st.getExternalStrategyId().trim());
         String inType = !StringUtils.hasText(task.getInputType()) ? "HTTP" : task.getInputType();
-        Optional<String> newExt = transcodeDispatchGateway.submit(
-                st.getPlatformCode(),
-                TranscodeSubmitCommand.builder()
-                        .inputType(inType)
-                        .inputPath(task.getInputPath())
-                        .externalStrategyId(ext)
-                        .priority(5)
-                        .build());
+        TranscodeSubmitCommand.TranscodeSubmitCommandBuilder b = TranscodeSubmitCommand.builder()
+                .inputType(inType)
+                .inputPath(task.getInputPath())
+                .externalStrategyId(ext)
+                .priority(5);
+        if (StringUtils.hasText(st.getParamsJson())) {
+            b.extraParamsJson(st.getParamsJson().trim());
+        }
+        Optional<String> newExt = transcodeDispatchGateway.submit(st.getPlatformCode(), b.build());
         if (newExt.isEmpty()) {
             throw BizException.of(ResultStatus.NORMAL_ERROR);
         }
@@ -183,27 +151,30 @@ public class MaterialResourceTaskService {
     }
 
     /**
-     * 绑定后尝试自动入队转码任务
-     *
-     * @param resourceId 资源ID
+     * 分片合并 / 元数据绑定后：按解析链（显式 → 栏目 → 全局默认）主转码；无策略则不入队。
+     * 受配置 {@value #CFG_AUTO_AFTER_BIND} 与 {@link MaterialTranscodeProperties#isAutoAfterBind()} 控制。
+     * 显式策略非法时抛业务异常，由事务回滚。
      */
-    public void tryAutoEnqueueAfterBind(String resourceId) {
-        if (!isAutoTranscodeAfterBindEnabled()) {
+    public void onUploadFileBound(String resourceId, String explicitTranscodeStrategyId) {
+        if (!StringUtils.hasText(resourceId)) {
             return;
         }
-        KtResource r = resourceService.findById(resourceId).orElse(null);
-        if (r == null || r.getType() == null) {
+        resourceService.findById(resourceId.trim())
+                .ifPresent(r -> onUploadFileBound(r, explicitTranscodeStrategyId));
+    }
+
+    public void onUploadFileBound(KtResource resource, String explicitTranscodeStrategyId) {
+        if (!isAutoTranscodeAfterBindEnabled() || resource == null) {
             return;
         }
-        if (!ResourceTypeEnum.VIDEO.getType().equals(r.getType())) {
+        TranscodeStrategyResolution res = transcodeStrategyFacade.resolveForUpload(resource, explicitTranscodeStrategyId);
+        if (res.strategy().isEmpty()) {
             return;
         }
         try {
-            MaterialTranscodeEnqueueDTO dto = new MaterialTranscodeEnqueueDTO();
-            dto.setResourceId(resourceId);
-            enqueueTranscode(dto);
+            submitTranscodeWithStrategy(resource, res.strategy().get(), "HTTP", null, 5);
         } catch (Exception e) {
-            log.warn("auto transcode failed resourceId={}", resourceId, e);
+            log.warn("auto transcode submit failed resourceId={}", resource.getId(), e);
         }
     }
 
@@ -224,6 +195,55 @@ public class MaterialResourceTaskService {
             return Optional.of(materialTranscodeProperties.getHttpInputBase().trim());
         }
         return Optional.empty();
+    }
+
+    private MaterialResourceTaskVO submitTranscodeWithStrategy(
+            KtResource resource,
+            KtMaterialTranscodeStrategy strategy,
+            String inputType,
+            String inputPathOrNull,
+            int priority) {
+        if (resource == null || strategy == null) {
+            throw BizException.of(ResultStatus.PARAM_ERROR);
+        }
+        String inType = !StringUtils.hasText(inputType) ? "HTTP" : inputType.trim();
+        String path = inputPathOrNull;
+        if (!StringUtils.hasText(path)) {
+            path = buildHttpInputFromMeta(resource.getId()).orElse(null);
+        }
+        if (!StringUtils.hasText(path)) {
+            throw BizException.of(ResultStatus.PARAM_ERROR);
+        }
+        long extSid = Long.parseLong(strategy.getExternalStrategyId().trim());
+        int pri = Math.max(1, Math.min(10, priority));
+        TranscodeSubmitCommand.TranscodeSubmitCommandBuilder cmd = TranscodeSubmitCommand.builder()
+                .inputType(inType)
+                .inputPath(path.trim())
+                .externalStrategyId(extSid)
+                .priority(pri);
+        if (StringUtils.hasText(strategy.getParamsJson())) {
+            cmd.extraParamsJson(strategy.getParamsJson().trim());
+        }
+        Optional<String> extTaskId = transcodeDispatchGateway.submit(strategy.getPlatformCode(), cmd.build());
+        if (extTaskId.isEmpty()) {
+            throw BizException.of(ResultStatus.NORMAL_ERROR);
+        }
+        KtResourceTask row = new KtResourceTask();
+        row.setId(UUID.randomUUID().toString());
+        row.setResourceId(resource.getId());
+        row.setResourceTitle(resource.getTitle());
+        row.setTaskType(ResourceTaskTypes.TRANSCODE);
+        row.setThirdTaskId(extTaskId.get());
+        row.setProgress(0);
+        row.setStatus("pending");
+        row.setInputType(inType);
+        row.setInputPath(path.trim());
+        row.setMaterialStrategyId(strategy.getId());
+        row.setDeleted(0);
+        if (!resourceTaskService.save(row)) {
+            throw BizException.of(ResultStatus.NORMAL_ERROR);
+        }
+        return toVo(row);
     }
 
     private Optional<String> buildHttpInputFromMeta(String resourceId) {
@@ -253,7 +273,7 @@ public class MaterialResourceTaskService {
         vo.setInputPath(t.getInputPath());
         vo.setMaterialStrategyId(t.getMaterialStrategyId());
         if (StringUtils.hasText(t.getMaterialStrategyId())) {
-            transcodeStrategyFacade.resolveForResource(null, t.getMaterialStrategyId()).ifPresent(s -> vo.setStrategyName(s.getName()));
+            transcodeStrategyFacade.getEnabledStrategyById(t.getMaterialStrategyId()).ifPresent(s -> vo.setStrategyName(s.getName()));
         }
         return vo;
     }

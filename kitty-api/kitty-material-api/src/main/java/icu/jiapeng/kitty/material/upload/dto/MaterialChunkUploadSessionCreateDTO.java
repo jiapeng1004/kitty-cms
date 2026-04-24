@@ -30,6 +30,9 @@ public class MaterialChunkUploadSessionCreateDTO {
     @Schema(description = "可选：预编目，合并成功后写入元数据")
     private MaterialPrecatalogPayloadDTO precatalog;
 
+    @Schema(description = "可选：显式转码策略 ID（kt_material_transcode_strategy.id），解析链优先于栏目/全局；无效则合并失败")
+    private String transcodeStrategyId;
+
     @Schema(description = "存储记录 ID（kt_file_storage.id）；不传则使用主存储，若未设置主存储则失败")
     private String storageId;
 

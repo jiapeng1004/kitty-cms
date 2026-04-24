@@ -14,6 +14,7 @@ import {
   deleteCatalog,
   queryCatalogTree,
   updateCatalog,
+  type CatalogMovePosition,
   type MaterialCatalogNode
 } from '@/api/mam_catalog_api'
 import {
@@ -23,10 +24,17 @@ import {
 } from '@/constants/material_permission_code'
 
 type CatalogTreeNode = NonNullable<TreeProps['treeData']>[number] & {
+  /** 与 {@link MaterialCatalogNode#id} 一致，供拖拽/接口使用（勿仅用 key） */
+  id: string
+  parentId: string
   name: string
   level: number
   virtualRoot: boolean
   children?: CatalogTreeNode[]
+}
+
+function rowFromDataRef(dataRef: unknown): CatalogTreeNode {
+  return dataRef as CatalogTreeNode
 }
 
 const selectedCatalogId = defineModel<string | undefined>('selectedCatalogId', { required: false })
@@ -48,6 +56,7 @@ const actionMenuNodeKey = ref<string>()
 const renameModalVisible = ref(false)
 const renameLoading = ref(false)
 const renameCatalogId = ref<string>()
+
 const renameName = ref('')
 const deleteModalVisible = ref(false)
 const deleting = ref(false)
@@ -57,6 +66,11 @@ const moveLoading = ref(false)
 const moveCatalogId = ref<string>()
 const moveTargetParentId = ref<string>()
 
+// 完全自主实现拖拽，不用 a-tree 内置 draggable（其 drop 样式类不会出现在自定义 title 上）
+const draggingNode = ref<CatalogTreeNode | null>(null)
+const dropTargetKey = ref<string | null>(null)
+const dropPosition = ref<'before' | 'after' | 'inside' | null>(null)
+
 const PERM_ADD = MaterialPermissionCode.MATERIAL_CATALOG_CREATE
 const PERM_EDIT = MaterialPermissionCode.MATERIAL_CATALOG_UPDATE
 const PERM_DELETE = MaterialPermissionCode.MATERIAL_CATALOG_DELETE
@@ -64,10 +78,13 @@ const PERM_DELETE = MaterialPermissionCode.MATERIAL_CATALOG_DELETE
 function buildTree(nodes: MaterialCatalogNode[], level = 0): CatalogTreeNode[] {
   return nodes.map((n) => ({
     key: n.id,
+    id: n.id,
+    parentId: n.parentId,
     title: n.name,
     name: n.name,
     level,
     virtualRoot: !!n.virtualRoot,
+    sortNum: n.sortNum,
     children: n.children?.length ? buildTree(n.children, level + 1) : undefined
   }))
 }
@@ -195,12 +212,18 @@ function openDeleteModal(nodeId: string) {
 
 function getSubtreeIdSet(rootId: string, nodes: MaterialCatalogNode[]): Set<string> {
   const ids = new Set<string>()
+  // 非空判断
+  if (!rootId || !nodes || !Array.isArray(nodes)) {
+    return ids
+  }
   const root = findNodeDeep(nodes, rootId)
   if (!root) {
     return ids
   }
   const walk = (n: MaterialCatalogNode) => {
-    ids.add(n.id)
+    if (n && n.id) {
+      ids.add(n.id)
+    }
     n.children?.forEach(walk)
   }
   walk(root)
@@ -253,6 +276,117 @@ const moveParentTreeData = computed(() => {
   ] as NonNullable<TreeSelectProps['treeData']>
 })
 
+function onNodeDragStart(e: DragEvent, node: CatalogTreeNode) {
+  if (node.virtualRoot) {
+    e.preventDefault()
+    return
+  }
+  draggingNode.value = node
+  if (e.dataTransfer) {
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', node.id)
+  }
+}
+
+function clearDropHint() {
+  dropTargetKey.value = null
+  dropPosition.value = null
+}
+
+function onNodeDragEnd() {
+  draggingNode.value = null
+  clearDropHint()
+}
+
+function onNodeDragOver(e: DragEvent, node: CatalogTreeNode) {
+  if (!draggingNode.value || node.virtualRoot) {
+    return
+  }
+  e.preventDefault()
+  e.stopPropagation()
+  if (e.dataTransfer) {
+    e.dataTransfer.dropEffect = 'move'
+  }
+  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+  const y = e.clientY - rect.top
+  const h = rect.height || 1
+  let pos: 'before' | 'after' | 'inside'
+  if (y < h * 0.25) {
+    pos = 'before'
+  } else if (y > h * 0.75) {
+    pos = 'after'
+  } else {
+    pos = 'inside'
+  }
+  dropTargetKey.value = String(node.key)
+  dropPosition.value = pos
+}
+
+function onNodeDragLeave(e: DragEvent, node: CatalogTreeNode) {
+  const el = e.currentTarget as HTMLElement
+  const to = e.relatedTarget as Node | null
+  if (to && el.contains(to)) {
+    return
+  }
+  if (dropTargetKey.value === String(node.key)) {
+    clearDropHint()
+  }
+}
+
+async function onNodeDrop(e: DragEvent, targetNode: CatalogTreeNode) {
+  e.preventDefault()
+  e.stopPropagation()
+  const hintPos = dropPosition.value
+  clearDropHint()
+
+  if (targetNode.virtualRoot) {
+    message.warning('不能移动到虚拟根')
+    draggingNode.value = null
+    return
+  }
+  if (!draggingNode.value) {
+    return
+  }
+  if (draggingNode.value.id === targetNode.id) {
+    return
+  }
+
+  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+  const y = e.clientY - rect.top
+  const height = rect.height || 1
+  const position: 'before' | 'after' | 'inside' =
+    hintPos ??
+    (y < height * 0.25 ? 'before' : y > height * 0.75 ? 'after' : 'inside')
+
+  const dragId = draggingNode.value.id
+  const targetId = targetNode.id
+
+  const subtreeIds = getSubtreeIdSet(dragId, rawTree.value)
+  if (subtreeIds.has(targetId) && position === 'inside') {
+    message.warning('不能移动到自己的子栏目下')
+    draggingNode.value = null
+    return
+  }
+
+  try {
+    const pos: CatalogMovePosition =
+      position === 'before' ? 'BEFORE' : position === 'after' ? 'AFTER' : 'INSIDE'
+    await updateCatalog({
+      id: dragId,
+      targetId,
+      position: pos
+    })
+    message.success('栏目移动成功')
+    await load()
+    selectedCatalogId.value = dragId
+  } catch (err: unknown) {
+    const errEx = err as { response?: { data?: { message?: string } }; message?: string }
+    message.error(errEx?.response?.data?.message || errEx?.message || '移动失败')
+  } finally {
+    draggingNode.value = null
+  }
+}
+
 function openMoveModal(nodeId: string) {
   const node = flatten(rawTree.value).find((n) => n.id === nodeId)
   if (!node) {
@@ -263,6 +397,8 @@ function openMoveModal(nodeId: string) {
   moveTargetParentId.value = node.parentId && node.parentId !== '' ? node.parentId : '0'
   moveModalVisible.value = true
 }
+
+
 
 function handleNodeMenuClick(action: string, nodeId: string) {
   actionMenuNodeKey.value = undefined
@@ -281,6 +417,10 @@ function handleNodeMenuClick(action: string, nodeId: string) {
   }
   if (action === 'move') {
     openMoveModal(nodeId)
+    return
+  }
+  if (action === 'sort') {
+    openSortModal(nodeId)
     return
   }
   if (action === 'setting') {
@@ -357,7 +497,7 @@ async function submitMove() {
   }
   moveLoading.value = true
   try {
-    await updateCatalog({ id, parentId })
+    await updateCatalog({ id, targetId: parentId, position: 'INSIDE' })
     message.success('移动成功')
     moveModalVisible.value = false
     await load()
@@ -369,6 +509,8 @@ async function submitMove() {
     moveLoading.value = false
   }
 }
+
+
 
 async function submitDelete() {
   const catalogId = deleteCatalogId.value
@@ -408,7 +550,7 @@ defineExpose({
 </script>
 
 <template>
-  <div class="material-catalog-tree-panel">
+  <div class="material-catalog-tree-panel" :class="{ 'is-catalog-dragging': !!draggingNode }">
     <div class="catalog-tree-search">
       <a-input
         v-model:value="searchKeyword"
@@ -440,28 +582,44 @@ defineExpose({
 
       <a-spin :spinning="loading">
         <a-tree
-          v-if="treeData?.length && hasSearchResult"
-          class="catalog-tree-widget"
-          :tree-data="displayTreeData"
-          default-expand-all
-          block-node
-          :selected-keys="selectedCatalogId ? [selectedCatalogId] : []"
-          @select="(keys) => { selectedCatalogId = (keys?.[0] as string) || undefined }"
-        >
+      v-if="treeData?.length && hasSearchResult"
+      class="catalog-tree-widget"
+      :tree-data="displayTreeData"
+      default-expand-all
+      block-node
+      :selected-keys="selectedCatalogId ? [selectedCatalogId] : []"
+      @select="(keys) => { selectedCatalogId = (keys?.[0] as string) || undefined }"
+    >
           <template #switcherIcon="{ expanded }">
             <caret-down-filled v-if="expanded" class="catalog-tree-switcher" />
             <caret-right-filled v-else class="catalog-tree-switcher" />
           </template>
           <template #title="{ dataRef }">
-            <div class="catalog-tree-node">
+            <div
+              class="catalog-tree-node"
+              :class="{
+                'catalog-tree-drop-before':
+                  dropTargetKey === String(dataRef?.key) && dropPosition === 'before',
+                'catalog-tree-drop-after':
+                  dropTargetKey === String(dataRef?.key) && dropPosition === 'after',
+                'catalog-tree-drop-inside':
+                  dropTargetKey === String(dataRef?.key) && dropPosition === 'inside'
+              }"
+              draggable="true"
+              @dragstart="(e) => onNodeDragStart(e, rowFromDataRef(dataRef))"
+              @dragend="onNodeDragEnd"
+              @dragover="(e) => onNodeDragOver(e, rowFromDataRef(dataRef))"
+              @dragleave="(e) => onNodeDragLeave(e, rowFromDataRef(dataRef))"
+              @drop="(e) => onNodeDrop(e, rowFromDataRef(dataRef))"
+            >
               <folder-filled class="catalog-tree-icon" />
-              <span class="catalog-tree-name">{{ dataRef?.name || dataRef?.title || '-' }}</span>
+              <span class="catalog-tree-name">{{ dataRef?.name || dataRef?.title || "-" }}</span>
               <span v-if="dataRef?.virtualRoot" class="catalog-tree-tag">虚拟根</span>
               <a-button
                 class="catalog-tree-node-more"
                 type="text"
                 size="small"
-                @click.stop="toggleNodeActionMenu(((dataRef?.key as string) || ''))"
+                @click.stop="toggleNodeActionMenu((dataRef?.key as string) || '')"
               >
                 ...
               </a-button>
@@ -478,13 +636,8 @@ defineExpose({
                 >
                   重命名
                 </button>
-                <button
-                  class="catalog-tree-action-item"
-                  :disabled="!hasPermissionOnNode(((dataRef?.key as string) || ''), PERM_EDIT)"
-                  @click="handleNodeMenuClick('move', ((dataRef?.key as string) || ''))"
-                >
-                  移动栏目
-                </button>
+
+                
                 <button
                   class="catalog-tree-action-item"
                   :disabled="!hasPermissionOnNode(((dataRef?.key as string) || ''), PERM_ADD)"
@@ -594,12 +747,56 @@ defineExpose({
   >
     <p>删除后不可恢复，确定要删除该栏目吗？</p>
   </a-modal>
+
+  
 </template>
 
 <style scoped lang="less">
 .material-catalog-tree-panel {
   width: 100%;
   min-width: 0;
+}
+
+:deep(.ant-tree-node-content-wrapper) {
+  position: relative;
+}
+
+/* 自定义 HTML5 拖拽落点（上 / 下 / 内） */
+.is-catalog-dragging .catalog-tree-node-more {
+  pointer-events: none;
+}
+
+.catalog-tree-node.catalog-tree-drop-before::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: #1677ff;
+  border-radius: 2px;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.catalog-tree-node.catalog-tree-drop-after::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: #1677ff;
+  border-radius: 2px;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.catalog-tree-node.catalog-tree-drop-inside {
+  background: rgba(22, 119, 255, 0.14) !important;
+  outline: 2px solid #1677ff;
+  outline-offset: -1px;
+  border-radius: 8px;
 }
 
 .catalog-tree-search {
@@ -655,6 +852,11 @@ defineExpose({
   position: relative;
   overflow: visible;
   padding-right: 28px;
+}
+/* 让图标和文字不阻挡拖拽事件 */
+.catalog-tree-icon,
+.catalog-tree-name {
+  pointer-events: none;
 }
 
 .catalog-tree-node-more {
@@ -789,12 +991,12 @@ defineExpose({
 }
 
 .catalog-tree-widget :deep(.ant-tree-node-content-wrapper:hover) {
-  background: #f5edf2;
+  background: #f0f7ff;
 }
 
 .catalog-tree-widget :deep(.ant-tree-node-selected),
 .catalog-tree-widget :deep(.ant-tree-node-selected:hover) {
-  background: #e9f2ff;
+  background: #e6f4ff;
 }
 
 .catalog-tree-widget :deep(.ant-tree-indent-unit) {

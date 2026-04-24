@@ -6,7 +6,7 @@ import lombok.Data;
 
 /**
  * 栏目更新 DTO。
- * 支持通过不同字段实现重命名、调整父级（移动）、调整排序。
+ * 移动/排序时通过 {@link #targetId} 与 {@link #position} 描述意图，其中 {@code inside} 表示新父级为目标（弹窗选父、拖入节点内均如此），不再单独传父栏目 id。
  */
 @Data
 @Schema(description = "栏目更新DTO")
@@ -18,9 +18,12 @@ public class CatalogUpdateDTO {
     @Schema(description = "栏目名称（可选）")
     private String name;
 
-    @Schema(description = "父栏目ID（可选，传入表示移动栏目）")
-    private String parentId;
-
-    @Schema(description = "同级排序值（可选）")
+    @Schema(description = "同级排序值（可选，直接指定时与 targetId/position 互斥于「相对目标移动」类场景）")
     private Integer sortNum;
+
+    @Schema(description = "目标栏目 id：与 position 成对。before/after 为参照节点；inside 为要挂入的父（或成为其子）")
+    private String targetId;
+
+    @Schema(description = "相对目标的落点，与 targetId 同时出现；INSIDE 时新父=目标，不再单独传父 id")
+    private CatalogMovePosition position;
 }

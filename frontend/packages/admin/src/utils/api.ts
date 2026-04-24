@@ -1,4 +1,5 @@
 import axios from 'axios'
+import {isUnauthorizedError, redirectToLogin} from '@/utils/authRedirect'
 
 const baseURL = import.meta.env.VITE_API_BASEURL || ''
 
@@ -71,18 +72,8 @@ instance.interceptors.request.use(
 instance.interceptors.response.use(
     (response) => response.data,
     (error) => {
-        const status = error.response?.status as number | undefined
-        const msg: string | undefined = error.response?.data?.message
-
-        // 未登录 / 登录过期 / token 无效等场景统一视为需重新登录
-        if (status === 401 || msg === 'token.expired' || msg === 'token.invalid') {
-            setToken(null)
-            setUserName(null)
-            const current = window.location.pathname + window.location.search
-            if (!current.startsWith('/login') && !current.startsWith('/register')) {
-                const redirect = encodeURIComponent(current)
-                window.location.href = `/login?redirect=${redirect}`
-            }
+        if (isUnauthorizedError(error)) {
+            redirectToLogin()
         }
         return Promise.reject(error)
     }

@@ -30,6 +30,10 @@ public class KtChunkUploadSession extends CommonEntity {
     @TableField("precatalog_json")
     private String precatalogJson;
 
+    /** 显式转码策略（与上传解析链「显式」优先一致） */
+    @TableField("transcode_strategy_id")
+    private String transcodeStrategyId;
+
     @TableField("storage_id")
     private String storageId;
 

@@ -1,5 +1,6 @@
 package icu.jiapeng.kitty.material.resource.service;
 
+import cn.hutool.core.collection.CollUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -11,20 +12,26 @@ import icu.jiapeng.kitty.material.catalog.service.CatalogService;
 import icu.jiapeng.kitty.material.metadata.service.MaterialMetadataInstanceService;
 import icu.jiapeng.kitty.material.metadata.vo.MaterialMetadataSnapshotVO;
 import icu.jiapeng.kitty.material.catalog.constants.CatalogPermission;
+import icu.jiapeng.kitty.material.behavior.MaterialDataEventClient;
+import icu.jiapeng.kitty.material.resource.constants.ResourceDestinationTypes;
 import icu.jiapeng.kitty.material.resource.constants.ResourceTypeEnum;
 import icu.jiapeng.kitty.material.resource.dto.*;
 import icu.jiapeng.kitty.material.resource.entity.KtFileStorage;
 import icu.jiapeng.kitty.material.resource.entity.KtMetaFile;
 import icu.jiapeng.kitty.material.resource.entity.KtResource;
+import icu.jiapeng.kitty.material.resource.entity.KtResourceDerivative;
 import icu.jiapeng.kitty.material.resource.fingerprint.ResourceFingerprintSupport;
 import icu.jiapeng.kitty.material.resource.mapper.KtFileStorageMapper;
 import icu.jiapeng.kitty.material.resource.mapper.KtResourceMapper;
 import icu.jiapeng.kitty.material.resource.support.MaterialResourcePreviewLinkBuilder;
 import icu.jiapeng.kitty.material.resource.support.MaterialStoragePublicUrlBuilder;
+import icu.jiapeng.kitty.material.resource.vo.MaterialDownloadUrlVO;
 import icu.jiapeng.kitty.material.resource.vo.MaterialMetaFileVO;
+import icu.jiapeng.kitty.material.resource.vo.MaterialResourceDerivativeVO;
 import icu.jiapeng.kitty.material.resource.vo.MaterialResourceDetailVO;
 import icu.jiapeng.kitty.material.resource.vo.MaterialResourceFingerprintPrecheckVO;
 import icu.jiapeng.kitty.material.resource.vo.MaterialResourceVO;
+import icu.jiapeng.kitty.material.user.UserContextGateway;
 import icu.jiapeng.kitty.material.review.service.MaterialReviewService;
 import icu.jiapeng.kitty.material.review.vo.MaterialReviewTaskVO;
 import icu.jiapeng.kitty.material.searchsync.MaterialSearchQueryPort;
@@ -80,6 +87,12 @@ public class MaterialResourceServiceImpl extends ServiceImpl<KtResourceMapper, K
     private MaterialResourcePreviewLinkBuilder materialResourcePreviewLinkBuilder;
     @Resource
     private KtFileStorageMapper ktFileStorageMapper;
+    @Resource
+    private ResourceDerivativeService resourceDerivativeService;
+    @Resource
+    private UserContextGateway userContextGateway;
+    @Resource
+    private MaterialDataEventClient materialDataEventClient;
 
     @Override
     public Optional<KtResource> findById(String id) {
@@ -198,6 +211,10 @@ public class MaterialResourceServiceImpl extends ServiceImpl<KtResourceMapper, K
         vo.setTaggingTasks(filterTaggingTasks(tasks));
         List<MaterialReviewTaskVO> reviewTasks = materialReviewService.listVoForResourceDetail(resourceId);
         vo.setReviewTasks(reviewTasks);
+        List<MaterialResourceDerivativeVO> derivVos = resourceDerivativeService.listByResourceId(resourceId).stream()
+                .map(this::toDerivativeVo)
+                .toList();
+        vo.setDerivatives(derivVos);
         return vo;
     }
 
@@ -405,7 +422,7 @@ public class MaterialResourceServiceImpl extends ServiceImpl<KtResourceMapper, K
         MaterialMetaFileVO vo = toMetaFileVo(meta);
         KtResource latest = findById(req.getResourceId()).orElse(resource);
         materialSearchSyncTrigger.publishFullDocument(latest);
-        materialResourceTaskService.tryAutoEnqueueAfterBind(req.getResourceId());
+        materialResourceTaskService.onUploadFileBound(req.getResourceId(), null);
         return vo;
     }
 
@@ -463,7 +480,7 @@ public class MaterialResourceServiceImpl extends ServiceImpl<KtResourceMapper, K
      * previewUrl 对非文件夹资源始终返回应用内预览路径；视频另返回 keyframe 接口相对路径（未产出时访问可能 404）。
      */
     private void enrichSrcUrls(List<MaterialResourceVO> vos) {
-        if (vos == null || vos.isEmpty()) {
+        if (CollUtil.isEmpty(vos)) {
             return;
         }
         List<String> ids = vos.stream().map(MaterialResourceVO::getId).filter(StringUtils::hasText).distinct().toList();
@@ -481,6 +498,23 @@ public class MaterialResourceServiceImpl extends ServiceImpl<KtResourceMapper, K
                 storageById.put(sid, st);
             }
         }
+        Set<String> videoIds = new LinkedHashSet<>();
+        for (MaterialResourceVO v : vos) {
+            if (v.getType() != null && ResourceTypeEnum.VIDEO.getType().equals(v.getType()) && StringUtils.hasText(v.getId())) {
+                videoIds.add(v.getId());
+            }
+        }
+        Map<String, String> coverUrlByResourceId = new HashMap<>();
+        if (!videoIds.isEmpty()) {
+            for (KtResourceDerivative c : resourceDerivativeService.listByResourceIdsAndDestinationType(
+                    videoIds, ResourceDestinationTypes.COVER)) {
+                String u = buildDerivativePublicUrl(c, storageById);
+                if (StringUtils.hasText(u) && StringUtils.hasText(c.getResourceId())
+                        && !coverUrlByResourceId.containsKey(c.getResourceId())) {
+                    coverUrlByResourceId.put(c.getResourceId(), u);
+                }
+            }
+        }
         for (MaterialResourceVO vo : vos) {
             vo.setSrcUrl(null);
             vo.setPreviewUrl(null);
@@ -495,17 +529,23 @@ public class MaterialResourceServiceImpl extends ServiceImpl<KtResourceMapper, K
                 vo.setSrcUrl(materialStoragePublicUrlBuilder.build(st, m.getObjectKey()));
             }
             vo.setPreviewUrl(materialResourcePreviewLinkBuilder.buildRelativePreviewPath(vo.getId()));
-            applyCoverAndKeyframeUrls(vo);
+            String cover = coverUrlByResourceId.get(vo.getId());
+            applyCoverAndKeyframeUrls(vo, cover);
         }
     }
 
-    /** 封面：图片使用原图直链；视频：关键帧接口相对路径（抽帧产物就绪前可能 404） */
-    private void applyCoverAndKeyframeUrls(MaterialResourceVO vo) {
+    /**
+     * 封面：图片使用原图直链；视频：优先已登记的 COVER 衍生物 URL，否则仍返回关键帧接口相对路径（未就绪可能 404）。
+     */
+    private void applyCoverAndKeyframeUrls(MaterialResourceVO vo, String coverDerivativeUrlOrNull) {
         Integer t = vo.getType();
         if (t != null && ResourceTypeEnum.IMAGE.getType().equals(t) && StringUtils.hasText(vo.getSrcUrl())) {
             vo.setCoverUrl(vo.getSrcUrl());
         }
         if (t != null && ResourceTypeEnum.VIDEO.getType().equals(t)) {
+            if (StringUtils.hasText(coverDerivativeUrlOrNull)) {
+                vo.setCoverUrl(coverDerivativeUrlOrNull);
+            }
             vo.setKeyframeUrl(materialResourcePreviewLinkBuilder.buildRelativeKeyframePath(vo.getId()));
         }
     }
@@ -519,7 +559,7 @@ public class MaterialResourceServiceImpl extends ServiceImpl<KtResourceMapper, K
         KtResource resource = findById(rid).orElseThrow(() -> BizException.of(ResultStatus.PARAM_ERROR));
         catalogService.requireOnCatalog(resource.getCatalogId(), CatalogPermission.RESOURCE_LIST_VIEW);
         KtMetaFile meta = metaFileService.findByResourceId(rid)
-                .orElseThrow(() -> BizException.of(ResultStatus.PARAM_ERROR));
+                .orElseThrow(() -> BizException.of(ResultStatus.MATERIAL_FILE_NOT_FOUND));
         KtFileStorage st = ktFileStorageMapper.selectById(meta.getStorageId());
         String url = materialStoragePublicUrlBuilder.build(st, meta.getObjectKey());
         if (!StringUtils.hasText(url)) {
@@ -539,8 +579,158 @@ public class MaterialResourceServiceImpl extends ServiceImpl<KtResourceMapper, K
             return Optional.empty();
         }
         catalogService.requireOnCatalog(resource.getCatalogId(), CatalogPermission.RESOURCE_LIST_VIEW);
-        // 关键帧对象写入存储后在此解析 URL；当前无持久化字段
-        return Optional.empty();
+        return resourceDerivativeService.findByResourceAndType(rid, ResourceDestinationTypes.COVER)
+                .map(d -> {
+                    if (StringUtils.hasText(d.getExternalUrl())) {
+                        return d.getExternalUrl().trim();
+                    }
+                    if (StringUtils.hasText(d.getStorageId()) && StringUtils.hasText(d.getObjectKey())) {
+                        KtFileStorage st = ktFileStorageMapper.selectById(d.getStorageId());
+                        return materialStoragePublicUrlBuilder.build(st, d.getObjectKey());
+                    }
+                    return null;
+                })
+                .filter(StringUtils::hasText);
+    }
+
+    @Override
+    public MaterialDownloadUrlVO resolveDownloadUrl(String resourceId, String destinationType) {
+        if (!StringUtils.hasText(resourceId) || !StringUtils.hasText(destinationType)) {
+            throw BizException.of(ResultStatus.PARAM_ERROR);
+        }
+        String rid = resourceId.trim();
+        String norm = normalizeDestinationType(destinationType);
+        KtResource resource = findById(rid).orElseThrow(() -> BizException.of(ResultStatus.PARAM_ERROR));
+        catalogService.requireOnCatalog(resource.getCatalogId(), CatalogPermission.RESOURCE_LIST_VIEW);
+
+        MaterialDownloadUrlVO vo = new MaterialDownloadUrlVO();
+        vo.setResourceId(rid);
+        vo.setDestinationType(norm);
+        vo.setExpiresInSec(3600);
+        if (ResourceDestinationTypes.SOURCE.equals(norm)) {
+            String url = buildSourcePublicUrl(resource);
+            if (!StringUtils.hasText(url)) {
+                throw BizException.of(ResultStatus.PARAM_ERROR);
+            }
+            vo.setActualDestinationType(ResourceDestinationTypes.SOURCE);
+            vo.setUrl(url);
+            return vo;
+        }
+        Optional<KtResourceDerivative> der = resourceDerivativeService.findByResourceAndType(rid, norm);
+        if (der.isPresent()) {
+            String url = buildDerivativePublicUrl(der.get(), null);
+            if (StringUtils.hasText(url)) {
+                vo.setActualDestinationType(norm);
+                vo.setUrl(url);
+                return vo;
+            }
+        }
+        if (ResourceDestinationTypes.COVER.equals(norm) || ResourceDestinationTypes.SPRITE.equals(norm)) {
+            throw BizException.of(ResultStatus.PARAM_ERROR);
+        }
+        String sourceUrl = buildSourcePublicUrl(resource);
+        if (!StringUtils.hasText(sourceUrl)) {
+            throw BizException.of(ResultStatus.PARAM_ERROR);
+        }
+        vo.setActualDestinationType(ResourceDestinationTypes.SOURCE);
+        vo.setUrl(sourceUrl);
+        return vo;
+    }
+
+    @Override
+    public void reportDownload(MaterialDownloadReportItemDTO body) {
+        if (body == null || !StringUtils.hasText(body.getResourceId()) || !StringUtils.hasText(body.getDestinationType())) {
+            throw BizException.of(ResultStatus.PARAM_ERROR);
+        }
+        String rid = body.getResourceId().trim();
+        KtResource r = findById(rid).orElseThrow(() -> BizException.of(ResultStatus.PARAM_ERROR));
+        catalogService.requireOnCatalog(r.getCatalogId(), CatalogPermission.RESOURCE_LIST_VIEW);
+        String title = StringUtils.hasText(body.getResourceTitle()) ? body.getResourceTitle() : r.getTitle();
+        String op = userContextGateway.currentUserId();
+        if (!StringUtils.hasText(op)) {
+            op = "-";
+        }
+        String actual = StringUtils.hasText(body.getActualDestinationType()) ? body.getActualDestinationType().trim() : null;
+        materialDataEventClient.tryReportDownload(
+                op, rid, title, body.getDestinationType().trim(), actual);
+    }
+
+    @Override
+    public void reportDownloadBatch(MaterialDownloadReportBatchDTO body) {
+        if (body == null || body.getItems() == null) {
+            return;
+        }
+        for (MaterialDownloadReportItemDTO item : body.getItems()) {
+            if (item == null) {
+                continue;
+            }
+            reportDownload(item);
+        }
+    }
+
+    private MaterialResourceDerivativeVO toDerivativeVo(KtResourceDerivative d) {
+        MaterialResourceDerivativeVO v = new MaterialResourceDerivativeVO();
+        v.setDestinationType(d.getDestinationType());
+        String url = buildDerivativePublicUrl(d, null);
+        v.setAccessUrl(url);
+        v.setAvailable(StringUtils.hasText(url));
+        v.setFileSize(d.getFileSize());
+        return v;
+    }
+
+    private String buildSourcePublicUrl(KtResource resource) {
+        if (resource == null) {
+            return null;
+        }
+        return metaFileService.findByResourceId(resource.getId())
+                .map(meta -> {
+                    KtFileStorage st = ktFileStorageMapper.selectById(meta.getStorageId());
+                    return materialStoragePublicUrlBuilder.build(st, meta.getObjectKey());
+                })
+                .orElse(null);
+    }
+
+    /**
+     * @param storageCache 可选；列表场景传入 meta 已加载的 storage 映射以便复用
+     */
+    private String buildDerivativePublicUrl(KtResourceDerivative d, Map<String, KtFileStorage> storageCache) {
+        if (d == null) {
+            return null;
+        }
+        if (StringUtils.hasText(d.getExternalUrl())) {
+            return d.getExternalUrl().trim();
+        }
+        if (!StringUtils.hasText(d.getStorageId()) || !StringUtils.hasText(d.getObjectKey())) {
+            return null;
+        }
+        KtFileStorage st = null;
+        if (storageCache != null) {
+            st = storageCache.get(d.getStorageId());
+        }
+        if (st == null) {
+            st = ktFileStorageMapper.selectById(d.getStorageId());
+            if (storageCache != null && st != null) {
+                storageCache.put(d.getStorageId(), st);
+            }
+        }
+        return materialStoragePublicUrlBuilder.build(st, d.getObjectKey());
+    }
+
+    private static String normalizeDestinationType(String raw) {
+        if (raw == null) {
+            return "";
+        }
+        String t = raw.trim();
+        if (ResourceDestinationTypes.SOURCE.equalsIgnoreCase(t)) {
+            return ResourceDestinationTypes.SOURCE;
+        }
+        if (ResourceDestinationTypes.COVER.equalsIgnoreCase(t)) {
+            return ResourceDestinationTypes.COVER;
+        }
+        if (ResourceDestinationTypes.SPRITE.equalsIgnoreCase(t)) {
+            return ResourceDestinationTypes.SPRITE;
+        }
+        return t;
     }
 
     private MaterialResourceVO enrichSingle(MaterialResourceVO vo) {

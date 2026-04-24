@@ -1,6 +1,8 @@
 package icu.jiapeng.kitty.material.catalog.service;
 
 import cn.hutool.core.util.StrUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import icu.jiapeng.kitty.common.core.constant.ResultStatus;
 import icu.jiapeng.kitty.common.core.exceptions.BizException;
@@ -9,11 +11,13 @@ import icu.jiapeng.kitty.material.catalog.CatalogBeansConvert;
 import icu.jiapeng.kitty.material.catalog.constants.CatalogPermission;
 import icu.jiapeng.kitty.material.catalog.constants.CatalogType;
 import icu.jiapeng.kitty.material.catalog.dto.CatalogCreateDTO;
+import icu.jiapeng.kitty.material.catalog.dto.CatalogMovePosition;
 import icu.jiapeng.kitty.material.catalog.dto.CatalogUpdateDTO;
 import icu.jiapeng.kitty.material.catalog.entity.KtCatalog;
 import icu.jiapeng.kitty.material.catalog.entity.KtCatalogPermission;
 import icu.jiapeng.kitty.material.catalog.event.CatalogCreatedEvent;
 import icu.jiapeng.kitty.material.catalog.event.CatalogDeletedEvent;
+import icu.jiapeng.kitty.material.catalog.event.CatalogParentSortTouchedEvent;
 import icu.jiapeng.kitty.material.catalog.event.CatalogUpdatedEvent;
 import icu.jiapeng.kitty.material.catalog.mapper.KtCatalogMapper;
 import icu.jiapeng.kitty.material.catalog.vo.CatalogNodeVO;
@@ -34,6 +38,15 @@ import java.util.stream.Collectors;
 @Service
 @Slf4j
 public class CatalogServiceImpl extends ServiceImpl<KtCatalogMapper, KtCatalog> implements CatalogService {
+
+    /**
+     * 父下首个子栏目缺省 sort（与历史逻辑一致，升序小在上）
+     */
+    private static final int DEFAULT_FIRST_SIBLING_SORT = 100;
+    /**
+     * 同父下腾挪、追加时步长（与 {@link CatalogSortRebalanceService#RENUMBER_STEP} 一致）
+     */
+    private static final int SORT_STEP = CatalogSortRebalanceService.RENUMBER_STEP;
 
     @Resource
     private UserContextGateway userContextGateway;
@@ -132,11 +145,14 @@ public class CatalogServiceImpl extends ServiceImpl<KtCatalogMapper, KtCatalog> 
         KtCatalog mpEntity = CatalogBeansConvert.INSTANCE.node2Mp(node);
         String treeCode = parentCode.concat(Integer.toString(childIndex, 36)).concat("/");
         mpEntity.setTreeCode(treeCode);
+        // 新建：始终置于父节点下当前最大 sort 之后（升序小在上，步长 +SORT_STEP 便于中间插入）
+        mpEntity.setSortNum(nextAppendSortInParent(parentId));
         boolean ok = save(mpEntity);
         if (!ok) {
             throw new IllegalStateException("mybatis-plus save failed: " + node);
         }
         applicationEventPublisher.publishEvent(new CatalogCreatedEvent(mpEntity.getId()));
+        applicationEventPublisher.publishEvent(new CatalogParentSortTouchedEvent(parentId));
         return mpEntity.getId();
     }
 
@@ -154,8 +170,28 @@ public class CatalogServiceImpl extends ServiceImpl<KtCatalogMapper, KtCatalog> 
         String oldParentId = entity.getParentId();
         String oldTreeCode = entity.getTreeCode();
         String newName = dto.getName() == null ? entity.getName() : dto.getName().trim();
-        String targetParentId = dto.getParentId() == null ? oldParentId : dto.getParentId().trim();
-        Integer targetSortNum = dto.getSortNum() == null ? entity.getSortNum() : dto.getSortNum();
+        if (StrUtil.isNotBlank(dto.getTargetId()) == (dto.getPosition() == null)) {
+            throw BizException.of(ResultStatus.PARAM_ERROR);
+        }
+        String targetParentId = oldParentId;
+        final boolean moveByTarget = StrUtil.isNotBlank(dto.getTargetId()) && dto.getPosition() != null;
+        Integer targetSortNum;
+        if (moveByTarget) {
+            KtCatalog target = getById(dto.getTargetId());
+            if (target == null) {
+                throw BizException.of(ResultStatus.CATALOG_TARGET_NOT_EXIST);
+            }
+            if (dto.getPosition() == CatalogMovePosition.INSIDE) {
+                targetParentId = target.getId();
+                targetSortNum = nextAppendSortInParent(target.getId());
+            } else {
+                targetParentId = StrUtil.isBlank(target.getParentId()) ? "0" : target.getParentId().trim();
+                int sortAdd = dto.getPosition() == CatalogMovePosition.BEFORE ? -1 : 1;
+                targetSortNum = sortOrZero(target) + sortAdd;
+            }
+        } else {
+            targetSortNum = dto.getSortNum() == null ? entity.getSortNum() : dto.getSortNum();
+        }
 
         if (newName.isBlank() || targetParentId.isBlank()) {
             throw BizException.of(ResultStatus.PARAM_ERROR);
@@ -194,10 +230,11 @@ public class CatalogServiceImpl extends ServiceImpl<KtCatalogMapper, KtCatalog> 
         }
 
         boolean sameName = Objects.equals(newName, entity.getName());
-        boolean sameSort = Objects.equals(targetSortNum, entity.getSortNum());
+        boolean sameSort = Objects.isNull(targetSortNum);
         if (!parentChanged && sameName && sameSort) {
             return;
         }
+        smallSortRestructure(targetParentId, targetSortNum, dto.getPosition() == CatalogMovePosition.BEFORE);
 
         if (parentChanged) {
             String newParentCode = Optional.ofNullable(targetParent).map(KtCatalog::getTreeCode).orElse("");
@@ -237,6 +274,7 @@ public class CatalogServiceImpl extends ServiceImpl<KtCatalogMapper, KtCatalog> 
                 }
             }
             applicationEventPublisher.publishEvent(new CatalogUpdatedEvent(catalogId));
+            publishParentSortTouchedAfterUpdateIfNeeded(oldParentId, targetParentId, parentChanged, sameSort);
             return;
         }
 
@@ -244,6 +282,25 @@ public class CatalogServiceImpl extends ServiceImpl<KtCatalogMapper, KtCatalog> 
         entity.setSortNum(targetSortNum);
         updateById(entity);
         applicationEventPublisher.publishEvent(new CatalogUpdatedEvent(catalogId));
+        publishParentSortTouchedAfterUpdateIfNeeded(oldParentId, targetParentId, parentChanged, sameSort);
+    }
+
+    /**
+     * 小重整排序
+     * 当父栏目下的目标sort被占据的时候推开一侧的sort
+     *
+     * @param parentId      目标父栏目
+     * @param targetSortNum 目标排序
+     * @param isBefore      是上边 否下边
+     */
+    private void smallSortRestructure(String parentId, Integer targetSortNum, boolean isBefore) {
+        lambdaUpdate()
+                .eq(KtCatalog::getParentId, parentId)
+                .le(isBefore, KtCatalog::getSortNum, targetSortNum)
+                .ge(!isBefore, KtCatalog::getSortNum, targetSortNum)
+                .setSql("sort_num = sort_num + " + (isBefore ? -SORT_STEP : SORT_STEP))
+                .apply("EXISTS (SELECT 1 from (SELECT 1 FROM kt_catalog WHERE parent_id = {0} AND sort_num = {1}) as tmp)", parentId, targetSortNum)
+                .update();
     }
 
     @Override
@@ -312,6 +369,7 @@ public class CatalogServiceImpl extends ServiceImpl<KtCatalogMapper, KtCatalog> 
                                 AND allow_flag=true AND role_id IN (%s)
                                 """, treeViewCode, roleIds.stream().map(s -> "'" + s + "'").collect(Collectors.joining(",")))
                 )
+                .orderByAsc(KtCatalog::getSortNum)
                 .list();
         // 2.获取权限map
         Map<String, List<String>> catalogPermissions = catalogPermissionService.getCatalogPermissions(roleIds);
@@ -373,5 +431,47 @@ public class CatalogServiceImpl extends ServiceImpl<KtCatalogMapper, KtCatalog> 
             return CatalogType.privateCatalogIdByUser(userContextGateway.currentUserId());
         }
         return normalized;
+    }
+
+    /**
+     * 置于同父下 sort 的末尾：max(sort)+SORT_STEP；无兄弟时用 {@link #DEFAULT_FIRST_SIBLING_SORT} 作为起点。
+     */
+    private int nextAppendSortInParent(String parentId) {
+        LambdaQueryWrapper<KtCatalog> eq = Wrappers.query(KtCatalog.class)
+                .select("MAX(sort_num) as sort_num")
+                .lambda().eq(KtCatalog::getParentId, parentId);
+        KtCatalog one = getOne(eq);
+        if (Objects.nonNull(one)) {
+            return one.getSortNum() + 1;
+        }
+        return DEFAULT_FIRST_SIBLING_SORT;
+    }
+
+    private void publishParentSortTouchedAfterUpdateIfNeeded(
+            String oldParentId,
+            String targetParentId,
+            boolean parentChanged,
+            boolean sameSort) {
+        if (!parentChanged && sameSort) {
+            return;
+        }
+        LinkedHashSet<String> parents = new LinkedHashSet<>();
+        if (parentChanged && StrUtil.isNotBlank(oldParentId)) {
+            parents.add(oldParentId);
+        }
+        if (StrUtil.isNotBlank(targetParentId)) {
+            parents.add(targetParentId);
+        }
+        for (String p : parents) {
+            applicationEventPublisher.publishEvent(new CatalogParentSortTouchedEvent(p));
+        }
+    }
+
+    private static int sortOrZero(KtCatalog row) {
+        return sortOrZero(row.getSortNum());
+    }
+
+    private static int sortOrZero(Integer sortNum) {
+        return sortNum == null ? 0 : sortNum;
     }
 }

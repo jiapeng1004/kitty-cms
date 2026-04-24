@@ -18,6 +18,9 @@ public class Event extends PanacheMongoEntity {
     @BsonProperty("value")
     public long value;
 
+    @BsonProperty("detailJson")
+    public String detailJson;
+
     @BsonProperty("timestamp")
     public Instant timestamp;
 

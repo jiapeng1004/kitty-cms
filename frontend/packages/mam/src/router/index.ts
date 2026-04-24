@@ -1,4 +1,5 @@
 import {createRouter, createWebHistory} from 'vue-router'
+import {getToken, redirectToLogin} from '@/utils/authRedirect'
 import Layout from '@/layouts/Layout.vue'
 import CatalogPermissionPage from '@/views/CatalogPermissionPage.vue'
 import StorageRoutePage from '@/views/StorageRoutePage.vue'
@@ -156,6 +157,21 @@ const router = createRouter({
             ]
         }
     ]
+})
+
+/** 无 token 时整站受保护，统一跳转登录（由 VITE_LOGIN_URL 或同域 /login 承载） */
+router.beforeEach((to, _from, next) => {
+    if (getToken()) {
+        next()
+        return
+    }
+    const path = to.path
+    if (path === '/login' || path === '/register') {
+        next()
+        return
+    }
+    redirectToLogin()
+    next(false)
 })
 
 export default router

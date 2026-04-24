@@ -54,4 +54,11 @@ public interface MaterialResourceService extends IService<KtResource> {
 
     /** 视频关键帧：未产出时 empty */
     Optional<String> resolveKeyframeRedirectUrl(String resourceId);
+
+    /** 按分级解析可下载的直链（缺省码率时非 COVER/SPRITE 可降级为源码并标注 actualDestinationType） */
+    MaterialDownloadUrlVO resolveDownloadUrl(String resourceId, String destinationType);
+
+    void reportDownload(MaterialDownloadReportItemDTO body);
+
+    void reportDownloadBatch(MaterialDownloadReportBatchDTO body);
 }
