@@ -81,6 +81,16 @@ export function pageResources(params: {
   return api.get(`${PREFIX}/page`, { params })
 }
 
+/** 回收站专用分页，与 /page 解耦 */
+export function pageRecycleResources(params: {
+  catalogId: string
+  parentId?: string
+  page?: number
+  size?: number
+}): Promise<PageRespVo<MaterialResourceVO>> {
+  return api.get(`${PREFIX}/recycle/page`, { params })
+}
+
 export function createResource(data: MaterialResourceUpsertDTO): Promise<MaterialResourceVO> {
   return api.post(`${PREFIX}`, data)
 }
@@ -242,4 +252,8 @@ export function reportResourceDownload(body: MaterialDownloadReportItemDTO): Pro
 
 export function reportResourceDownloadBatch(body: MaterialDownloadReportBatchDTO): Promise<void> {
   return api.post(`${PREFIX}/download/report/batch`, body)
+}
+
+export function recycleResourcesToBin(body: { resourceIds: string[] }): Promise<void> {
+  return api.post(`${PREFIX}/recycle`, body)
 }

@@ -9,5 +9,8 @@ public enum MaterialSearchSyncMessageType {
     FULL_DOCUMENT,
 
     /** 仅编目实例变更：可映射为 ES partial update（templateId + 字段编码集合）。 */
-    METADATA_FIELD_PATCH
+    METADATA_FIELD_PATCH,
+
+    /** 文档应从检索索引中删除（如逻辑删/回收站）。 */
+    DOCUMENT_REMOVED
 }

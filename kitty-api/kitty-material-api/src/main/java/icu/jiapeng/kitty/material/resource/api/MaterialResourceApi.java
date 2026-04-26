@@ -1,30 +1,13 @@
 package icu.jiapeng.kitty.material.resource.api;
 
 import icu.jiapeng.kitty.common.core.page.PageRespVo;
-import icu.jiapeng.kitty.material.resource.dto.MaterialDownloadReportBatchDTO;
-import icu.jiapeng.kitty.material.resource.dto.MaterialDownloadReportItemDTO;
-import icu.jiapeng.kitty.material.resource.dto.MaterialMetaFileBindDTO;
-import icu.jiapeng.kitty.material.resource.dto.MaterialResourceListPageQueryDTO;
-import icu.jiapeng.kitty.material.resource.dto.MaterialResourceListQueryDTO;
-import icu.jiapeng.kitty.material.resource.dto.MaterialResourceUpsertDTO;
-import icu.jiapeng.kitty.material.resource.dto.MaterialFolderCreateDTO;
-import icu.jiapeng.kitty.material.resource.dto.MaterialFolderUploadPlanDTO;
-import icu.jiapeng.kitty.material.resource.dto.MaterialResourceFingerprintDTO;
-import icu.jiapeng.kitty.material.resource.vo.MaterialMetaFileVO;
-import icu.jiapeng.kitty.material.resource.vo.MaterialResourceDetailVO;
-import icu.jiapeng.kitty.material.resource.vo.MaterialResourceVO;
-import icu.jiapeng.kitty.material.resource.vo.MaterialDownloadUrlVO;
-import icu.jiapeng.kitty.material.resource.vo.MaterialResourceFingerprintPrecheckVO;
+import icu.jiapeng.kitty.material.resource.dto.*;
+import icu.jiapeng.kitty.material.resource.vo.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -41,6 +24,10 @@ public interface MaterialResourceApi {
     @Operation(summary = "资源分页列表（未传 keyword/semantic 时走数据库分页；传了则与 list 同检索逻辑后在内存切片，总条数受检索条数上限影响）")
     @GetMapping("/api/material/resource/page")
     PageRespVo<MaterialResourceVO> page(@ModelAttribute MaterialResourceListPageQueryDTO query);
+
+    @Operation(summary = "回收站分页列表（仅逻辑删未彻底移除的资源，数据库分页，与全文/向量检索接口分离）")
+    @GetMapping("/api/material/resource/recycle/page")
+    PageRespVo<MaterialResourceVO> pageRecycle(@ModelAttribute MaterialResourceListPageQueryDTO query);
 
     @Operation(summary = "资源详情（含编目最新快照）")
     @GetMapping("/api/material/resource/detail")
@@ -104,4 +91,12 @@ public interface MaterialResourceApi {
     @Operation(summary = "批量下载行为上报")
     @PostMapping("/api/material/resource/download/report/batch")
     void reportDownloadBatch(@Valid @RequestBody MaterialDownloadReportBatchDTO body);
+
+    @Operation(summary = "移入回收站（逻辑删 deleted=1）")
+    @PostMapping("/api/material/resource/recycle")
+    void recycleToBin(@Valid @RequestBody MaterialResourceIdsDTO body);
+
+    @Operation(summary = "从回收站彻底删除：写入坟场、删除对象存储、物理删主表及关联行")
+    @PostMapping("/api/material/resource/purge")
+    void purgeFromRecycle(@Valid @RequestBody MaterialResourceIdsDTO body);
 }

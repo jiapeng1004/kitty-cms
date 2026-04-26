@@ -1,8 +1,11 @@
 package icu.jiapeng.kitty.material.search.adapter;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.elasticsearch._types.Result;
 import co.elastic.clients.elasticsearch.core.IndexRequest;
+import co.elastic.clients.elasticsearch.core.DeleteRequest;
 import co.elastic.clients.elasticsearch.core.UpdateRequest;
+import co.elastic.clients.elasticsearch.core.DeleteResponse;
 import co.elastic.clients.elasticsearch._types.mapping.DenseVectorSimilarity;
 import co.elastic.clients.elasticsearch._types.mapping.DenseVectorProperty;
 import co.elastic.clients.elasticsearch._types.mapping.Property;
@@ -48,6 +51,24 @@ public class ElasticsearchMaterialSearchIndexAdapter implements MaterialSearchIn
             log.debug("material ES partial update id={}", resourceId);
         } catch (Exception e) {
             throw new IllegalStateException("material ES patch failed: " + resourceId, e);
+        }
+    }
+
+    @Override
+    public void removeDocument(String resourceId) {
+        if (resourceId == null || resourceId.isBlank()) {
+            return;
+        }
+        try {
+            ensureIndex();
+            DeleteResponse r = client.delete(DeleteRequest.of(d -> d.index(MaterialSearchConstants.INDEX_NAME).id(resourceId)));
+            if (r.result() == Result.NotFound) {
+                log.debug("material ES delete skipped (not found) id={}", resourceId);
+                return;
+            }
+            log.debug("material ES document removed id={}", resourceId);
+        } catch (IOException e) {
+            throw new IllegalStateException("material ES delete failed: " + resourceId, e);
         }
     }
 

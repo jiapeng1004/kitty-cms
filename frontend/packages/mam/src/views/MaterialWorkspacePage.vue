@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {computed, nextTick, ref, watch} from 'vue'
-import {message} from 'ant-design-vue'
+import {message, Modal} from 'ant-design-vue'
 import type {MenuProps, UploadProps} from 'ant-design-vue'
 import {
   AppstoreOutlined,
@@ -21,7 +21,9 @@ import MaterialCatalogTreePanel from '@/components/MaterialCatalogTreePanel.vue'
 import {
   createFolder,
   materialApiAbsoluteUrl,
+  pageRecycleResources,
   pageResources,
+  recycleResourcesToBin,
   type MaterialResourceVO
 } from '@/api/mam_resource_api'
 import type {MaterialCatalogNode} from '@/api/mam_catalog_api'
@@ -61,6 +63,19 @@ function goResourceDetail(id: string) {
   router.push(resourceDetailPath(id))
 }
 
+/** 与路由 /material/recycle、/embed/material/recycle 对应 */
+const isRecycleView = computed(
+  () => route.path === '/material/recycle' || route.path === '/embed/material/recycle'
+)
+
+function goToMaterialHome() {
+  void router.push(mamAdminPath('/material'))
+}
+
+function goToRecycleBin() {
+  void router.push(mamAdminPath('/material/recycle'))
+}
+
 function thumbSrc(item: MaterialResourceVO): string {
   if (item.coverUrl) return materialApiAbsoluteUrl(item.coverUrl)
   if (item.keyframeUrl) return materialApiAbsoluteUrl(item.keyframeUrl)
@@ -84,7 +99,7 @@ const currentCatalog = ref<MaterialCatalogNode | undefined>()
 
 const loading = ref(false)
 const resources = ref<MaterialResourceVO[]>([])
-/** 服务端分页总条数（与 /api/material/resource/page 一致） */
+/** 服务端分页总条数（素材库见 /api/material/resource/page，回收站见 /api/material/resource/recycle/page） */
 const serverTotal = ref(0)
 const searchKeyword = ref('')
 const fileTypeTab = ref<string>('all')
@@ -163,6 +178,61 @@ function clearSelectionCurrentPage() {
   onTableSelectChange(selectedRowKeys.value.filter((id) => !pageIds.has(id)))
 }
 
+const selectablePageIds = computed(() => pagedList.value.filter((r) => r.type !== 7).map((r) => r.id))
+
+const isCurrentPageFullySelected = computed(() => {
+  const ids = selectablePageIds.value
+  if (ids.length === 0) {
+    return false
+  }
+  const s = new Set(selectedRowKeys.value)
+  return ids.every((id) => s.has(id))
+})
+
+/** 本页可选项未全选则全选本页，否则仅清除本页勾选（跨页已选保留） */
+function toggleSelectCurrentPage() {
+  if (isCurrentPageFullySelected.value) {
+    clearSelectionCurrentPage()
+  } else {
+    selectAllCurrentPage()
+  }
+}
+
+const recycleSubmitting = ref(false)
+
+function resolveSelectedNonFolderIds(): string[] {
+  return selectedRowKeys.value.filter((id) => {
+    const r = knownResourceById.value[id] || pagedList.value.find((p) => p.id === id)
+    return r != null && r.type !== 7
+  })
+}
+
+function openRecycleToBin() {
+  const ids = resolveSelectedNonFolderIds()
+  if (!ids.length) {
+    message.warning('请先勾选可删除的文件资源（已排除文件夹）')
+    return
+  }
+  Modal.confirm({
+    title: '移入回收站',
+    content: `确定将已选的 ${ids.length} 个资源移入回收站吗？`,
+    okText: '移入回收站',
+    okType: 'danger',
+    onOk: async () => {
+      recycleSubmitting.value = true
+      try {
+        await recycleResourcesToBin({ resourceIds: ids })
+        message.success('已移入回收站')
+        selectedRowKeys.value = []
+        knownResourceById.value = {}
+        await loadResources(false)
+      } finally {
+        recycleSubmitting.value = false
+      }
+    }
+  })
+}
+
 async function submitBatchDownload() {
   const dt = resolveDestinationType(batchTierPreset.value, batchCustomTier.value)
   if (!dt) {
@@ -212,13 +282,20 @@ async function loadResources(resetPage?: boolean) {
   loading.value = true
   try {
     const kw = searchKeyword.value.trim()
-    const resp = await pageResources({
-      catalogId: cid,
-      parentId: '0',
-      page: page.value,
-      size: pageSize.value,
-      ...(kw ? {keyword: kw} : {})
-    })
+    const resp = isRecycleView.value
+      ? await pageRecycleResources({
+          catalogId: cid,
+          parentId: '0',
+          page: page.value,
+          size: pageSize.value
+        })
+      : await pageResources({
+          catalogId: cid,
+          parentId: '0',
+          page: page.value,
+          size: pageSize.value,
+          ...(kw ? {keyword: kw} : {})
+        })
     resources.value = resp.records ?? []
     serverTotal.value = Number(resp.total ?? 0)
   } catch (e: unknown) {
@@ -236,7 +313,7 @@ watch(selectedCatalogId, () => {
 })
 
 watch(searchKeyword, () => {
-  if (!selectedCatalogId.value) {
+  if (!selectedCatalogId.value || isRecycleView.value) {
     return
   }
   if (searchDebounceTimer !== undefined) {
@@ -247,6 +324,15 @@ watch(searchKeyword, () => {
     void loadResources(true)
   }, SEARCH_DEBOUNCE_MS)
 })
+
+watch(
+  isRecycleView,
+  () => {
+    selectedRowKeys.value = []
+    knownResourceById.value = {}
+    void loadResources(true)
+  }
+)
 
 const {uploading, progressText, uploadFiles} = useMaterialFileUpload({
   getCatalogId: () => selectedCatalogId.value,
@@ -400,26 +486,38 @@ const fileTabs: { key: string; label: string; icon: typeof AppstoreOutlined }[] 
   <div class="material-workspace">
     <aside class="workspace-rail" aria-label="主导航">
       <div class="rail-top">
-        <div class="rail-item rail-item-active" title="素材">
-          <appstore-outlined/>
+        <button
+          type="button"
+          class="rail-item"
+          :class="{ 'rail-item-active': !isRecycleView }"
+          title="素材"
+          @click="goToMaterialHome"
+        >
+          <appstore-outlined />
           <span>素材</span>
-        </div>
+        </button>
         <div class="rail-item rail-item-disabled" title="即将推出">
-          <user-outlined/>
+          <user-outlined />
           <span>我的</span>
         </div>
         <div class="rail-item rail-item-disabled" title="即将推出">
-          <tool-outlined/>
+          <tool-outlined />
           <span>工具集</span>
         </div>
         <div class="rail-item rail-item-disabled" title="即将推出">
-          <share-alt-outlined/>
+          <share-alt-outlined />
           <span>分享</span>
         </div>
-        <div class="rail-item rail-item-disabled" title="即将推出">
-          <delete-outlined/>
+        <button
+          type="button"
+          class="rail-item"
+          :class="{ 'rail-item-active': isRecycleView }"
+          title="回收站"
+          @click="goToRecycleBin"
+        >
+          <delete-outlined />
           <span>回收站</span>
-        </div>
+        </button>
       </div>
       <div class="rail-bottom">
         <a-dropdown :trigger="['click']" placement="rightTop" overlay-class-name="mam-admin-gear-overlay">
@@ -454,17 +552,25 @@ const fileTabs: { key: string; label: string; icon: typeof AppstoreOutlined }[] 
     </aside>
 
     <main class="workspace-main">
-      <header class="workspace-main-head workspace-main-head--mam-pro">
+      <header
+        class="workspace-main-head workspace-main-head--mam-pro"
+        :class="{ 'workspace-main-head--recycle': isRecycleView }"
+      >
         <div class="main-title-row">
-          <div class="main-title-block">
-            <h1 class="main-title">{{ currentCatalog?.name || '媒资库' }}</h1>
-            <span class="main-count"
-            ><span class="main-count-num">{{ total }}</span> 条可检索结果</span
+          <div class="main-title-block" :class="{ 'main-title-block--recycle': isRecycleView }">
+            <h1 class="main-title">
+              {{ isRecycleView ? '回收站' : (currentCatalog?.name || '媒资库') }}
+            </h1>
+            <span v-if="!isRecycleView" class="main-count"
+              ><span class="main-count-num">{{ total }}</span> 条可检索结果</span
+            >
+            <span v-else class="main-count main-count--recycle"
+              ><span class="main-count-num">{{ total }}</span> 条在回收站（当前栏目根目录）</span
             >
           </div>
         </div>
 
-        <div class="main-search-row">
+        <div v-show="!isRecycleView" class="main-search-row">
           <div class="mam-search-shell">
             <a-input-group compact class="main-search-compact">
               <a-select default-value="keyword" class="mam-search-type" style="width: 112px" disabled>
@@ -482,6 +588,11 @@ const fileTabs: { key: string; label: string; icon: typeof AppstoreOutlined }[] 
             </a-input-group>
             <p class="mam-search-hint">支持在当前栏目内检索；与类型标签组合筛选。</p>
           </div>
+        </div>
+        <div v-show="isRecycleView" class="main-search-row main-search-row--recycle">
+          <p class="mam-search-hint mam-recycle-hint">
+            按删除时间倒序；对应当前栏目根目录。类型标签仅筛选本页。请返回「素材库」并还原资源后再作预览/下载等操作。
+          </p>
         </div>
 
         <div class="main-type-tabs" role="tablist" aria-label="按类型筛选">
@@ -502,21 +613,33 @@ const fileTabs: { key: string; label: string; icon: typeof AppstoreOutlined }[] 
 
         <div class="mam-toolbar">
           <div class="mam-toolbar-left">
-            <template v-if="viewMode === 'grid' && total > 0 && !filterEmptyButHasTotal">
-              <a-button type="link" class="mam-toolbar-link" size="small" @click.stop="selectAllCurrentPage">
-                全选本页
-              </a-button>
-              <a-button type="link" class="mam-toolbar-link" size="small" @click.stop="clearSelectionCurrentPage">
-                清除本页
+            <template
+              v-if="(viewMode === 'grid' || viewMode === 'list') && total > 0 && !filterEmptyButHasTotal"
+            >
+              <a-button
+                type="link"
+                class="mam-toolbar-link"
+                size="small"
+                @click.stop="toggleSelectCurrentPage"
+              >
+                {{ isCurrentPageFullySelected ? '取消本页' : '全选本页' }}
               </a-button>
               <a-divider type="vertical" class="mam-toolbar-divider" />
             </template>
             <a-button
-              v-if="selectedRowKeys.length > 0"
+              v-if="!isRecycleView && selectedRowKeys.length > 0"
               @click="openBatchDownloadModal"
             >
               批量下载
               ({{ selectedRowKeys.length }})
+            </a-button>
+            <a-button
+              v-if="!isRecycleView && selectedRowKeys.length > 0"
+              danger
+              :loading="recycleSubmitting"
+              @click="openRecycleToBin"
+            >
+              删除到回收站
             </a-button>
             <a-button :disabled="!selectedCatalogId" @click="loadResources(false)">
               <template #icon>
@@ -549,7 +672,7 @@ const fileTabs: { key: string; label: string; icon: typeof AppstoreOutlined }[] 
             </a-button>
           </a-space>
           <span v-if="progressText" class="upload-progress">{{ progressText }}</span>
-          <a-dropdown :trigger="['click']">
+          <a-dropdown v-if="!isRecycleView" :trigger="['click']">
             <a-button type="primary" :loading="uploading" :disabled="!selectedCatalogId">
               上传
               <down-outlined/>
@@ -879,7 +1002,8 @@ const fileTabs: { key: string; label: string; icon: typeof AppstoreOutlined }[] 
   min-height: 0;
   overflow-y: auto;
   padding: 20px 24px;
-  background: linear-gradient(180deg, #f5f7fa 0%, #f0f2f5 32%);
+  /* 与 .mam-page 同系浅灰，略压对比，与左侧栏背景连续 */
+  background: linear-gradient(180deg, #f4f6f9 0%, var(--mam-page-bg) 36%);
 }
 
 .workspace-rail {
@@ -912,6 +1036,14 @@ const fileTabs: { key: string; label: string; icon: typeof AppstoreOutlined }[] 
   border-radius: 8px;
   margin: 0 6px;
   transition: background 0.2s;
+}
+
+.rail-top button.rail-item {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  width: 100%;
 }
 
 .rail-item:hover:not(.rail-item-disabled) {
@@ -955,11 +1087,22 @@ const fileTabs: { key: string; label: string; icon: typeof AppstoreOutlined }[] 
 .workspace-catalog {
   width: 300px;
   flex-shrink: 0;
-  background: var(--mam-surface);
+  /* 与主区同一页背景，避免「中栏一整块白、右栏一整块灰」的拼接感 */
+  background: var(--mam-page-bg);
   border-right: 1px solid var(--mam-border);
-  padding: 16px 14px 20px;
-  overflow: auto;
-  box-shadow: 4px 0 24px rgba(15, 23, 42, 0.04);
+  padding: 16px 12px 20px 14px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  align-items: stretch;
+}
+
+/* 让栏目树占满中栏高度，树列表可滚，减少底部空洞感 */
+.workspace-catalog > * {
+  flex: 1 1 0;
+  min-height: 0;
+  min-width: 0;
 }
 
 .workspace-main {
@@ -983,6 +1126,10 @@ const fileTabs: { key: string; label: string; icon: typeof AppstoreOutlined }[] 
   box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
 }
 
+.workspace-main-head--recycle {
+  padding-bottom: 10px;
+}
+
 .main-title-row {
   margin-bottom: 16px;
 }
@@ -992,6 +1139,12 @@ const fileTabs: { key: string; label: string; icon: typeof AppstoreOutlined }[] 
   flex-wrap: wrap;
   align-items: baseline;
   gap: 10px 16px;
+}
+
+.main-title-block--recycle {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
 }
 
 .main-title {
@@ -1013,6 +1166,11 @@ const fileTabs: { key: string; label: string; icon: typeof AppstoreOutlined }[] 
   margin-right: 2px;
 }
 
+.main-count--recycle {
+  max-width: 48rem;
+  line-height: 1.45;
+}
+
 .main-search-row {
   margin-bottom: 14px;
 }
@@ -1026,6 +1184,20 @@ const fileTabs: { key: string; label: string; icon: typeof AppstoreOutlined }[] 
   font-size: 12px;
   color: var(--mam-text-secondary);
   line-height: 1.4;
+}
+
+.mam-recycle-hint {
+  margin: 0;
+}
+
+.main-search-row--recycle {
+  margin-bottom: 14px;
+  max-width: 720px;
+  padding: 10px 14px;
+  background: var(--mam-muted-bg, #f8fafc);
+  border: 1px solid var(--mam-border);
+  border-radius: var(--mam-radius-lg, 12px);
+  box-shadow: var(--mam-shadow-sm, 0 1px 3px rgba(15, 23, 42, 0.06));
 }
 
 .main-search-compact {
@@ -1114,7 +1286,7 @@ const fileTabs: { key: string; label: string; icon: typeof AppstoreOutlined }[] 
   justify-content: space-between;
   gap: 10px 16px;
   padding: 10px 0 2px;
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid var(--mam-border);
   margin-top: 4px;
 }
 

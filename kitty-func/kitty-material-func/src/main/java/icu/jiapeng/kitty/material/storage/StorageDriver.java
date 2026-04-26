@@ -55,6 +55,13 @@ public interface StorageDriver {
         return objectKey == null ? "" : objectKey.trim();
     }
 
+    /**
+     * 删除已存储对象；若不存在则各实现可忽略或视为成功。
+     */
+    default void deleteObject(KtFileStorage storageConfig, String objectKey) throws IOException {
+        throw new IOException("delete not supported: " + driverName());
+    }
+
     default boolean isValidObjectKey(String objectKey) {
         return objectKey != null && !objectKey.isBlank();
     }

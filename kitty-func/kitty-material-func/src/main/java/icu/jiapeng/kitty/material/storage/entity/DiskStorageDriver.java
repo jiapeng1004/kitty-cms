@@ -35,6 +35,15 @@ public class DiskStorageDriver implements StorageDriver {
     }
 
     @Override
+    public void deleteObject(KtFileStorage storageConfig, String objectKey) throws IOException {
+        if (!isValidObjectKey(objectKey)) {
+            return;
+        }
+        Path target = resolveDiskObjectPath(storageConfig.getBucket(), objectKey);
+        Files.deleteIfExists(target);
+    }
+
+    @Override
     public void writeSequentialLocalPartFilesToObject(KtFileStorage storageConfig, String objectKey, List<Path> orderedLocalPartPaths) throws IOException {
         Path target = resolveDiskObjectPath(storageConfig.getBucket(), objectKey);
         Files.createDirectories(target.getParent());

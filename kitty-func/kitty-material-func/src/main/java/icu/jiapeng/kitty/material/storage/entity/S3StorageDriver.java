@@ -21,6 +21,7 @@ import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CompletedMultipartUpload;
 import software.amazon.awssdk.services.s3.model.CompletedPart;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartResponse;
@@ -44,6 +45,19 @@ public class S3StorageDriver implements StorageDriver {
     @Override
     public String driverName() {
         return FileEngineTypeEnum.OBJECT_STORAGE.getType();
+    }
+
+    @Override
+    public void deleteObject(KtFileStorage storageConfig, String objectKey) throws IOException {
+        if (!isValidObjectKey(objectKey)) {
+            return;
+        }
+        try (S3Client client = buildClient(storageConfig)) {
+            client.deleteObject(DeleteObjectRequest.builder()
+                    .bucket(storageConfig.getBucket().trim())
+                    .key(objectKey)
+                    .build());
+        }
     }
 
     @Override

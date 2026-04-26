@@ -558,7 +558,7 @@ defineExpose({
         placeholder="搜索栏目"
         class="catalog-tree-search-input"
       />
-      <a-button type="primary" danger>搜索</a-button>
+      <a-button type="primary" class="catalog-tree-search-btn">筛选</a-button>
     </div>
 
     <div class="catalog-tree-panel">
@@ -580,7 +580,7 @@ defineExpose({
         </a-button>
       </div>
 
-      <a-spin :spinning="loading">
+      <a-spin class="catalog-tree-spin" :spinning="loading">
         <a-tree
       v-if="treeData?.length && hasSearchResult"
       class="catalog-tree-widget"
@@ -755,6 +755,10 @@ defineExpose({
 .material-catalog-tree-panel {
   width: 100%;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
 }
 
 :deep(.ant-tree-node-content-wrapper) {
@@ -799,46 +803,114 @@ defineExpose({
   border-radius: 8px;
 }
 
+/* 与素材主区同系：白底、蓝强调、无大红/大粉，避免与右侧「工作台」像两个产品 */
 .catalog-tree-search {
   display: flex;
-  gap: 8px;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 0;
   margin-bottom: 12px;
+  min-height: 40px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--mam-border, #e2e8f0);
+  background: var(--mam-surface, #fff);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
 }
 
 .catalog-tree-search-input {
   flex: 1;
+  min-width: 0;
+}
+
+.catalog-tree-search-input :deep(.ant-input) {
+  height: 40px;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  background: var(--mam-surface, #fff) !important;
+}
+
+.catalog-tree-search-btn {
+  min-width: 72px;
+  height: 40px;
+  font-weight: 500;
+  border-radius: 0 9px 9px 0 !important;
+  flex-shrink: 0;
 }
 
 .catalog-tree-panel {
-  border-radius: 12px;
-  background: #f6f8fc;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--mam-radius-lg, 12px);
+  background: var(--mam-surface, #fff);
+  border: 1px solid var(--mam-border, #e2e8f0);
+  box-shadow: var(--mam-shadow-sm, 0 1px 3px rgba(15, 23, 42, 0.06));
   padding: 8px;
-  min-height: 360px;
+  overflow: hidden;
+}
+
+.catalog-tree-spin {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.catalog-tree-spin :deep(.ant-spin-nested-loading),
+.catalog-tree-spin :deep(.ant-spin-container) {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .catalog-tree-panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 10px;
+  padding: 9px 10px;
   border-radius: 10px;
-  background: #f7dfea;
+  background: var(--mam-primary-bg, #e6f4ff);
+  border: 1px solid rgba(22, 119, 255, 0.12);
   margin-bottom: 8px;
   cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.catalog-tree-panel-header:hover {
+  background: #dbeafe;
+  border-color: rgba(22, 119, 255, 0.2);
 }
 
 .catalog-tree-panel-title {
   display: inline-flex;
   gap: 6px;
   align-items: center;
-  color: #ef5350;
+  color: var(--mam-text, #0f172a);
   font-weight: 600;
+  font-size: 13px;
+}
+
+.catalog-tree-panel-title :deep(.anticon) {
+  color: var(--mam-primary, #1677ff);
+  font-size: 15px;
 }
 
 .catalog-tree-panel-add {
   border-radius: 8px;
-  background: #5f6b77;
-  color: #fff;
+  color: var(--mam-primary, #1677ff) !important;
+  background: rgba(22, 119, 255, 0.1) !important;
+}
+
+.catalog-tree-panel-add:hover:not(:disabled) {
+  color: var(--mam-primary-hover, #4096ff) !important;
+  background: rgba(22, 119, 255, 0.16) !important;
 }
 
 .catalog-tree-node {
@@ -928,7 +1000,7 @@ defineExpose({
 .catalog-tree-name {
   display: inline-flex;
   align-items: center;
-  color: #3f4a5a;
+  color: var(--mam-text, #0f172a);
   line-height: 22px;
   font-size: 14px;
   flex: 1;
@@ -956,13 +1028,18 @@ defineExpose({
   align-items: center;
   justify-content: center;
   width: 16px;
-  color: #f5222d;
+  color: var(--mam-primary, #1677ff);
   font-size: 14px;
   line-height: 1;
+  opacity: 0.9;
 }
 
 .catalog-tree-widget {
-  background: #f6f8fc;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: transparent;
+  padding: 2px 0;
 }
 
 .catalog-tree-widget :deep(.ant-tree-list-holder-inner) {
@@ -991,12 +1068,13 @@ defineExpose({
 }
 
 .catalog-tree-widget :deep(.ant-tree-node-content-wrapper:hover) {
-  background: #f0f7ff;
+  background: var(--mam-primary-bg, #e6f4ff);
 }
 
 .catalog-tree-widget :deep(.ant-tree-node-selected),
 .catalog-tree-widget :deep(.ant-tree-node-selected:hover) {
-  background: #e6f4ff;
+  background: var(--mam-primary-bg, #e6f4ff);
+  box-shadow: inset 0 0 0 1px rgba(22, 119, 255, 0.12);
 }
 
 .catalog-tree-widget :deep(.ant-tree-indent-unit) {

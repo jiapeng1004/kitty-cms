@@ -75,4 +75,9 @@ public class MamFuncConfig {
         registrationBean.setOrder(Ordered.HIGHEST_PRECEDENCE);
         return registrationBean;
     }
+
+    @Bean
+    public EsIndexNameGenerator esIndexNameGenerator() {
+        return new EsIndexNameGenerator();
+    }
 }

@@ -4,8 +4,8 @@ import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import icu.jiapeng.kitty.common.core.constant.ResultStatus;
 import icu.jiapeng.kitty.common.core.exceptions.BizException;
-import icu.jiapeng.kitty.material.catalog.service.CatalogService;
 import icu.jiapeng.kitty.material.catalog.constants.CatalogPermission;
+import icu.jiapeng.kitty.material.catalog.service.CatalogService;
 import icu.jiapeng.kitty.material.resource.constants.ResourceTypeEnum;
 import icu.jiapeng.kitty.material.resource.entity.KtResource;
 import icu.jiapeng.kitty.material.resource.mapper.KtResourceMapper;
@@ -86,7 +86,6 @@ public class MaterialChunkUploadService {
         KtChunkUploadSession created = chunkUploadSessionService.create(toCreateSpec(req));
         return toVo(created, List.of());
     }
-
     private void validateMamSessionCreate(MaterialChunkUploadSessionCreateDTO req) {
         if (!StringUtils.hasText(req.getCatalogId()) || !StringUtils.hasText(req.getTitle()) || req.getType() == null) {
             throw BizException.of(ResultStatus.PARAM_ERROR);

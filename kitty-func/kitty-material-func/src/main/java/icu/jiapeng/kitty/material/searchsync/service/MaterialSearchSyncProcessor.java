@@ -55,6 +55,10 @@ public class MaterialSearchSyncProcessor {
                 indexFullFallback(resourceId);
                 return;
             }
+            if (msg.getType() == MaterialSearchSyncMessageType.DOCUMENT_REMOVED) {
+                materialSearchIndexPort.removeDocument(resourceId);
+                return;
+            }
         } catch (Exception e) {
             log.error("material search sync failed resourceId={} type={}", resourceId, msg.getType(), e);
         }

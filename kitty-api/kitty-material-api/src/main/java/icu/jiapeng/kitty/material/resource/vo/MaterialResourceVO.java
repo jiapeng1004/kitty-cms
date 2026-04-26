@@ -58,4 +58,7 @@ public class MaterialResourceVO {
      */
     @Schema(description = "视频关键帧 URL（相对路径；未产出时为 null）")
     private String keyframeUrl;
+
+    @Schema(description = "评分")
+    private Double score;
 }

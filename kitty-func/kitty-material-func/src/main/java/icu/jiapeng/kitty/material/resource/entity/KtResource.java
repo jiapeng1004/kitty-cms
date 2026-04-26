@@ -1,7 +1,9 @@
 package icu.jiapeng.kitty.material.resource.entity;
 
 
+import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import icu.jiapeng.kitty.common.core.entity.CommonEntity;
 import lombok.Data;
@@ -58,4 +60,11 @@ public class KtResource extends CommonEntity {
      */
     @TableField("fingerprint")
     private String fingerprint;
+
+    /**
+     * 逻辑删/回收站：0 正常、1 已入回收站；与全局 logic-not-delete-value / logic-delete-value 一致，插入时由公共填充置 0。
+     */
+    @TableField(value = "deleted", fill = FieldFill.INSERT)
+    @TableLogic(value = "0", delval = "1")
+    private Integer deleted;
 }

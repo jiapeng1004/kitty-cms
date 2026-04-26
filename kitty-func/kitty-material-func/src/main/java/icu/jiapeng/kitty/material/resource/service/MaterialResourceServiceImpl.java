@@ -1,56 +1,75 @@
 package icu.jiapeng.kitty.material.resource.service;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.StrUtil;
+import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.MatchQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.QueryBuilders;
+import co.elastic.clients.elasticsearch._types.query_dsl.TermQuery;
+import co.elastic.clients.elasticsearch.core.SearchRequest;
+import co.elastic.clients.elasticsearch.core.SearchResponse;
+import co.elastic.clients.elasticsearch.core.search.HighlightField;
+import co.elastic.clients.elasticsearch.core.search.Hit;
+import co.elastic.clients.elasticsearch.core.search.HitsMetadata;
+import co.elastic.clients.elasticsearch.core.search.TotalHits;
+import co.elastic.clients.util.NamedValue;
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import icu.jiapeng.kitty.common.core.constant.ResultStatus;
 import icu.jiapeng.kitty.common.core.exceptions.BizException;
 import icu.jiapeng.kitty.common.core.page.PageRespVo;
+import icu.jiapeng.kitty.material.behavior.MaterialDataEventClient;
+import icu.jiapeng.kitty.material.catalog.constants.CatalogPermission;
 import icu.jiapeng.kitty.material.catalog.service.CatalogService;
+import icu.jiapeng.kitty.material.config.EsIndexNameGenerator;
+import icu.jiapeng.kitty.material.embedding.KtEmbeddingDTO;
+import icu.jiapeng.kitty.material.embedding.KtEmbeddingPort;
+import icu.jiapeng.kitty.material.embedding.KtEmbeddingRequest;
+import icu.jiapeng.kitty.material.embedding.MaterialVectorSourceKey;
+import icu.jiapeng.kitty.material.embedding.entity.KtResourceEmbedding;
+import icu.jiapeng.kitty.material.embedding.mapper.KtResourceEmbeddingMapper;
 import icu.jiapeng.kitty.material.metadata.service.MaterialMetadataInstanceService;
 import icu.jiapeng.kitty.material.metadata.vo.MaterialMetadataSnapshotVO;
-import icu.jiapeng.kitty.material.catalog.constants.CatalogPermission;
-import icu.jiapeng.kitty.material.behavior.MaterialDataEventClient;
 import icu.jiapeng.kitty.material.resource.constants.ResourceDestinationTypes;
+import icu.jiapeng.kitty.material.resource.constants.ResourceGraveyardArchiveType;
 import icu.jiapeng.kitty.material.resource.constants.ResourceTypeEnum;
 import icu.jiapeng.kitty.material.resource.dto.*;
-import icu.jiapeng.kitty.material.resource.entity.KtFileStorage;
-import icu.jiapeng.kitty.material.resource.entity.KtMetaFile;
-import icu.jiapeng.kitty.material.resource.entity.KtResource;
-import icu.jiapeng.kitty.material.resource.entity.KtResourceDerivative;
+import icu.jiapeng.kitty.material.resource.entity.*;
 import icu.jiapeng.kitty.material.resource.fingerprint.ResourceFingerprintSupport;
 import icu.jiapeng.kitty.material.resource.mapper.KtFileStorageMapper;
+import icu.jiapeng.kitty.material.resource.mapper.KtResourceGraveyardMapper;
 import icu.jiapeng.kitty.material.resource.mapper.KtResourceMapper;
 import icu.jiapeng.kitty.material.resource.support.MaterialResourcePreviewLinkBuilder;
 import icu.jiapeng.kitty.material.resource.support.MaterialStoragePublicUrlBuilder;
-import icu.jiapeng.kitty.material.resource.vo.MaterialDownloadUrlVO;
-import icu.jiapeng.kitty.material.resource.vo.MaterialMetaFileVO;
-import icu.jiapeng.kitty.material.resource.vo.MaterialResourceDerivativeVO;
-import icu.jiapeng.kitty.material.resource.vo.MaterialResourceDetailVO;
-import icu.jiapeng.kitty.material.resource.vo.MaterialResourceFingerprintPrecheckVO;
-import icu.jiapeng.kitty.material.resource.vo.MaterialResourceVO;
-import icu.jiapeng.kitty.material.user.UserContextGateway;
+import icu.jiapeng.kitty.material.resource.vo.*;
 import icu.jiapeng.kitty.material.review.service.MaterialReviewService;
 import icu.jiapeng.kitty.material.review.vo.MaterialReviewTaskVO;
 import icu.jiapeng.kitty.material.searchsync.MaterialSearchQueryPort;
 import icu.jiapeng.kitty.material.searchsync.service.MaterialSearchSyncTrigger;
+import icu.jiapeng.kitty.material.storage.StorageDriver;
+import icu.jiapeng.kitty.material.storage.StorageDriverFactory;
 import icu.jiapeng.kitty.material.task.ResourceTaskTypes;
+import icu.jiapeng.kitty.material.task.entity.KtResourceTask;
 import icu.jiapeng.kitty.material.task.service.MaterialResourceTaskService;
+import icu.jiapeng.kitty.material.task.service.ResourceTaskService;
 import icu.jiapeng.kitty.material.task.vo.MaterialResourceTaskVO;
-import icu.jiapeng.kitty.material.embedding.KtEmbeddingRequest;
-import icu.jiapeng.kitty.material.embedding.KtEmbeddingDTO;
-import icu.jiapeng.kitty.material.embedding.KtEmbeddingPort;
-import icu.jiapeng.kitty.material.embedding.MaterialVectorSourceKey;
+import icu.jiapeng.kitty.material.user.UserContextGateway;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -93,6 +112,19 @@ public class MaterialResourceServiceImpl extends ServiceImpl<KtResourceMapper, K
     private UserContextGateway userContextGateway;
     @Resource
     private MaterialDataEventClient materialDataEventClient;
+    @Resource
+    private KtResourceGraveyardMapper ktResourceGraveyardMapper;
+    @Resource
+    private ResourceTaskService resourceTaskService;
+    @Resource
+    private KtResourceEmbeddingMapper ktResourceEmbeddingMapper;
+    @Resource
+    private StorageDriverFactory storageDriverFactory;
+    @Resource
+    private EsIndexNameGenerator esIndexNameGenerator;
+
+    @Resource
+    private ElasticsearchClient esClient;
 
     @Override
     public Optional<KtResource> findById(String id) {
@@ -262,43 +294,137 @@ public class MaterialResourceServiceImpl extends ServiceImpl<KtResourceMapper, K
         }
         long page = Math.max(1L, query.getPage());
         long size = Math.min(200L, Math.max(1L, query.getSize()));
+        query.setPage(page);
+        query.setSize(size);
         String normalizedCatalogId = normalizeCatalogIdNullable(query.getCatalogId());
-        if (!StringUtils.hasText(normalizedCatalogId)) {
-            throw BizException.of(ResultStatus.PARAM_ERROR);
+        query.setCatalogId(normalizedCatalogId);
+        if (StrUtil.isNotBlank(query.getKeyword())
+                || StrUtil.isNotBlank(query.getSemanticText())
+        ) {
+            return pageByEs(query);
         }
-        catalogService.requireOnCatalog(normalizedCatalogId, CatalogPermission.RESOURCE_LIST_VIEW);
+        return pageByDb(query);
+//        MaterialResourceListQueryDTO lq = new MaterialResourceListQueryDTO();
+//        lq.setCatalogId(query.getCatalogId());
+//        lq.setParentId(query.getParentId());
+//        lq.setKeyword(query.getKeyword());
+//        lq.setSemanticText(query.getSemanticText());
+//        int need = (int) Math.min(200L, page * size);
+//        lq.setLimit(Math.max(need, 1));
+//        List<MaterialResourceVO> fetched = list(lq);
+//        long total = fetched.size();
+//        int from = (int) ((page - 1) * size);
+//        List<MaterialResourceVO> records;
+//        if (from >= fetched.size()) {
+//            records = List.of();
+//        } else {
+//            int to = (int) Math.min(from + size, fetched.size());
+//            records = new ArrayList<>(fetched.subList(from, to));
+//        }
+//        return PageRespVo.<MaterialResourceVO>builder()
+//                .page(page)
+//                .size(size)
+//                .total(total)
+//                .records(records)
+//                .build();
+    }
 
-        if (StringUtils.hasText(query.getKeyword()) || StringUtils.hasText(query.getSemanticText())) {
-            MaterialResourceListQueryDTO lq = new MaterialResourceListQueryDTO();
-            lq.setCatalogId(query.getCatalogId());
-            lq.setParentId(query.getParentId());
-            lq.setKeyword(query.getKeyword());
-            lq.setSemanticText(query.getSemanticText());
-            int need = (int) Math.min(200L, page * size);
-            lq.setLimit(Math.max(need, 1));
-            List<MaterialResourceVO> fetched = list(lq);
-            long total = fetched.size();
-            int from = (int) ((page - 1) * size);
-            List<MaterialResourceVO> records;
-            if (from >= fetched.size()) {
-                records = List.of();
-            } else {
-                int to = (int) Math.min(from + size, fetched.size());
-                records = new ArrayList<>(fetched.subList(from, to));
-            }
+    @SneakyThrows
+    PageRespVo<MaterialResourceVO> pageByEs(MaterialResourceListPageQueryDTO query) {
+        // 直接es编目检索
+        BoolQuery.Builder qb = getQuery(query);
+        List<NamedValue<HighlightField>> highlights = new ArrayList<>();
+        Integer from = (int) ((query.getPage() - 1) * query.getSize());
+        Long size = Math.max(1L, query.getSize());
+        if (Boolean.TRUE.equals(query.getNeedHighLight())) {
+            // TODO
+        }
+        SearchRequest searchRequest = SearchRequest.of(b -> b
+                        .index(esIndexNameGenerator.resourceIndex())
+                        // 禁用 _source
+                        .source(s -> s.fetch(false))
+                        // 返回的字段
+                        .fields(f -> f.field("id").field("type"))
+                        .highlight(highlight -> highlight.fields(highlights).preTags("<em>").postTags("</em>"))
+//                .query(BoolQuery.of(builder -> builder.filter(bool._toQuery()).should(knnList).minimumShouldMatch("1"))._toQuery())
+                        .from(from)
+                        .size(size.intValue())
+        );
+        SearchResponse<JSONObject> esResponse = esClient.search(searchRequest, JSONObject.class);
+        HitsMetadata<JSONObject> hits = esResponse.hits();
+        PageRespVo<MaterialResourceVO> objectPageRespVo = new PageRespVo<>();
+        objectPageRespVo.setPage(query.getPage());
+        objectPageRespVo.setSize(size);
+        objectPageRespVo.setTotal(Optional.ofNullable(hits.total()).map(TotalHits::value).orElse(0L));
+        List<String> resourceIds = hits.hits().stream().map(Hit::id).toList();
+        // 回表
+        if (CollUtil.isEmpty(resourceIds)) {
             return PageRespVo.<MaterialResourceVO>builder()
-                    .page(page)
+                    .page(query.getPage())
                     .size(size)
-                    .total(total)
+                    .total(0L)
+                    .records(List.of())
+                    .build();
+        } else {
+            Map<String, Double> scoreMap = esResponse.hits().hits().stream()
+                    .collect(Collectors.toMap(
+                            Hit::id,
+                            h -> h.score() == null ? 1.0 : h.score())
+                    );
+            List<KtResource> ktResources = listByIds(resourceIds);
+            List<MaterialResourceVO> records = ktResources.stream().map(this::toVo).peek(vo -> {
+                vo.setScore(scoreMap.get(vo.getId()));
+            }).collect(Collectors.toList());
+            enrichSrcUrls(records);
+            return PageRespVo.<MaterialResourceVO>builder()
+                    .page(query.getPage())
+                    .size(size)
+                    .total(objectPageRespVo.getTotal())
                     .records(records)
                     .build();
         }
+    }
 
-        LambdaQueryWrapper<KtResource> w = new LambdaQueryWrapper<KtResource>()
-                .eq(KtResource::getCatalogId, normalizedCatalogId);
-        if (StringUtils.hasText(query.getParentId())) {
-            w.eq(KtResource::getParentId, query.getParentId());
+    private BoolQuery.Builder getQuery(MaterialResourceListPageQueryDTO query) {
+        if (query.getIsRecycled()) {
+            throw new BizException("参数错误：回收站资源不允许使用es查询。", ResultStatus.PARAM_ERROR);
         }
+        BoolQuery.Builder bool = QueryBuilders.bool();
+        if (StrUtil.isNotBlank(query.getCatalogId())) {
+            bool.filter(f -> f.term(TermQuery.of(t -> t.field("catalogId").value(query.getCatalogId()))));
+        }
+        if (StrUtil.isNotBlank(query.getParentId())) {
+            bool.filter(f -> f.term(TermQuery.of(t -> t.field("parentId").value(query.getParentId()))));
+        }
+        if (StrUtil.isNotBlank(query.getCatalogTreeCode())) {
+            bool.filter(f -> f.term(TermQuery.of(t -> t.field("catalogTreeCode").value(query.getCatalogTreeCode()))));
+        }
+        if (Objects.nonNull(query.getType())) {
+            bool.filter(f -> f.term(TermQuery.of(t -> t.field("type").value(query.getType()))));
+        }
+        if (StrUtil.isNotBlank(query.getTitle())) {
+            bool.must(m -> m.match(MatchQuery.of(mq -> mq.field("title").query(query.getTitle()).boost(1f))));
+        }
+        if (StrUtil.isNotBlank(query.getFingerprint())) {
+            bool.filter(f -> f.term(TermQuery.of(t -> t.field("fingerprint").value(query.getFingerprint()))));
+        }
+        if (Objects.nonNull(query.getMinFileSize())) {
+            bool.filter(f -> f.range(r -> r.number(n -> n.field("fileSize").gte(Double.valueOf(query.getMinFileSize())))));
+        }
+        if (Objects.nonNull(query.getMaxFileSize())) {
+            bool.filter(f -> f.range(r -> r.number(n -> n.field("fileSize").lte(Double.valueOf(query.getMaxFileSize())))));
+        }
+        return bool;
+    }
+
+
+    PageRespVo<MaterialResourceVO> pageByDb(MaterialResourceListPageQueryDTO query) {
+        if (query == null) {
+            throw BizException.of(ResultStatus.PARAM_ERROR);
+        }
+        long page = Math.max(1L, query.getPage());
+        long size = Math.min(200L, Math.max(1L, query.getSize()));
+        QueryWrapper<KtResource> w = getQueryWrapper(query);
         Page<KtResource> mpPage = new Page<>(page, size);
         Page<KtResource> mpResult = page(mpPage, w);
         List<MaterialResourceVO> records = mpResult.getRecords().stream().map(this::toVo).collect(Collectors.toList());
@@ -309,6 +435,56 @@ public class MaterialResourceServiceImpl extends ServiceImpl<KtResourceMapper, K
                 .total(mpResult.getTotal())
                 .records(records)
                 .build();
+    }
+
+    QueryWrapper<KtResource> getQueryWrapper(MaterialResourceListPageQueryDTO query) {
+        QueryWrapper<KtResource> queryWrapper0 = Wrappers.query();
+        LambdaQueryWrapper<KtResource> queryWrapper = queryWrapper0.lambda();
+        if (StrUtil.isNotBlank(query.getCatalogId())) {
+            queryWrapper.eq(KtResource::getCatalogId, query.getCatalogId());
+        }
+        if (StrUtil.isNotBlank(query.getParentId())) {
+            queryWrapper.eq(KtResource::getParentId, query.getParentId());
+        }
+        if (StrUtil.isNotBlank(query.getCatalogTreeCode())) {
+            queryWrapper.likeRight(KtResource::getCatalogTreeCode, query.getCatalogTreeCode());
+        }
+        if (Objects.nonNull(query.getType())) {
+            queryWrapper.eq(KtResource::getType, query.getType());
+        }
+        if (Objects.nonNull(query.getIsRecycled())) {
+            queryWrapper.eq(KtResource::getDeleted, 1);
+        }
+        if (StrUtil.isNotBlank(query.getTitle())) {
+            queryWrapper.like(KtResource::getTitle, query.getTitle());
+        }
+        if (StrUtil.isNotBlank(query.getFingerprint())) {
+            queryWrapper.like(KtResource::getFingerprint, query.getFingerprint());
+        }
+        if (Objects.nonNull(query.getMinFileSize())) {
+            queryWrapper.ge(KtResource::getFileSize, query.getMinFileSize());
+        }
+        if (Objects.nonNull(query.getMaxFileSize())) {
+            queryWrapper.le(KtResource::getFileSize, query.getMaxFileSize());
+        }
+        return queryWrapper0;
+    }
+
+    @Override
+    public PageRespVo<MaterialResourceVO> pageRecycle(MaterialResourceListPageQueryDTO query) {
+        if (query == null) {
+            throw BizException.of(ResultStatus.PARAM_ERROR);
+        }
+        long page = Math.max(1L, query.getPage());
+        long size = Math.min(200L, Math.max(1L, query.getSize()));
+        query.setPage(page);
+        query.setSize(size);
+        if (StrUtil.isNotBlank(query.getCatalogId())) {
+            String normalizedCatalogId = normalizeCatalogIdNullable(query.getCatalogId());
+            query.setCatalogId(normalizedCatalogId);
+        }
+        query.setIsRecycled(true);
+        return pageByDb(query);
     }
 
     @Override
@@ -665,6 +841,119 @@ public class MaterialResourceServiceImpl extends ServiceImpl<KtResourceMapper, K
                 continue;
             }
             reportDownload(item);
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void recycleToBin(MaterialResourceIdsDTO body) {
+        if (body == null || CollUtil.isEmpty(body.getResourceIds())) {
+            throw BizException.of(ResultStatus.PARAM_ERROR);
+        }
+        for (String idRaw : body.getResourceIds().stream().filter(StringUtils::hasText).distinct().toList()) {
+            String id = idRaw.trim();
+            KtResource r = getById(id);
+            if (r == null) {
+                throw new BizException("资源不存在: " + id, ResultStatus.PARAM_ERROR);
+            }
+            if (ResourceTypeEnum.isFolder(r.getType())) {
+                throw new BizException("暂不支持将文件夹移入回收站: " + r.getTitle(), ResultStatus.PARAM_ERROR);
+            }
+            catalogService.requireOnCatalog(r.getCatalogId(), CatalogPermission.RESOURCE_UPDATE);
+            String catalogId = r.getCatalogId();
+            removeById(r.getId());
+            materialSearchSyncTrigger.publishDocumentRemoved(r.getId(), catalogId);
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void purgeFromRecycle(MaterialResourceIdsDTO body) {
+        if (body == null || CollUtil.isEmpty(body.getResourceIds())) {
+            throw BizException.of(ResultStatus.PARAM_ERROR);
+        }
+        if (CollUtil.isNotEmpty(body.getResourceIds())) {
+            List<KtResource> all = lambdaQuery()
+                    .eq(KtResource::getDeleted, 1)
+                    .in(KtResource::getId, body.getResourceIds()).list();
+            if (CollUtil.isNotEmpty(all)) {
+                for (KtResource r : all) {
+                    if (Objects.isNull(r)) {
+                        continue;
+                    }
+                    if (ResourceTypeEnum.isFolder(r.getType())) {
+                        log.warn("暂不支持在回收站中彻底删除文件夹: {}", r.getTitle());
+                    }
+                    purgeOneResourceInRecycle(r);
+                }
+            }
+        }
+    }
+
+    private void purgeOneResourceInRecycle(KtResource r) {
+        Optional<KtMetaFile> meta = metaFileService.findByResourceId(r.getId());
+        List<KtResourceDerivative> derivs = resourceDerivativeService.listByResourceId(r.getId());
+        JSONObject snapshot = new JSONObject();
+        snapshot.put("resource", JSON.parseObject(JSON.toJSONString(r)));
+        snapshot.put("metaFile", meta.map(m -> (Object) JSON.parseObject(JSON.toJSONString(m))).orElse(null));
+        snapshot.put("derivatives", JSON.toJSON(derivs));
+        String json = snapshot.toJSONString();
+
+        if (meta.isPresent()) {
+            KtMetaFile m = meta.get();
+            tryDeleteStorageObject(m.getStorageId(), m.getObjectKey());
+            metaFileService.removeById(m.getId());
+        }
+        for (KtResourceDerivative d : derivs) {
+            if (StringUtils.hasText(d.getStorageId()) && StringUtils.hasText(d.getObjectKey())) {
+                tryDeleteStorageObject(d.getStorageId(), d.getObjectKey());
+            }
+            resourceDerivativeService.removeById(d.getId());
+        }
+
+        KtResourceGraveyard row = new KtResourceGraveyard();
+        row.setId(UUID.randomUUID().toString());
+        row.setArchiveType(ResourceGraveyardArchiveType.KT_RESOURCE);
+        row.setOriginalId(r.getId());
+        row.setJson(json);
+        ktResourceGraveyardMapper.insert(row);
+
+        ktResourceEmbeddingMapper.delete(
+                new LambdaQueryWrapper<KtResourceEmbedding>().eq(KtResourceEmbedding::getResourceId, r.getId()));
+        resourceTaskService.remove(
+                new LambdaQueryWrapper<KtResourceTask>().eq(KtResourceTask::getResourceId, r.getId()));
+        boolean remove = remove(recyclePhysicalDeleteWrapper(r.getId()));
+        if (!remove) {
+            throw new BizException("彻底删除主表行失败: " + r.getId(), ResultStatus.PARAM_ERROR);
+        }
+        materialSearchSyncTrigger.publishDocumentRemoved(r.getId(), r.getCatalogId());
+    }
+
+
+    /**
+     * 回收站物理删主表：id + {@code deleted=1} 条件。
+     */
+    private LambdaQueryWrapper<KtResource> recyclePhysicalDeleteWrapper(String id) {
+        return new LambdaQueryWrapper<KtResource>()
+                .eq(KtResource::getId, id)
+                .eq(KtResource::getDeleted, 1);
+    }
+
+    private void tryDeleteStorageObject(String storageId, String objectKey) {
+        if (!StringUtils.hasText(storageId) || !StringUtils.hasText(objectKey)) {
+            return;
+        }
+        KtFileStorage st = ktFileStorageMapper.selectById(storageId);
+        if (st == null) {
+            log.warn("purge skip file delete, storage not found, storageId={} key={}", storageId, objectKey);
+            return;
+        }
+        StorageDriver driver = storageDriverFactory.resolve(st.getStorageType());
+        try {
+            driver.deleteObject(st, objectKey);
+        } catch (IOException e) {
+            log.error("storage deleteObject failed, storageId={} key={}", storageId, objectKey, e);
+            throw new BizException("删除对象存储文件失败: " + objectKey, ResultStatus.PARAM_ERROR);
         }
     }
 

@@ -19,4 +19,9 @@ public interface MaterialSearchIndexPort {
      * 部分更新（典型为编目字段 patch）；若索引中尚无该文档，调用方应回退为 {@link #indexOrReplace}。
      */
     void patchDocument(String resourceId, Map<String, Object> partialDocument);
+
+    /**
+     * 从检索索引中移除资源文档（如入回收站、彻底删除后）。
+     */
+    void removeDocument(String resourceId);
 }

@@ -29,6 +29,11 @@ public interface MaterialResourceService extends IService<KtResource> {
 
     PageRespVo<MaterialResourceVO> page(MaterialResourceListPageQueryDTO query);
 
+    /**
+     * 回收站专用分页（deleted=1），与 {@link #page} 职责分离。
+     */
+    PageRespVo<MaterialResourceVO> pageRecycle(MaterialResourceListPageQueryDTO query);
+
     MaterialResourceVO create(MaterialResourceUpsertDTO req);
 
     MaterialResourceVO update(MaterialResourceUpsertDTO req);
@@ -61,4 +66,14 @@ public interface MaterialResourceService extends IService<KtResource> {
     void reportDownload(MaterialDownloadReportItemDTO body);
 
     void reportDownloadBatch(MaterialDownloadReportBatchDTO body);
+
+    /**
+     * 批量移入回收站（逻辑删）。
+     */
+    void recycleToBin(MaterialResourceIdsDTO body);
+
+    /**
+     * 从回收站彻底删除：写入坟场、删除物理文件、物理删主表及关联子表行。
+     */
+    void purgeFromRecycle(MaterialResourceIdsDTO body);
 }

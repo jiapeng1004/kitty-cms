@@ -43,4 +43,12 @@ public class MaterialSearchSyncMessage {
                 .touchedFieldCodes(fieldCodes == null ? List.of() : List.copyOf(fieldCodes))
                 .build();
     }
+
+    public static MaterialSearchSyncMessage documentRemoved(String resourceId, String catalogId) {
+        return builder()
+                .resourceId(Objects.requireNonNull(resourceId))
+                .catalogId(catalogId)
+                .type(MaterialSearchSyncMessageType.DOCUMENT_REMOVED)
+                .build();
+    }
 }

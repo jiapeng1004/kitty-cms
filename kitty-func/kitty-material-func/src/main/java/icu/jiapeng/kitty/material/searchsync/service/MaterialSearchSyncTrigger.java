@@ -43,6 +43,14 @@ public class MaterialSearchSyncTrigger {
         scheduleAfterCommit(() -> sendSafe(msg));
     }
 
+    public void publishDocumentRemoved(String resourceId, String catalogId) {
+        if (resourceId == null || resourceId.isBlank()) {
+            return;
+        }
+        MaterialSearchSyncMessage msg = MaterialSearchSyncMessage.documentRemoved(resourceId, catalogId);
+        scheduleAfterCommit(() -> sendSafe(msg));
+    }
+
     private void sendSafe(MaterialSearchSyncMessage msg) {
         try {
             String json = JSON.toJSONString(msg);

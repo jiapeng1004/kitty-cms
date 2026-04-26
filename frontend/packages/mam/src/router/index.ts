@@ -23,6 +23,12 @@ const router = createRouter({
             redirect: '/material',
             children: [
                 {
+                    path: 'material/recycle',
+                    name: 'MaterialRecycleWorkspacePage',
+                    component: MaterialWorkspacePage,
+                    meta: { flush: true, immersive: true, recycle: true }
+                },
+                {
                     path: 'material',
                     name: 'MaterialWorkspacePage',
                     component: MaterialWorkspacePage,
@@ -91,6 +97,12 @@ const router = createRouter({
         {
             path: '/embed',
             children: [
+                {
+                    path: 'material/recycle',
+                    name: 'EmbedMaterialRecycleWorkspacePage',
+                    component: MaterialWorkspacePage,
+                    meta: { flush: true, immersive: true, recycle: true }
+                },
                 {
                     path: 'material',
                     name: 'EmbedMaterialWorkspacePage',
