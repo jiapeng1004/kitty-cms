@@ -22,8 +22,10 @@ import icu.jiapeng.kitty.material.storage.vo.MaterialFileStorageVO;
 import icu.jiapeng.kitty.material.storage.vo.MaterialStorageInstanceOptionVO;
 import icu.jiapeng.kitty.material.storage.vo.MaterialStorageConnectivityVO;
 import icu.jiapeng.kitty.material.storage.vo.MaterialStorageObjectKeyNormalizeVO;
+import icu.jiapeng.kitty.material.storage.redis.MaterialStorageRedisPubSubChannels;
 import icu.jiapeng.kitty.material.storage.vo.MaterialStorageRoutePreviewVO;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -56,6 +58,7 @@ public class KtFileStorageServiceImpl extends ServiceImpl<KtFileStorageMapper, K
     private final KtFileStorageMapper fileStorageMapper;
     private final StorageDriverFactory storageDriverFactory;
     private final StringRedisTemplateCacheOperator cacheOperator;
+    private final StringRedisTemplate stringRedisTemplate;
 
     /**
      * 返回当前库中全部存储记录 ID（无权限细分，供下拉选择等）。
@@ -200,6 +203,7 @@ public class KtFileStorageServiceImpl extends ServiceImpl<KtFileStorageMapper, K
         applyPrimaryExclusiveBeforePersist(existing.getId(), Boolean.TRUE.equals(existing.getPrimaryFlag()));
         updateById(existing);
         evictStorageListCache();
+        publishS3ClientCacheInvalidate(existing.getId());
         return toMaterialFileStorageVo(getById(existing.getId()));
     }
 
@@ -208,8 +212,10 @@ public class KtFileStorageServiceImpl extends ServiceImpl<KtFileStorageMapper, K
         if (!StringUtils.hasText(storageId)) {
             throw BizException.of(ResultStatus.PARAM_ERROR);
         }
-        removeById(storageId.trim());
+        String sid = storageId.trim();
+        removeById(sid);
         evictStorageListCache();
+        publishS3ClientCacheInvalidate(sid);
     }
 
     @Override
@@ -316,6 +322,19 @@ public class KtFileStorageServiceImpl extends ServiceImpl<KtFileStorageMapper, K
     private void evictStorageListCache() {
         try {
             cacheOperator.delete(CACHE_KEY_STORAGE_IDS);
+        } catch (Exception ignored) {
+        }
+    }
+
+    /**
+     * 通知各 Pod 驱逐该存储 id 下缓存的 S3 客户端（与磁盘型存储无关时订阅端 no-op）。
+     */
+    private void publishS3ClientCacheInvalidate(String storageId) {
+        if (!StringUtils.hasText(storageId)) {
+            return;
+        }
+        try {
+            stringRedisTemplate.convertAndSend(MaterialStorageRedisPubSubChannels.S3_STORAGE_CLIENT_INVALIDATE, storageId.trim());
         } catch (Exception ignored) {
         }
     }

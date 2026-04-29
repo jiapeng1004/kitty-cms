@@ -5,7 +5,11 @@ import {
 } from '@/api/mam_chunk_upload_api'
 import { normalizeObjectKey } from '@/api/mam_storage_api'
 
-const DEFAULT_CHUNK_SIZE = 4 * 1024 * 1024
+/** S3 等多 part 对象除末片外单 part 不得小于 5MiB，默认按 5MiB 对齐 */
+const DEFAULT_CHUNK_SIZE = 5 * 1024 * 1024
+
+/** 单文件分片上传时同时进行的 HTTP 分片请求数 */
+const CHUNK_UPLOAD_PARALLELISM = 4
 
 /** 与存储路由演示一致的无符号 CRC32 */
 export function crc32Unsigned(buf: Uint8Array): number {
@@ -72,7 +76,7 @@ export interface UploadMaterialFileOptions {
 }
 
 /**
- * 单文件分片上传：创建会话 → 按 Content-Range 逐片上传 → complete
+ * 单文件分片上传：创建会话 → 按 Content-Range 并行上传分片（并行度 {@link CHUNK_UPLOAD_PARALLELISM}）→ complete
  */
 export async function uploadMaterialFile(file: File, options: UploadMaterialFileOptions): Promise<void> {
   const { catalogId, parentId, chunkSize = DEFAULT_CHUNK_SIZE, storageId: optStorageId } = options
@@ -117,21 +121,38 @@ export async function uploadMaterialFile(file: File, options: UploadMaterialFile
     return
   }
 
-  for (let i = 0; i < totalChunks; i++) {
+  let nextChunkIndex = 0
+  let completedChunks = 0
+
+  const uploadChunkAtIndex = async (i: number) => {
     const start = i * chunkSize
     const end = Math.min(start + chunkSize, file.size)
     const slice = file.slice(start, end)
     const body = new Uint8Array(await slice.arrayBuffer())
     const last = start + body.byteLength - 1
     const range = `bytes ${start}-${last}/${file.size}`
+    await uploadChunkWithHttpHeaders(session.id, body, range, body.byteLength)
+    completedChunks++
     options.onProgress?.({
       fileName: file.name,
       phase: 'upload',
-      sentChunks: i,
+      sentChunks: completedChunks,
       totalChunks
     })
-    await uploadChunkWithHttpHeaders(session.id, body, range, body.byteLength)
   }
+
+  const workerCount = Math.min(CHUNK_UPLOAD_PARALLELISM, totalChunks)
+  await Promise.all(
+    Array.from({ length: workerCount }, async () => {
+      while (true) {
+        const i = nextChunkIndex++
+        if (i >= totalChunks) {
+          break
+        }
+        await uploadChunkAtIndex(i)
+      }
+    })
+  )
 
   await completeChunkSession(session.id)
   options.onProgress?.({

@@ -36,7 +36,7 @@ export function useMaterialFileUpload(options: {
           if (p.phase === 'prepare') {
             progressText.value = `${p.fileName}：准备上传…`
           } else if (p.phase === 'upload') {
-            progressText.value = `${p.fileName}：${p.sentChunks + 1}/${p.totalChunks} 片`
+            progressText.value = `${p.fileName}：${p.sentChunks}/${p.totalChunks} 片`
           } else {
             progressText.value = `${p.fileName}：完成`
           }

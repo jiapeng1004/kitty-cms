@@ -10,12 +10,14 @@ import icu.jiapeng.kitty.material.storage.StorageMimeTypes;
 import icu.jiapeng.kitty.material.storage.StoragePartEtag;
 import icu.jiapeng.kitty.material.storage.StorageRouteRequest;
 import icu.jiapeng.kitty.material.storage.StorageRouteResult;
+import jakarta.annotation.PreDestroy;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.services.s3.model.AbortMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CompletedMultipartUpload;
@@ -25,26 +27,59 @@ import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartResponse;
-import software.amazon.awssdk.services.s3.S3Configuration;
 import org.springframework.util.StringUtils;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * S3 存储驱动（路由契约实现；分片上传走 Multipart，不落本地合并文件）。
+ * <p>
+ * 按 {@link KtFileStorage#getId()} 复用 {@link S3Client}，避免每次请求新建连接；
+ * 配置变更由各节点通过 Redis 订阅驱逐本地缓存项（见 {@link icu.jiapeng.kitty.material.storage.redis.S3StorageClientInvalidateListener}）。
  */
 @Component
 public class S3StorageDriver implements StorageDriver {
 
+    private final ConcurrentHashMap<String, S3Client> clientByStorageId = new ConcurrentHashMap<>();
+
     @Override
     public String driverName() {
         return FileEngineTypeEnum.OBJECT_STORAGE.getType();
+    }
+
+    /**
+     * 驱逐并关闭指定存储 id 对应的客户端（Redis 通知或下线清理时调用）。
+     */
+    public void invalidateCachedClient(String storageId) {
+        if (storageId == null || storageId.isBlank()) {
+            return;
+        }
+        S3Client removed = clientByStorageId.remove(storageId.trim());
+        closeQuietly(removed);
+    }
+
+    @PreDestroy
+    public void closeAllCachedS3Clients() {
+        clientByStorageId.forEach((id, client) -> closeQuietly(client));
+        clientByStorageId.clear();
+    }
+
+    private static void closeQuietly(S3Client client) {
+        if (client == null) {
+            return;
+        }
+        try {
+            client.close();
+        } catch (Exception ignored) {
+        }
     }
 
     @Override
@@ -52,24 +87,22 @@ public class S3StorageDriver implements StorageDriver {
         if (!isValidObjectKey(objectKey)) {
             return;
         }
-        try (S3Client client = buildClient(storageConfig)) {
-            client.deleteObject(DeleteObjectRequest.builder()
-                    .bucket(storageConfig.getBucket().trim())
-                    .key(objectKey)
-                    .build());
-        }
+        S3Client client = getOrCreateClient(storageConfig);
+        client.deleteObject(DeleteObjectRequest.builder()
+                .bucket(storageConfig.getBucket().trim())
+                .key(objectKey)
+                .build());
     }
 
     @Override
     public void putEmptyObject(KtFileStorage storageConfig, String objectKey, String contentTypeOrNull) throws IOException {
         String ct = effectiveContentType(contentTypeOrNull, objectKey);
-        try (S3Client client = buildClient(storageConfig)) {
-            PutObjectRequest.Builder b = PutObjectRequest.builder()
-                    .bucket(storageConfig.getBucket().trim())
-                    .key(objectKey)
-                    .contentType(ct);
-            client.putObject(b.build(), RequestBody.fromBytes(new byte[0]));
-        }
+        S3Client client = getOrCreateClient(storageConfig);
+        PutObjectRequest.Builder b = PutObjectRequest.builder()
+                .bucket(storageConfig.getBucket().trim())
+                .key(objectKey)
+                .contentType(ct);
+        client.putObject(b.build(), RequestBody.fromBytes(new byte[0]));
     }
 
     @Override
@@ -80,13 +113,12 @@ public class S3StorageDriver implements StorageDriver {
     @Override
     public String initiateMultipartUpload(KtFileStorage storageConfig, String objectKey, String contentTypeOrNull) throws IOException {
         String ct = effectiveContentType(contentTypeOrNull, objectKey);
-        try (S3Client client = buildClient(storageConfig)) {
-            return client.createMultipartUpload(CreateMultipartUploadRequest.builder()
-                    .bucket(storageConfig.getBucket().trim())
-                    .key(objectKey)
-                    .contentType(ct)
-                    .build()).uploadId();
-        }
+        S3Client client = getOrCreateClient(storageConfig);
+        return client.createMultipartUpload(CreateMultipartUploadRequest.builder()
+                .bucket(storageConfig.getBucket().trim())
+                .key(objectKey)
+                .contentType(ct)
+                .build()).uploadId();
     }
 
     /**
@@ -102,18 +134,17 @@ public class S3StorageDriver implements StorageDriver {
     @Override
     public String uploadMultipartPart(KtFileStorage storageConfig, String objectKey, String uploadId, int partNumber, byte[] data) throws IOException {
         byte[] payload = data == null ? new byte[0] : data;
-        try (S3Client client = buildClient(storageConfig)) {
-            UploadPartRequest req = UploadPartRequest.builder()
-                    .bucket(storageConfig.getBucket().trim())
-                    .key(objectKey)
-                    .uploadId(uploadId)
-                    .partNumber(partNumber)
-                    .contentLength((long) payload.length)
-                    .build();
-            UploadPartResponse resp = client.uploadPart(req, RequestBody.fromBytes(payload));
-            String etag = resp.eTag();
-            return etag == null ? "" : etag;
-        }
+        S3Client client = getOrCreateClient(storageConfig);
+        UploadPartRequest req = UploadPartRequest.builder()
+                .bucket(storageConfig.getBucket().trim())
+                .key(objectKey)
+                .uploadId(uploadId)
+                .partNumber(partNumber)
+                .contentLength((long) payload.length)
+                .build();
+        UploadPartResponse resp = client.uploadPart(req, RequestBody.fromBytes(payload));
+        String etag = resp.eTag();
+        return etag == null ? "" : etag;
     }
 
     @Override
@@ -127,24 +158,45 @@ public class S3StorageDriver implements StorageDriver {
                     .eTag(p.eTag())
                     .build());
         }
-        try (S3Client client = buildClient(storageConfig)) {
-            client.completeMultipartUpload(CompleteMultipartUploadRequest.builder()
-                    .bucket(storageConfig.getBucket().trim())
-                    .key(objectKey)
-                    .uploadId(uploadId)
-                    .multipartUpload(CompletedMultipartUpload.builder().parts(completedParts).build())
-                    .build());
-        }
+        S3Client client = getOrCreateClient(storageConfig);
+        client.completeMultipartUpload(CompleteMultipartUploadRequest.builder()
+                .bucket(storageConfig.getBucket().trim())
+                .key(objectKey)
+                .uploadId(uploadId)
+                .multipartUpload(CompletedMultipartUpload.builder().parts(completedParts).build())
+                .build());
     }
 
     @Override
     public void abortMultipartUpload(KtFileStorage storageConfig, String objectKey, String uploadId) throws IOException {
-        try (S3Client client = buildClient(storageConfig)) {
-            client.abortMultipartUpload(AbortMultipartUploadRequest.builder()
-                    .bucket(storageConfig.getBucket().trim())
-                    .key(objectKey)
-                    .uploadId(uploadId)
-                    .build());
+        S3Client client = getOrCreateClient(storageConfig);
+        client.abortMultipartUpload(AbortMultipartUploadRequest.builder()
+                .bucket(storageConfig.getBucket().trim())
+                .key(objectKey)
+                .uploadId(uploadId)
+                .build());
+    }
+
+    private S3Client getOrCreateClient(KtFileStorage storageConfig) throws IOException {
+        String id = storageConfig.getId();
+        if (id == null || id.isBlank()) {
+            throw new IOException("object storage record id missing; cannot cache S3 client");
+        }
+        String key = id.trim();
+        try {
+            return clientByStorageId.computeIfAbsent(key, k -> {
+                try {
+                    return buildClient(storageConfig);
+                } catch (IOException e) {
+                    throw new UncheckedIOException(e);
+                }
+            });
+        } catch (UncheckedIOException e) {
+            IOException cause = e.getCause();
+            if (cause != null) {
+                throw cause;
+            }
+            throw new IOException(e);
         }
     }
 
