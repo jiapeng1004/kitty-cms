@@ -25,7 +25,7 @@ const isFlush = computed(() => route.meta.flush === true)
   /* 让 flush 子页面（素材工作台等）能拿到「剩余视口高度」，内部才能把分页栏压到底部 */
   display: flex;
   flex-direction: column;
-  background: #f0f2f5;
+  background: var(--mam-page-bg);
 }
 
 .mam-content {

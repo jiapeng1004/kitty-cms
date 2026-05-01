@@ -53,7 +53,8 @@ const router = createRouter({
                 {
                     path: 'resources',
                     name: 'ResourceManagePage',
-                    component: ResourceManagePage
+                    component: ResourceManagePage,
+                    meta: { flush: true, immersive: true }
                 },
                 {
                     path: 'storage-route',
@@ -128,7 +129,8 @@ const router = createRouter({
                 {
                     path: 'resources',
                     name: 'EmbedResourceManagePage',
-                    component: ResourceManagePage
+                    component: ResourceManagePage,
+                    meta: { flush: true, immersive: true }
                 },
                 {
                     path: 'storage-route',

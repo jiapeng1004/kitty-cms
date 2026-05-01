@@ -45,11 +45,12 @@ async function refresh() {
 .catalog-tree-page {
   padding: 20px;
   min-height: calc(100vh - 64px);
+  background: var(--mam-page-bg);
 }
 
 .catalog-page-title {
   margin-bottom: 12px;
-  color: #111827;
+  color: var(--mam-text);
   font-size: 22px;
   font-weight: 600;
   line-height: 1.2;
@@ -58,6 +59,11 @@ async function refresh() {
 .catalog-tree-shell {
   width: 340px;
   flex-shrink: 0;
+  background: var(--mam-surface);
+  border: 1px solid var(--mam-border);
+  border-radius: var(--mam-radius-lg);
+  box-shadow: var(--mam-shadow-sm);
+  padding: 20px;
 }
 
 .catalog-tree-toolbar {
@@ -69,14 +75,19 @@ async function refresh() {
 }
 
 .catalog-refresh-btn {
-  border-color: #d0d7de;
-  color: #155eef;
+  border-color: var(--mam-border);
+  color: var(--mam-primary);
   height: 28px;
   padding: 0 12px;
 }
 
+.catalog-refresh-btn:hover {
+  border-color: var(--mam-primary);
+  color: var(--mam-primary-hover);
+}
+
 .catalog-current-label {
-  color: #4b5563;
+  color: var(--mam-text-secondary);
   font-size: 13px;
   line-height: 28px;
 }

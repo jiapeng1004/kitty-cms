@@ -1048,12 +1048,12 @@ const fileTabs: { key: string; label: string; icon: typeof AppstoreOutlined }[] 
 
 .rail-item:hover:not(.rail-item-disabled) {
   background: rgba(255, 255, 255, 0.08);
-  color: #fff;
+  color: var(--mam-surface);
 }
 
 .rail-item-active {
   background: linear-gradient(180deg, rgba(22, 119, 255, 0.35), rgba(22, 119, 255, 0.12));
-  color: #fff;
+  color: var(--mam-surface);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
 }
 
@@ -1255,7 +1255,7 @@ const fileTabs: { key: string; label: string; icon: typeof AppstoreOutlined }[] 
   border-radius: 20px;
   padding: 6px 14px;
   font-size: 13px;
-  color: #475569;
+  color: var(--mam-text-secondary);
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -1308,7 +1308,7 @@ const fileTabs: { key: string; label: string; icon: typeof AppstoreOutlined }[] 
 
 .mam-toolbar-link {
   padding: 0 4px;
-  color: #475569 !important;
+  color: var(--mam-text-secondary) !important;
 }
 
 .mam-toolbar-link:hover {
@@ -1317,7 +1317,7 @@ const fileTabs: { key: string; label: string; icon: typeof AppstoreOutlined }[] 
 
 .mam-toolbar-divider {
   margin: 0 2px;
-  background: #e2e8f0;
+  background: var(--mam-border);
 }
 
 .view-toggle :deep(.ant-btn) {
@@ -1334,12 +1334,12 @@ const fileTabs: { key: string; label: string; icon: typeof AppstoreOutlined }[] 
 
 .admin-link {
   font-size: 13px;
-  color: #155eef;
+  color: var(--mam-primary);
 }
 
 .upload-progress {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--mam-text-secondary);
   max-width: 220px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1353,16 +1353,16 @@ const fileTabs: { key: string; label: string; icon: typeof AppstoreOutlined }[] 
 }
 
 .mam-asset-card {
-  border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
-  border: 1px solid #eef0f3;
+  border-radius: var(--mam-radius-lg);
+  box-shadow: var(--mam-shadow-sm);
+  border: 1px solid var(--mam-border);
   transition: box-shadow 0.2s, border-color 0.2s, transform 0.2s;
   overflow: hidden;
 }
 
 .mam-asset-card:hover {
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.1);
-  border-color: rgba(22, 119, 255, 0.25);
+  box-shadow: var(--mam-shadow-md);
+  border-color: var(--mam-primary);
 }
 
 .mam-asset-card :deep(.ant-card-body) {
@@ -1384,13 +1384,13 @@ const fileTabs: { key: string; label: string; icon: typeof AppstoreOutlined }[] 
 }
 
 .title-detail-link {
-  color: #1677ff;
+  color: var(--mam-primary);
   font-weight: 500;
 }
 
 .title-detail-link:hover {
   text-decoration: underline;
-  color: #4096ff;
+  color: var(--mam-primary-hover);
 }
 
 .card-thumbnail {
@@ -1400,7 +1400,7 @@ const fileTabs: { key: string; label: string; icon: typeof AppstoreOutlined }[] 
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(160deg, #e8eef5 0%, #f8fafc 100%);
+  background: linear-gradient(160deg, var(--mam-muted-bg) 0%, var(--mam-surface) 100%);
   position: relative;
   overflow: hidden;
 }
@@ -1431,7 +1431,7 @@ const fileTabs: { key: string; label: string; icon: typeof AppstoreOutlined }[] 
 
 .thumb-placeholder {
   font-size: 22px;
-  color: #9ca3af;
+  color: var(--mam-text-secondary);
 }
 
 .thumb-img {
@@ -1506,7 +1506,7 @@ const fileTabs: { key: string; label: string; icon: typeof AppstoreOutlined }[] 
 
 .file-meta-line {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--mam-text-secondary);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1524,13 +1524,13 @@ const fileTabs: { key: string; label: string; icon: typeof AppstoreOutlined }[] 
 }
 
 .file-link--muted {
-  color: #64748b !important;
+  color: var(--mam-text-secondary) !important;
   font-weight: 400;
 }
 
 .file-link-disabled {
   font-size: 12px;
-  color: #cbd5e1;
+  color: var(--mam-border);
 }
 
 .file-path {
@@ -1542,7 +1542,7 @@ const fileTabs: { key: string; label: string; icon: typeof AppstoreOutlined }[] 
 .file-path-url {
   font-size: 12px;
   margin-top: 2px;
-  color: #155eef;
+  color: var(--mam-primary);
   word-break: break-all;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -1552,27 +1552,27 @@ const fileTabs: { key: string; label: string; icon: typeof AppstoreOutlined }[] 
 
 .table-path-url {
   word-break: break-all;
-  color: #155eef;
+  color: var(--mam-primary);
 }
 
 .file-src-link {
   font-size: 12px;
   margin-left: 8px;
-  color: #64748b;
+  color: var(--mam-text-secondary);
 }
 
 .table-src-url {
   word-break: break-all;
-  color: #64748b;
+  color: var(--mam-text-secondary);
   font-size: 12px;
 }
 
 .resource-list-wrap {
   background: var(--mam-surface);
-  border-radius: 12px;
+  border-radius: var(--mam-radius-lg);
   padding: 8px 10px 12px;
   border: 1px solid var(--mam-border);
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+  box-shadow: var(--mam-shadow-sm);
 }
 
 .resource-list-wrap :deep(.ant-table) {
@@ -1585,8 +1585,8 @@ const fileTabs: { key: string; label: string; icon: typeof AppstoreOutlined }[] 
   width: 100%;
   box-sizing: border-box;
   padding: 12px 20px;
-  border-top: 1px solid #e8e8e8;
-  background: #fff;
+  border-top: 1px solid var(--mam-border);
+  background: var(--mam-surface);
   box-shadow: 0 -4px 12px rgba(15, 23, 42, 0.04);
   z-index: 2;
 }
@@ -1604,7 +1604,7 @@ const fileTabs: { key: string; label: string; icon: typeof AppstoreOutlined }[] 
 
 .pagination-summary {
   font-size: 13px;
-  color: #64748b;
+  color: var(--mam-text-secondary);
   line-height: 32px;
   flex: 0 1 auto;
   min-width: 0;
@@ -1612,7 +1612,7 @@ const fileTabs: { key: string; label: string; icon: typeof AppstoreOutlined }[] 
 
 .pagination-total-num {
   font-weight: 600;
-  color: #111827;
+  color: var(--mam-text);
 }
 
 .pagination-controls {
@@ -1633,7 +1633,7 @@ const fileTabs: { key: string; label: string; icon: typeof AppstoreOutlined }[] 
 
 .batch-dl-hint {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--mam-text-secondary);
   margin: 0;
 }
 

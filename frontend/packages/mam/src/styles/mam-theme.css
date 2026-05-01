@@ -8,11 +8,23 @@
   --mam-primary-bg: #e6f4ff;
   --mam-text: #0f172a;
   --mam-text-secondary: #64748b;
+  --mam-text-tertiary: #94a3b8;
   --mam-border: #e2e8f0;
   --mam-surface: #ffffff;
   --mam-page-bg: #f0f2f5;
   --mam-muted-bg: #f8fafc;
+  --mam-shell-bg: #eef2f7;
+  --mam-segment-bg: #eef2f6;
+  --mam-scroll-bg: #f1f5f9;
+  --mam-detail-play-bg: #0b1220;
+  --mam-detail-rail-bg: #0f1629;
+  --mam-detail-rail-active: rgba(30, 58, 138, 0.35);
+  --mam-detail-rail-border: #3b82f6;
+  --mam-purple: #722ed1;
+  --mam-orange: #fa8c16;
+  --mam-success: #52c41a;
   --mam-radius-lg: 12px;
+  --mam-radius-sm: 8px;
   --mam-shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06);
   --mam-shadow-md: 0 4px 16px rgba(15, 23, 42, 0.08);
 }

@@ -416,6 +416,7 @@ onMounted(async () => {
   max-width: 1280px;
   margin: 0 auto;
   box-sizing: border-box;
+  background: var(--mam-page-bg);
 }
 
 /* 与素材库同壳（无整站顶栏）：主区横向拉满，减少两侧灰边 */
@@ -435,8 +436,8 @@ onMounted(async () => {
 }
 
 .storage-card {
-  border-radius: 8px;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  border-radius: var(--mam-radius-lg);
+  box-shadow: var(--mam-shadow-sm);
 }
 
 .storage-load-error {
@@ -459,16 +460,16 @@ onMounted(async () => {
 
 .storage-title {
   margin: 0 0 4px;
-  font-size: 18px;
+  font-size: 22px;
   font-weight: 600;
-  color: #111827;
+  color: var(--mam-text);
   line-height: 1.3;
 }
 
 .storage-sub {
   margin: 0;
   font-size: 13px;
-  color: #6b7280;
+  color: var(--mam-text-secondary);
   line-height: 1.5;
 }
 
@@ -478,7 +479,7 @@ onMounted(async () => {
 
 .storage-hint :deep(.ant-alert-description) {
   font-size: 13px;
-  color: #4b5563;
+  color: var(--mam-text-secondary);
   line-height: 1.55;
 }
 
@@ -492,14 +493,14 @@ onMounted(async () => {
 
 .storage-primary-no {
   font-size: 13px;
-  color: #6b7280;
+  color: var(--mam-text-secondary);
 }
 
 .form-item-hint {
   display: block;
   margin-top: 6px;
   font-size: 12px;
-  color: #6b7280;
+  color: var(--mam-text-secondary);
   line-height: 1.4;
 }
 
@@ -513,7 +514,7 @@ onMounted(async () => {
 
 .storage-id-presets-label {
   font-size: 12px;
-  color: #6b7280;
+  color: var(--mam-text-secondary);
 }
 
 .storage-id-preset-btn {
@@ -538,7 +539,7 @@ onMounted(async () => {
   right: 0;
   bottom: 0;
   top: 0;
-  background: #f0f2f5;
+  background: var(--mam-page-bg);
   overflow-y: auto;
   overflow-x: hidden;
   box-sizing: border-box;
@@ -548,9 +549,9 @@ onMounted(async () => {
 .storage-form-panel {
   max-width: 720px;
   margin: 0 auto;
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+  background: var(--mam-surface);
+  border-radius: var(--mam-radius-lg);
+  box-shadow: var(--mam-shadow-md);
   display: flex;
   flex-direction: column;
   max-height: calc(100vh - 40px);
@@ -562,14 +563,14 @@ onMounted(async () => {
   justify-content: space-between;
   gap: 12px;
   padding: 16px 20px;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid var(--mam-border);
 }
 
 .storage-form-title {
   margin: 0;
   font-size: 18px;
   font-weight: 600;
-  color: #111827;
+  color: var(--mam-text);
 }
 
 .storage-form-close {
@@ -581,14 +582,14 @@ onMounted(async () => {
   border: none;
   border-radius: 8px;
   background: transparent;
-  color: #6b7280;
+  color: var(--mam-text-secondary);
   cursor: pointer;
   transition: background 0.2s, color 0.2s;
 }
 
 .storage-form-close:hover {
-  background: #f3f4f6;
-  color: #111827;
+  background: var(--mam-muted-bg);
+  color: var(--mam-text);
 }
 
 .storage-form-body {
@@ -603,8 +604,8 @@ onMounted(async () => {
   justify-content: flex-end;
   gap: 12px;
   padding: 16px 20px;
-  border-top: 1px solid #f3f4f6;
-  background: #fafafa;
-  border-radius: 0 0 8px 8px;
+  border-top: 1px solid var(--mam-border);
+  background: var(--mam-muted-bg);
+  border-radius: 0 0 var(--mam-radius-lg) var(--mam-radius-lg);
 }
 </style>

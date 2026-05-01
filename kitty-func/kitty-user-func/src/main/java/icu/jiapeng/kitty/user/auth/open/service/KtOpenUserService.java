@@ -13,14 +13,13 @@ package icu.jiapeng.kitty.user.auth.open.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import icu.jiapeng.kitty.user.auth.open.entity.KtOpenUser;
-import org.jspecify.annotations.NonNull;
 
 import java.util.Optional;
 
 /**
  * 开放认证用户：上游 SSO 与本地用户映射的增查。
  */
-public interface KtOpenUserService extends IService<@NonNull KtOpenUser> {
+public interface KtOpenUserService extends IService<KtOpenUser> {
 
     /**
      * 根据平台与上游用户唯一标识查询本地 user_id。

@@ -1,0 +1,1980 @@
+{
+  "version": "2.11",
+  "children": [
+    {
+      "type": "note",
+      "id": "LvHVx",
+      "x": 0,
+      "y": -200,
+      "name": "flutNote",
+      "width": 560,
+      "height": 120,
+      "content": "【Flutter / Material 3 · 仅原型对照】AppBar / NavigationBar / ListView / PageView / SafeArea / 触控≥48dp。工程实现改 portal.pen 对应的 Flutter 工程，不在本文件写代码。"
+    },
+    {
+      "type": "frame",
+      "id": "br0M2",
+      "x": 40,
+      "y": 24,
+      "name": "① 首页 · 推荐",
+      "clip": true,
+      "width": 390,
+      "height": 844,
+      "fill": "#f4f6f8",
+      "stroke": {
+        "align": "inside",
+        "thickness": 1,
+        "fill": "#dadce0"
+      },
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "j9yDX",
+          "name": "appB",
+          "width": "fill_container",
+          "fill": "#ffffff",
+          "stroke": {
+            "align": "outside",
+            "thickness": {
+              "bottom": 1
+            },
+            "fill": "#e8eaed"
+          },
+          "effect": {
+            "type": "shadow",
+            "shadowType": "outer",
+            "color": "#0f172a0a",
+            "offset": {
+              "x": 0,
+              "y": 2
+            },
+            "blur": 8
+          },
+          "padding": [
+            12,
+            14
+          ],
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "h9isC",
+              "fill": "#0f172a",
+              "content": "融媒门户",
+              "fontFamily": "Inter",
+              "fontSize": 18,
+              "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "Us6C1",
+              "name": "icG",
+              "gap": 14,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "q74f3",
+                  "fill": "#1565C0",
+                  "content": "搜索",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "kiVnm",
+                  "fill": "#64748b",
+                  "content": "通知",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "y8OrER",
+          "name": "s1",
+          "width": "fill_container",
+          "fill": "#ffffff",
+          "stroke": {
+            "align": "outside",
+            "thickness": {
+              "bottom": 1
+            },
+            "fill": "#e2e8f0"
+          },
+          "gap": 10,
+          "padding": [
+            8,
+            14,
+            12,
+            14
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "g1EJH0",
+              "name": "box",
+              "width": "fill_container",
+              "height": 42,
+              "fill": "#f1f5f9",
+              "cornerRadius": 21,
+              "stroke": {
+                "align": "inside",
+                "thickness": 1,
+                "fill": "#cbd5e1"
+              },
+              "padding": [
+                0,
+                16
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "y2ow0",
+                  "fill": "#64748b",
+                  "content": "搜索热点、直播、号主…",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "IoYDx",
+              "name": "cam",
+              "width": 44,
+              "height": 44,
+              "fill": "#1565C0",
+              "cornerRadius": 22,
+              "layout": "vertical",
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "yvJXr",
+                  "fill": "#ffffff",
+                  "content": "⌁",
+                  "fontFamily": "Inter",
+                  "fontSize": 18,
+                  "fontWeight": "600"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "KssF9",
+          "name": "main",
+          "width": "fill_container",
+          "height": "fill_container",
+          "fill": "#f4f6f8",
+          "layout": "vertical",
+          "gap": 12,
+          "padding": [
+            12,
+            14,
+            72,
+            14
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "X5Ru3b",
+              "name": "hero",
+              "metadata": {
+                "type": "unsplash",
+                "username": "kaiyu_wu",
+                "link": "https://unsplash.com/@kaiyu_wu",
+                "author": "Kaiyu Wu"
+              },
+              "width": "fill_container",
+              "height": 148,
+              "fill": {
+                "type": "image",
+                "enabled": true,
+                "url": "https://images.unsplash.com/photo-1636165994053-b4cadd524833?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NDM0ODN8MHwxfHJhbmRvbXx8fHx8fHx8fDE3Nzc3MDUwMjR8&ixlib=rb-4.1.0&q=80&w=1080",
+                "mode": "fill"
+              },
+              "cornerRadius": 16,
+              "effect": {
+                "type": "shadow",
+                "shadowType": "outer",
+                "color": "#0c4a6e44",
+                "offset": {
+                  "x": 0,
+                  "y": 6
+                },
+                "blur": 16
+              },
+              "layout": "vertical",
+              "gap": 4,
+              "padding": [
+                14,
+                16
+              ],
+              "justifyContent": "end",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "b1FoG",
+                  "fill": "#e2e8f0",
+                  "content": "轮播 Banner · PageView（Flutter）",
+                  "fontFamily": "Inter",
+                  "fontSize": 11,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "wje6F",
+                  "fill": "#ffffff",
+                  "textGrowth": "fixed-width",
+                  "width": 320,
+                  "content": "头条：大型融媒直播特别节目",
+                  "fontFamily": "Inter",
+                  "fontSize": 15,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "fj9MD",
+                  "fill": "#93c5fd",
+                  "content": "今日 14:30 开播 · 12.6 万预约",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "iFIM2",
+              "name": "chips",
+              "width": "fill_container",
+              "gap": 8,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "Lrf2K",
+                  "name": "p1",
+                  "fill": "#1565C0",
+                  "cornerRadius": 16,
+                  "padding": [
+                    6,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "vHz8h",
+                      "fill": "#ffffff",
+                      "content": "推荐",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "f14sM",
+                  "name": "p2",
+                  "fill": "#ffffff",
+                  "cornerRadius": 16,
+                  "stroke": {
+                    "align": "inside",
+                    "thickness": 1,
+                    "fill": "#e2e8f0"
+                  },
+                  "padding": [
+                    6,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "PfhCD",
+                      "fill": "#334155",
+                      "content": "直播",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "iOjdW",
+                  "name": "p3",
+                  "fill": "#ffffff",
+                  "cornerRadius": 16,
+                  "stroke": {
+                    "align": "inside",
+                    "thickness": 1,
+                    "fill": "#e2e8f0"
+                  },
+                  "padding": [
+                    6,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "S4CnRY",
+                      "fill": "#334155",
+                      "content": "短视频",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "MMKtU",
+                  "name": "p4",
+                  "fill": "#ffffff",
+                  "cornerRadius": 16,
+                  "stroke": {
+                    "align": "inside",
+                    "thickness": 1,
+                    "fill": "#e2e8f0"
+                  },
+                  "padding": [
+                    6,
+                    12
+                  ],
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "Y1PC2H",
+                      "fill": "#334155",
+                      "content": "新闻",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "OJzrx",
+              "name": "secT",
+              "width": "fill_container",
+              "padding": [
+                8,
+                0,
+                0,
+                0
+              ],
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "wKlk7",
+                  "fill": "#0f172a",
+                  "content": "为你推荐",
+                  "fontFamily": "Inter",
+                  "fontSize": 15,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "tB9r7",
+                  "fill": "#1565C0",
+                  "content": "更多 ›",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "500"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "H8snu",
+              "name": "rowG1",
+              "width": "fill_container",
+              "gap": 10,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "H7wC0z",
+                  "name": "c1",
+                  "clip": true,
+                  "width": "fill_container",
+                  "fill": "#ffffff",
+                  "cornerRadius": 14,
+                  "stroke": {
+                    "align": "inside",
+                    "thickness": 1,
+                    "fill": "#e2e8f0"
+                  },
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#0f172a0c",
+                    "offset": {
+                      "x": 0,
+                      "y": 4
+                    },
+                    "blur": 10
+                  },
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "vL5r4",
+                      "name": "th1",
+                      "metadata": {
+                        "type": "unsplash",
+                        "username": "bielej",
+                        "link": "https://unsplash.com/@bielej",
+                        "author": "Michał Bielejewski"
+                      },
+                      "width": "fill_container",
+                      "height": 108,
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "https://images.unsplash.com/photo-1638729329100-160841b2d83f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NDM0ODN8MHwxfHJhbmRvbXx8fHx8fHx8fDE3Nzc3MDUwMjV8&ixlib=rb-4.1.0&q=80&w=1080",
+                        "mode": "fill"
+                      }
+                    },
+                    {
+                      "type": "frame",
+                      "id": "P5GmtO",
+                      "name": "meta1",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 4,
+                      "padding": [
+                        8,
+                        10,
+                        10,
+                        10
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "ncY7K",
+                          "fill": "#0f172a",
+                          "textGrowth": "fixed-width",
+                          "width": 160,
+                          "content": "民生热线：供暖季答疑",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "text",
+                          "id": "zEO5Y",
+                          "fill": "#94a3b8",
+                          "content": "2.1万播放 · 刚刚",
+                          "fontFamily": "Inter",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "rLcOy",
+                  "name": "c2",
+                  "clip": true,
+                  "width": "fill_container",
+                  "fill": "#ffffff",
+                  "cornerRadius": 14,
+                  "stroke": {
+                    "align": "inside",
+                    "thickness": 1,
+                    "fill": "#e2e8f0"
+                  },
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#0f172a0c",
+                    "offset": {
+                      "x": 0,
+                      "y": 4
+                    },
+                    "blur": 10
+                  },
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "SamWx",
+                      "name": "th2",
+                      "metadata": {
+                        "type": "unsplash",
+                        "username": "daryan",
+                        "link": "https://unsplash.com/@daryan",
+                        "author": "Daryan Shamkhali"
+                      },
+                      "width": "fill_container",
+                      "height": 108,
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "https://images.unsplash.com/photo-1589215932149-1c39b70b474a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NDM0ODN8MHwxfHJhbmRvbXx8fHx8fHx8fDE3Nzc3MDUwMjV8&ixlib=rb-4.1.0&q=80&w=1080",
+                        "mode": "fill"
+                      }
+                    },
+                    {
+                      "type": "frame",
+                      "id": "NEWHG",
+                      "name": "meta2",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 4,
+                      "padding": [
+                        8,
+                        10,
+                        10,
+                        10
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "HcDVO",
+                          "fill": "#0f172a",
+                          "textGrowth": "fixed-width",
+                          "width": 160,
+                          "content": "航拍 · 城市夜景",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "text",
+                          "id": "UfSSB",
+                          "fill": "#94a3b8",
+                          "content": "纪录片 · 08:42",
+                          "fontFamily": "Inter",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "HjBPf",
+              "name": "rowG2",
+              "width": "fill_container",
+              "gap": 10,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "i3QMO",
+                  "name": "c3",
+                  "clip": true,
+                  "width": "fill_container",
+                  "fill": "#ffffff",
+                  "cornerRadius": 14,
+                  "stroke": {
+                    "align": "inside",
+                    "thickness": 1,
+                    "fill": "#e2e8f0"
+                  },
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#0f172a0a",
+                    "offset": {
+                      "x": 0,
+                      "y": 4
+                    },
+                    "blur": 10
+                  },
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "r3FSsf",
+                      "name": "th3",
+                      "width": "fill_container",
+                      "height": 96,
+                      "fill": "#94a3b8"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "iwru2",
+                      "name": "mt3",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 4,
+                      "padding": [
+                        10,
+                        12,
+                        12,
+                        12
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "omRXj",
+                          "fill": "#0f172a",
+                          "textGrowth": "fixed-width",
+                          "width": 160,
+                          "content": "短纪实：胡同里的手艺人",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "SiJoN",
+                          "fill": "#64748b",
+                          "content": "8926 播放 · 纪录片",
+                          "fontFamily": "Inter",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "KKpvn",
+                  "name": "c4",
+                  "clip": true,
+                  "width": "fill_container",
+                  "fill": "#ffffff",
+                  "cornerRadius": 14,
+                  "stroke": {
+                    "align": "inside",
+                    "thickness": 1,
+                    "fill": "#e2e8f0"
+                  },
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#0f172a0a",
+                    "offset": {
+                      "x": 0,
+                      "y": 4
+                    },
+                    "blur": 10
+                  },
+                  "layout": "vertical",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "C4ILC",
+                      "name": "th4",
+                      "width": "fill_container",
+                      "height": 96,
+                      "fill": "#64748b"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "gyLly",
+                      "name": "mt4",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 4,
+                      "padding": [
+                        10,
+                        12,
+                        12,
+                        12
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "liwRT",
+                          "fill": "#0f172a",
+                          "textGrowth": "fixed-width",
+                          "width": 160,
+                          "content": "政论：新质生产力一线观察",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "omJw9",
+                          "fill": "#64748b",
+                          "content": "专题策划 · 12:08",
+                          "fontFamily": "Inter",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "V55eeD",
+          "name": "bot",
+          "width": "fill_container",
+          "height": 72,
+          "fill": "#ffffff",
+          "stroke": {
+            "align": "outside",
+            "thickness": {
+              "top": 1
+            },
+            "fill": "#e8eaed"
+          },
+          "padding": [
+            12,
+            0,
+            22,
+            0
+          ],
+          "justifyContent": "space_around",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "w73MSH",
+              "name": "n1",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 2,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "calYI",
+                  "fill": "#1565C0",
+                  "content": "●",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "CxZ6V",
+                  "fill": "#1565C0",
+                  "content": "首页",
+                  "fontFamily": "Inter",
+                  "fontSize": 10,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "poIBM",
+              "name": "n2",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 2,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "KqOCV",
+                  "fill": "#94a3b8",
+                  "content": "◎",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "vQ4Ac",
+                  "fill": "#64748b",
+                  "content": "直播",
+                  "fontFamily": "Inter",
+                  "fontSize": 10,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "DEPc7",
+              "name": "n3",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 2,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "PCQxI",
+                  "fill": "#94a3b8",
+                  "content": "▶",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "fnUUf",
+                  "fill": "#64748b",
+                  "content": "短视频",
+                  "fontFamily": "Inter",
+                  "fontSize": 10,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "CcnQY",
+              "name": "n4",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 2,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "cd76g",
+                  "fill": "#94a3b8",
+                  "content": "≡",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "i7W6r",
+                  "fill": "#64748b",
+                  "content": "新闻",
+                  "fontFamily": "Inter",
+                  "fontSize": 10,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "r6e45",
+              "name": "n5",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 2,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "B2Qz5H",
+                  "fill": "#94a3b8",
+                  "content": "◯",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "imj4M",
+                  "fill": "#64748b",
+                  "content": "我的",
+                  "fontFamily": "Inter",
+                  "fontSize": 10,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "c5dA6d",
+      "x": 460,
+      "y": 24,
+      "name": "② 直播",
+      "clip": true,
+      "width": 390,
+      "height": 844,
+      "fill": "#f4f6f8",
+      "stroke": {
+        "align": "inside",
+        "thickness": 1,
+        "fill": "#dadce0"
+      },
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "Kv2bw",
+          "name": "lb",
+          "width": "fill_container",
+          "fill": "#ffffff",
+          "stroke": {
+            "align": "outside",
+            "thickness": {
+              "bottom": 1
+            },
+            "fill": "#e8eaed"
+          },
+          "effect": {
+            "type": "shadow",
+            "shadowType": "outer",
+            "color": "#0f172a06",
+            "offset": {
+              "x": 0,
+              "y": 1
+            },
+            "blur": 6
+          },
+          "padding": [
+            12,
+            14
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "zeavW",
+              "fill": "#0f172a",
+              "content": "直播大厅",
+              "fontFamily": "Inter",
+              "fontSize": 18,
+              "fontWeight": "600"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "ZdC6y",
+          "name": "listL",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "gap": 10,
+          "padding": [
+            12,
+            14,
+            72,
+            14
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "NttiY",
+              "name": "r1",
+              "width": "fill_container",
+              "fill": "#ffffff",
+              "cornerRadius": 14,
+              "stroke": {
+                "align": "inside",
+                "thickness": 1,
+                "fill": "#e5e7eb"
+              },
+              "effect": {
+                "type": "shadow",
+                "shadowType": "outer",
+                "color": "#0f172a0b",
+                "offset": {
+                  "x": 0,
+                  "y": 4
+                },
+                "blur": 12
+              },
+              "gap": 10,
+              "padding": 10,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "YPkrf",
+                  "name": "t1",
+                  "metadata": {
+                    "type": "unsplash",
+                    "username": "siborey",
+                    "link": "https://unsplash.com/@siborey",
+                    "author": "Siborey Sean"
+                  },
+                  "width": 120,
+                  "height": 68,
+                  "fill": {
+                    "type": "image",
+                    "enabled": true,
+                    "url": "https://images.unsplash.com/photo-1699444116393-d0426d46c0d0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NDM0ODN8MHwxfHJhbmRvbXx8fHx8fHx8fDE3Nzc3MDUwMjZ8&ixlib=rb-4.1.0&q=80&w=1080",
+                    "mode": "fill"
+                  },
+                  "cornerRadius": 8
+                },
+                {
+                  "type": "frame",
+                  "id": "HVXeT",
+                  "name": "mr1",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 6,
+                  "justifyContent": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "MALJo",
+                      "fill": "#dc2626",
+                      "content": "LIVE",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "SoxzP",
+                      "fill": "#0f172a",
+                      "textGrowth": "fixed-width",
+                      "width": 200,
+                      "content": "都市晚高峰 · 路况滚动",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "text",
+                      "id": "VZP2r",
+                      "fill": "#94a3b8",
+                      "content": "12.8万在看",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "RPjYk",
+              "name": "r2",
+              "width": "fill_container",
+              "fill": "#ffffff",
+              "cornerRadius": 14,
+              "stroke": {
+                "align": "inside",
+                "thickness": 1,
+                "fill": "#e5e7eb"
+              },
+              "effect": {
+                "type": "shadow",
+                "shadowType": "outer",
+                "color": "#0f172a0b",
+                "offset": {
+                  "x": 0,
+                  "y": 4
+                },
+                "blur": 12
+              },
+              "gap": 10,
+              "padding": 10,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "WFrGl",
+                  "name": "t2",
+                  "metadata": {
+                    "type": "unsplash",
+                    "username": "fabianfriedrich",
+                    "link": "https://unsplash.com/@fabianfriedrich",
+                    "author": "Fabian Friedrich"
+                  },
+                  "width": 120,
+                  "height": 68,
+                  "fill": {
+                    "type": "image",
+                    "enabled": true,
+                    "url": "https://images.unsplash.com/photo-1593080358201-08e4ff5f93d9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NDM0ODN8MHwxfHJhbmRvbXx8fHx8fHx8fDE3Nzc3MDUwMjd8&ixlib=rb-4.1.0&q=80&w=1080",
+                    "mode": "fill"
+                  },
+                  "cornerRadius": 8
+                },
+                {
+                  "type": "frame",
+                  "id": "VX1aL",
+                  "name": "mr2",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 6,
+                  "justifyContent": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "v0cts0",
+                      "fill": "#dc2626",
+                      "content": "LIVE",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "TPCXJ",
+                      "fill": "#0f172a",
+                      "textGrowth": "fixed-width",
+                      "width": 200,
+                      "content": "新闻发布会 · 答记者问",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "text",
+                      "id": "NDgbi",
+                      "fill": "#94a3b8",
+                      "content": "3.2万在看",
+                      "fontFamily": "Inter",
+                      "fontSize": 11,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "TH6Ph",
+          "name": "botL",
+          "width": "fill_container",
+          "fill": "#ffffff",
+          "stroke": {
+            "align": "outside",
+            "thickness": {
+              "top": 1
+            },
+            "fill": "#e8eaed"
+          },
+          "padding": [
+            8,
+            0,
+            18,
+            0
+          ],
+          "justifyContent": "space_around",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "orNlb",
+              "fill": "#64748b",
+              "content": "首页",
+              "fontFamily": "Inter",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "l9J9i",
+              "fill": "#1565C0",
+              "content": "直播",
+              "fontFamily": "Inter",
+              "fontSize": 10,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "KPbNU",
+              "fill": "#64748b",
+              "content": "短视频",
+              "fontFamily": "Inter",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "dGsMj",
+              "fill": "#64748b",
+              "content": "新闻",
+              "fontFamily": "Inter",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "hLf9I",
+              "fill": "#64748b",
+              "content": "我的",
+              "fontFamily": "Inter",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "Leh5X",
+      "x": 880,
+      "y": 24,
+      "name": "③ 新闻",
+      "clip": true,
+      "width": 390,
+      "height": 844,
+      "fill": "#f4f6f8",
+      "stroke": {
+        "align": "inside",
+        "thickness": 1,
+        "fill": "#dadce0"
+      },
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "LITWY",
+          "name": "nb",
+          "width": "fill_container",
+          "fill": "#ffffff",
+          "stroke": {
+            "align": "outside",
+            "thickness": {
+              "bottom": 1
+            },
+            "fill": "#e8eaed"
+          },
+          "effect": {
+            "type": "shadow",
+            "shadowType": "outer",
+            "color": "#0f172a06",
+            "offset": {
+              "x": 0,
+              "y": 1
+            },
+            "blur": 6
+          },
+          "padding": [
+            12,
+            14
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "DkwwP",
+              "fill": "#0f172a",
+              "content": "新闻",
+              "fontFamily": "Inter",
+              "fontSize": 18,
+              "fontWeight": "600"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "Vnoq7",
+          "name": "nlist",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "padding": [
+            12,
+            14,
+            72,
+            14
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "v8uIHo",
+              "name": "nr",
+              "width": "fill_container",
+              "fill": "#ffffff",
+              "cornerRadius": 14,
+              "stroke": {
+                "align": "inside",
+                "thickness": 1,
+                "fill": "#e5e7eb"
+              },
+              "effect": {
+                "type": "shadow",
+                "shadowType": "outer",
+                "color": "#0f172a0a",
+                "offset": {
+                  "x": 0,
+                  "y": 3
+                },
+                "blur": 10
+              },
+              "layout": "vertical",
+              "gap": 4,
+              "padding": [
+                12,
+                14
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "cmyCN",
+                  "fill": "#1565C0",
+                  "content": "时政",
+                  "fontFamily": "Inter",
+                  "fontSize": 11,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "AG1Ee",
+                  "fill": "#0f172a",
+                  "textGrowth": "fixed-width",
+                  "width": 340,
+                  "content": "本市出台新一轮惠民补贴实施细则",
+                  "fontFamily": "Inter",
+                  "fontSize": 15,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "G1bNE",
+                  "fill": "#94a3b8",
+                  "content": "人民日报客户端 · 10 分钟前",
+                  "fontFamily": "Inter",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "agu3Q",
+                  "name": "leadImg",
+                  "metadata": {
+                    "type": "unsplash",
+                    "username": "alinashchurova",
+                    "link": "https://unsplash.com/@alinashchurova",
+                    "author": "Alina Shchurova"
+                  },
+                  "clip": true,
+                  "width": "fill_container",
+                  "height": 120,
+                  "fill": {
+                    "type": "image",
+                    "enabled": true,
+                    "url": "https://images.unsplash.com/photo-1577309017483-8f102efa249d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NDM0ODN8MHwxfHJhbmRvbXx8fHx8fHx8fDE3Nzc3MDUwNDl8&ixlib=rb-4.1.0&q=80&w=1080",
+                    "mode": "fill"
+                  },
+                  "cornerRadius": 8
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "dlgIU",
+              "name": "nr2",
+              "width": "fill_container",
+              "fill": "#ffffff",
+              "cornerRadius": 14,
+              "stroke": {
+                "align": "inside",
+                "thickness": 1,
+                "fill": "#e5e7eb"
+              },
+              "effect": {
+                "type": "shadow",
+                "shadowType": "outer",
+                "color": "#0f172a0a",
+                "offset": {
+                  "x": 0,
+                  "y": 3
+                },
+                "blur": 10
+              },
+              "layout": "vertical",
+              "gap": 4,
+              "padding": [
+                12,
+                14
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "EqQjS",
+                  "fill": "#64748b",
+                  "content": "社会",
+                  "fontFamily": "Inter",
+                  "fontSize": 11,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "CzTGE",
+                  "fill": "#0f172a",
+                  "textGrowth": "fixed-width",
+                  "width": 340,
+                  "content": "社区议事厅：老旧小区加装电梯进展",
+                  "fontFamily": "Inter",
+                  "fontSize": 15,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "K7I1i",
+                  "fill": "#94a3b8",
+                  "content": "安徽视讯 · 1 小时前",
+                  "fontFamily": "Inter",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "QIURW",
+                  "name": "leadImg2",
+                  "metadata": {
+                    "type": "unsplash",
+                    "username": "straz",
+                    "link": "https://unsplash.com/@straz",
+                    "author": "Jim Strasma"
+                  },
+                  "clip": true,
+                  "width": "fill_container",
+                  "height": 120,
+                  "fill": {
+                    "type": "image",
+                    "enabled": true,
+                    "url": "https://images.unsplash.com/photo-1573796711206-3f57c4542af7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NDM0ODN8MHwxfHJhbmRvbXx8fHx8fHx8fDE3Nzc3MDUwNDl8&ixlib=rb-4.1.0&q=80&w=1080",
+                    "mode": "fill"
+                  },
+                  "cornerRadius": 8
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "ohOZN",
+          "name": "botN",
+          "width": "fill_container",
+          "fill": "#ffffff",
+          "stroke": {
+            "align": "outside",
+            "thickness": {
+              "top": 1
+            },
+            "fill": "#e8eaed"
+          },
+          "padding": [
+            8,
+            0,
+            18,
+            0
+          ],
+          "justifyContent": "space_around",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "YhUPl",
+              "fill": "#64748b",
+              "content": "首页",
+              "fontFamily": "Inter",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "esYrJ",
+              "fill": "#64748b",
+              "content": "直播",
+              "fontFamily": "Inter",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "JchcO",
+              "fill": "#64748b",
+              "content": "短视频",
+              "fontFamily": "Inter",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "OnyM3",
+              "fill": "#1565C0",
+              "content": "新闻",
+              "fontFamily": "Inter",
+              "fontSize": 10,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "k9uIj",
+              "fill": "#64748b",
+              "content": "我的",
+              "fontFamily": "Inter",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "tUnhv",
+      "x": 1300,
+      "y": 24,
+      "name": "④ 短视频沉浸",
+      "clip": true,
+      "width": 390,
+      "height": 844,
+      "fill": "#0a0a0a",
+      "stroke": {
+        "align": "inside",
+        "thickness": 1,
+        "fill": "#404040"
+      },
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "DU0Tt",
+          "name": "play",
+          "metadata": {
+            "type": "unsplash",
+            "username": "imperioame",
+            "link": "https://unsplash.com/@imperioame",
+            "author": "Mario Amé"
+          },
+          "width": "fill_container",
+          "height": "fill_container",
+          "fill": {
+            "type": "image",
+            "enabled": true,
+            "url": "https://images.unsplash.com/photo-1701246359905-59124945f24e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NDM0ODN8MHwxfHJhbmRvbXx8fHx8fHx8fDE3Nzc3MDUwMjl8&ixlib=rb-4.1.0&q=80&w=1080",
+            "mode": "fill"
+          },
+          "layout": "vertical",
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "cAvst",
+              "fill": "#a3a3a3",
+              "content": "9:16 全屏 · PageView 上下滑",
+              "fontFamily": "Inter",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "i0VUTN",
+              "fill": "#737373",
+              "content": "VideoPlayer + 手势",
+              "fontFamily": "Inter",
+              "fontSize": 11,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "AdwXA",
+          "name": "bar",
+          "width": "fill_container",
+          "fill": "#0f172acc",
+          "gap": 14,
+          "padding": [
+            12,
+            12,
+            24,
+            12
+          ],
+          "alignItems": "end",
+          "children": [
+            {
+              "type": "frame",
+              "id": "deCHj",
+              "name": "lt",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 6,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "dZtsZ",
+                  "fill": "#ffffff",
+                  "content": "@融媒号",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "umsz4",
+                  "fill": "#e5e7eb",
+                  "textGrowth": "fixed-width",
+                  "width": 220,
+                  "content": "夜市经济 · 竖屏纪实",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "fEvmq",
+              "name": "rt",
+              "layout": "vertical",
+              "gap": 12,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "OcRiT",
+                  "fill": "#ffffff",
+                  "content": "赞",
+                  "fontFamily": "Inter",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "V6EjU",
+                  "fill": "#ffffff",
+                  "content": "评",
+                  "fontFamily": "Inter",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "ZCq3d",
+                  "fill": "#ffffff",
+                  "content": "享",
+                  "fontFamily": "Inter",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "note",
+      "id": "IF6Qe",
+      "x": 1740,
+      "y": -200,
+      "name": "cov",
+      "width": 680,
+      "height": 120,
+      "content": "【portal.pen 单文件】移动端 ①–⑤ + 桌面直播/OAuth 示意；实现阶段再对照 Flutter，不在此改代码。"
+    },
+    {
+      "type": "frame",
+      "id": "U76Uk",
+      "x": 1740,
+      "y": 24,
+      "name": "⑤ 我的 · 账号与开放能力",
+      "clip": true,
+      "width": 390,
+      "height": 844,
+      "fill": "#f4f6f8",
+      "stroke": {
+        "align": "inside",
+        "thickness": 1,
+        "fill": "#dadce0"
+      },
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "K1itt7",
+          "name": "mb",
+          "width": "fill_container",
+          "fill": "#ffffff",
+          "stroke": {
+            "align": "outside",
+            "thickness": {
+              "bottom": 1
+            },
+            "fill": "#e8eaed"
+          },
+          "effect": {
+            "type": "shadow",
+            "shadowType": "outer",
+            "color": "#0f172a06",
+            "offset": {
+              "x": 0,
+              "y": 1
+            },
+            "blur": 6
+          },
+          "padding": [
+            12,
+            14
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "jVj4v",
+              "fill": "#0f172a",
+              "content": "我的",
+              "fontFamily": "Inter",
+              "fontSize": 18,
+              "fontWeight": "600"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "CE1VE",
+          "name": "mbody",
+          "width": "fill_container",
+          "height": "fill_container",
+          "layout": "vertical",
+          "gap": 12,
+          "padding": [
+            16,
+            14,
+            72,
+            14
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "IKWET",
+              "name": "prof",
+              "width": "fill_container",
+              "fill": "#ffffff",
+              "cornerRadius": 12,
+              "stroke": {
+                "align": "inside",
+                "thickness": 1,
+                "fill": "#e5e7eb"
+              },
+              "gap": 14,
+              "padding": [
+                16,
+                14
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "LS6vO",
+                  "name": "av",
+                  "metadata": {
+                    "type": "unsplash",
+                    "username": "nathanael240606",
+                    "link": "https://unsplash.com/@nathanael240606",
+                    "author": "Nathanaël Desmeules"
+                  },
+                  "width": 52,
+                  "height": 52,
+                  "fill": {
+                    "type": "image",
+                    "enabled": true,
+                    "url": "https://images.unsplash.com/photo-1636812028884-8046cff5e68d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w4NDM0ODN8MHwxfHJhbmRvbXx8fHx8fHx8fDE3Nzc3MDUwMjl8&ixlib=rb-4.1.0&q=80&w=1080",
+                    "mode": "fill"
+                  },
+                  "cornerRadius": 26,
+                  "layout": "vertical",
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "weswi",
+                      "fill": "#1e40af",
+                      "content": "用",
+                      "fontFamily": "Inter",
+                      "fontSize": 18,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "m600Az",
+                  "name": "pt",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "justifyContent": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "n8WGXh",
+                      "fill": "#0f172a",
+                      "content": "已登录 · 融媒通行证",
+                      "fontFamily": "Inter",
+                      "fontSize": 15,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "Ycfik",
+                      "fill": "#94a3b8",
+                      "content": "点击查看资料 / 绑定手机",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "pVI07",
+              "name": "menu1",
+              "clip": true,
+              "width": "fill_container",
+              "fill": "#ffffff",
+              "cornerRadius": 12,
+              "stroke": {
+                "align": "inside",
+                "thickness": 1,
+                "fill": "#e5e7eb"
+              },
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "B0yOY",
+                  "fill": "#0f172a",
+                  "textGrowth": "fixed-width",
+                  "width": 340,
+                  "content": "开放平台  ·  第三方应用管理  ›",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "R5kKp",
+                  "fill": "#94a3b8",
+                  "textGrowth": "fixed-width",
+                  "width": 340,
+                  "content": "OAuth2 入驻、密钥轮换、回调域名",
+                  "fontFamily": "Inter",
+                  "fontSize": 11,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "b1UQ6B",
+                  "fill": "#f1f5f9",
+                  "content": "————————————————————",
+                  "fontFamily": "Inter",
+                  "fontSize": 8,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "rO7nb",
+                  "fill": "#334155",
+                  "content": "观看历史  ›",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "GGzGX",
+                  "fill": "#334155",
+                  "content": "设置 · 青少年模式 · 关于  ›",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "W7GZf",
+          "name": "botMy",
+          "width": "fill_container",
+          "fill": "#ffffff",
+          "stroke": {
+            "align": "outside",
+            "thickness": {
+              "top": 1
+            },
+            "fill": "#e8eaed"
+          },
+          "padding": [
+            8,
+            0,
+            18,
+            0
+          ],
+          "justifyContent": "space_around",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "X0Tut",
+              "fill": "#64748b",
+              "content": "首页",
+              "fontFamily": "Inter",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "xceiE",
+              "fill": "#64748b",
+              "content": "直播",
+              "fontFamily": "Inter",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "BEaQg",
+              "fill": "#64748b",
+              "content": "短视频",
+              "fontFamily": "Inter",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "rzpDm",
+              "fill": "#64748b",
+              "content": "新闻",
+              "fontFamily": "Inter",
+              "fontSize": 10,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "g19a7",
+              "fill": "#1565C0",
+              "content": "我的",
+              "fontFamily": "Inter",
+              "fontSize": 10,
+              "fontWeight": "600"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

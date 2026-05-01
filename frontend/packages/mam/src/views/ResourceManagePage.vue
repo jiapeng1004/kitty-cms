@@ -1,12 +1,9 @@
 <script setup lang="ts">
-import { computed, ref, watch, onMounted } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import type { UploadProps } from 'ant-design-vue'
-import {
-  DownOutlined,
-  ReloadOutlined
-} from '@ant-design/icons-vue'
+import { DownOutlined, LeftOutlined, ReloadOutlined } from '@ant-design/icons-vue'
 import MaterialCatalogTreePanel from '@/components/MaterialCatalogTreePanel.vue'
 import {
   createFolder,
@@ -23,11 +20,28 @@ import {
   resolveDestinationType,
   showMamBatchDownloadConfirm
 } from '@/composables/useMamBatchDownload'
-
-// 删除之前的强制注入样式，用原生布局适配
+import { useMamTableCellCopy } from '@/composables/useMamTableCellCopy'
 
 const route = useRoute()
 const router = useRouter()
+
+const { copyCell } = useMamTableCellCopy()
+
+const isEmbed = computed(() => route.path.startsWith('/embed/'))
+const showBackToMaterial = computed(
+  () => isEmbed.value || (route.meta as { immersive?: boolean }).immersive === true
+)
+
+function goBackToMaterial() {
+  void router.push(isEmbed.value ? '/embed/material' : '/material')
+}
+
+function thumbSrc(row: MaterialResourceVO): string {
+  if (row.coverUrl) return materialApiAbsoluteUrl(row.coverUrl)
+  if (row.keyframeUrl) return materialApiAbsoluteUrl(row.keyframeUrl)
+  if (row.previewUrl && row.type === 3) return materialApiAbsoluteUrl(row.previewUrl)
+  return ''
+}
 
 const selectedCatalogId = ref<string>()
 const currentCatalog = ref<MaterialCatalogNode | undefined>()
@@ -262,7 +276,22 @@ async function refresh() {
 </script>
 
 <template>
-  <div class="mam-page mam-page--padded resource-manage-page">
+  <div
+    class="mam-page resource-manage-page"
+    :class="{
+      'mam-page--padded': !showBackToMaterial,
+      'resource-manage-page--immersive': showBackToMaterial
+    }"
+  >
+    <div v-if="showBackToMaterial" class="resource-embed-bar">
+      <a-button type="link" class="resource-back" @click="goBackToMaterial">
+        <template #icon>
+          <left-outlined />
+        </template>
+        返回素材库
+      </a-button>
+    </div>
+
     <div class="mam-page-head resource-page-head">
       <h1 class="mam-page-title">资源管理</h1>
       <span class="mam-page-sub"
@@ -330,6 +359,14 @@ async function refresh() {
           </a-dropdown>
         </div>
 
+        <a-alert
+          type="info"
+          show-icon
+          class="resource-hint"
+          message="使用说明"
+          description="在左侧选择栏目后加载列表；除「操作」列外单击单元格可复制字段全文。预览列为缩略图，点击标题或「详情」进入资源详情页。"
+        />
+
         <!-- 列表容器占满剩余高度，内部滚动，让分页留在底部 -->
         <div class="resource-list-container mam-table-wrap">
           <a-table
@@ -345,54 +382,92 @@ async function refresh() {
               getCheckboxProps: (record) => ({ disabled: record.type === 7 })
             }"
           >
-          <a-table-column title="标题" data-index="title" key="title" :ellipsis="true" />
+          <a-table-column title="预览" key="thumb" :width="76" fixed="left">
+            <template #default="{ record }">
+              <button
+                type="button"
+                class="resource-thumb"
+                :title="record.title"
+                @click="openDetail(record)"
+              >
+                <img v-if="thumbSrc(record)" :src="thumbSrc(record)" alt="" />
+                <span v-else class="resource-thumb-ph">{{ typeLabel(record.type).slice(0, 1) }}</span>
+              </button>
+            </template>
+          </a-table-column>
+          <a-table-column title="标题" data-index="title" key="title" :ellipsis="true">
+            <template #default="{ record }">
+              <span class="mam-table-cell-copy" @click="copyCell(record.title)">{{ record.title }}</span>
+            </template>
+          </a-table-column>
           <a-table-column title="类型" key="type" :width="100">
             <template #default="{ record }">
-              {{ typeLabel(record.type) }}
+              <span class="mam-table-cell-copy" @click="copyCell(typeLabel(record.type))">{{
+                typeLabel(record.type)
+              }}</span>
             </template>
           </a-table-column>
           <a-table-column title="大小" key="size" :width="108">
             <template #default="{ record }">
-              {{ formatSize(record.fileSize) }}
+              <span class="mam-table-cell-copy" @click="copyCell(formatSize(record.fileSize))">{{
+                formatSize(record.fileSize)
+              }}</span>
             </template>
           </a-table-column>
-          <a-table-column title="预览" key="previewUrl" :width="120">
+          <a-table-column title="预览链" key="previewUrl" :width="120">
             <template #default="{ record }">
-              <a
+              <span
                 v-if="record.previewUrl"
-                :href="materialApiAbsoluteUrl(record.previewUrl)"
-                target="_blank"
-                rel="noopener noreferrer"
-              >打开</a>
-              <span v-else>—</span>
+                class="mam-table-cell-copy"
+                @click="copyCell(materialApiAbsoluteUrl(record.previewUrl))"
+              >
+                <a
+                  :href="materialApiAbsoluteUrl(record.previewUrl)"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  @click.stop
+                >打开</a>
+              </span>
+              <span v-else class="mam-table-cell-copy" @click="copyCell(undefined)">—</span>
             </template>
           </a-table-column>
           <a-table-column title="封面" key="coverUrl" :width="88">
             <template #default="{ record }">
-              <a
+              <span
                 v-if="record.coverUrl"
-                :href="materialApiAbsoluteUrl(record.coverUrl)"
-                target="_blank"
-                rel="noopener noreferrer"
-              >打开</a>
-              <span v-else>—</span>
+                class="mam-table-cell-copy"
+                @click="copyCell(record.coverUrl)"
+              >
+                <a :href="materialApiAbsoluteUrl(record.coverUrl)" target="_blank" rel="noopener noreferrer" @click.stop
+                  >打开</a
+                >
+              </span>
+              <span v-else class="mam-table-cell-copy" @click="copyCell(undefined)">—</span>
             </template>
           </a-table-column>
           <a-table-column title="关键帧" key="keyframeUrl" :width="88">
             <template #default="{ record }">
-              <a
+              <span
                 v-if="record.keyframeUrl"
-                :href="materialApiAbsoluteUrl(record.keyframeUrl)"
-                target="_blank"
-                rel="noopener noreferrer"
-              >打开</a>
-              <span v-else>—</span>
+                class="mam-table-cell-copy"
+                @click="copyCell(materialApiAbsoluteUrl(record.keyframeUrl))"
+              >
+                <a
+                  :href="materialApiAbsoluteUrl(record.keyframeUrl)"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  @click.stop
+                >打开</a>
+              </span>
+              <span v-else class="mam-table-cell-copy" @click="copyCell(undefined)">—</span>
             </template>
           </a-table-column>
           <a-table-column title="原文件" key="srcUrl" :ellipsis="true">
             <template #default="{ record }">
-              <a v-if="record.srcUrl" :href="record.srcUrl" target="_blank" rel="noopener noreferrer">{{ record.srcUrl }}</a>
-              <span v-else>—</span>
+              <span v-if="record.srcUrl" class="mam-table-cell-copy" @click="copyCell(record.srcUrl)">
+                <a :href="record.srcUrl" target="_blank" rel="noopener noreferrer" @click.stop>{{ record.srcUrl }}</a>
+              </span>
+              <span v-else class="mam-table-cell-copy" @click="copyCell(undefined)">—</span>
             </template>
           </a-table-column>
           <a-table-column title="操作" key="act" :width="200" fixed="right">
@@ -458,6 +533,67 @@ async function refresh() {
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
+}
+
+.resource-manage-page--immersive {
+  max-width: none;
+  margin: 0;
+  padding: 12px 16px 24px;
+  background: var(--mam-page-bg, #f0f2f5);
+}
+
+.resource-embed-bar {
+  flex-shrink: 0;
+  margin-bottom: 10px;
+}
+
+.resource-back {
+  padding-left: 0;
+  height: auto;
+  font-weight: 500;
+}
+
+.resource-hint {
+  flex-shrink: 0;
+  margin-bottom: 12px;
+}
+
+.resource-hint :deep(.ant-alert-description) {
+  font-size: 13px;
+  color: var(--mam-text-secondary, #64748b);
+  line-height: 1.55;
+}
+
+.resource-thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--mam-border, #e2e8f0);
+  border-radius: var(--mam-radius-sm, 8px);
+  background: var(--mam-muted-bg, #f8fafc);
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.resource-thumb:hover {
+  border-color: var(--mam-primary, #1677ff);
+  box-shadow: 0 0 0 1px rgba(22, 119, 255, 0.12);
+}
+
+.resource-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.resource-thumb-ph {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--mam-text-secondary, #64748b);
 }
 
 .resource-page-head {

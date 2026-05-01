@@ -251,6 +251,9 @@ onMounted(refreshStrategies)
 .mam-transcode-policy-page {
   max-width: 1200px;
   margin: 0 auto;
+  padding: 20px;
+  background: var(--mam-page-bg);
+  min-height: calc(100vh - 64px);
 }
 
 .mam-transcode-policy-page :deep(.mam-surface-card .ant-table) {
