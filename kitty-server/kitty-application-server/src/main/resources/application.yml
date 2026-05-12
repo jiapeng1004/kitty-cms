@@ -1,0 +1,34 @@
+spring:
+  profiles:
+    # 本仓库未提交 application-prod.yml；含数据源/Redis 的示例在 application-loc.yml（需激活 loc）。
+    # 本地调试可改为: active: loc  或  active: prod,loc
+    active: prod
+  main:
+    allow-bean-definition-overriding: true
+  application:
+    name: kitty-application
+    version: "@project.version@"
+  web:
+    resources:
+      add-mappings: false
+logging:
+  level:
+    org.springframework.aot: fatal
+    net.devh.boot.grpc: fatal
+    com.baomidou.mybatisplus: debug
+
+kitty:
+  oauth2:
+    authorization-server:
+      extras:
+        authorization-code-persistence: mybatis-plus
+        refresh-token-persistence: mybatis-plus
+        access-token-persistence: mybatis-plus
+        end-user-session: satoken
+  user:
+    rsa-public-key: classpath:rsa.pub
+    rsa-private-key: classpath:rsa.pri
+    white-list:
+      - /user/register
+      - /user/login
+      - /view/**

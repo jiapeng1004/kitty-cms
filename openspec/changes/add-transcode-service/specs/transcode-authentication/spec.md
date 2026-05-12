@@ -270,13 +270,13 @@ X-Signature: {signature}
 ```java
 public interface TranscodeApi {
     
-    @PostExchange("/api/transcode/task")
+    @PostMapping("/api/transcode/task")
     String createTask(@RequestBody CreateTaskRequest request);
     
-    @GetExchange("/api/transcode/task/{id}")
+    @GetMapping("/api/transcode/task/{id}")
     TaskVO getTask(@PathVariable String id);
     
-    @DeleteExchange("/api/transcode/task/{id}")
+    @DeleteMapping("/api/transcode/task/{id}")
     Boolean cancelTask(@PathVariable String id);
 }
 ```

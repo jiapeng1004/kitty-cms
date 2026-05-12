@@ -15,7 +15,6 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import icu.jiapeng.kitty.common.core.baomidou.KittyMetaDataHandler;
-import icu.jiapeng.kitty.common.core.config.GrpcConfig;
 import icu.jiapeng.kitty.user.db.DefaultTenantDataSource;
 import icu.jiapeng.kitty.user.db.KtTenSchemaInterceptor;
 import icu.jiapeng.kitty.user.db.TenantAwareDataSource;
@@ -30,11 +29,8 @@ import org.springframework.core.Ordered;
 import org.springframework.web.client.RestTemplate;
 
 @Configuration
-@EnableConfigurationProperties(MamConfigProperties.class)
-@Import({
-        GrpcConfig.class,
-        SaConfig.class,
-        KittyMetaDataHandler.class,
+@EnableConfigurationProperties({MamConfigProperties.class, MaterialTranscodeProperties.class})
+@Import({KittyMetaDataHandler.class,
         DefaultTenantDataSource.class,
         // Kafka（检索同步等）
         MamKafkaConfig.class,

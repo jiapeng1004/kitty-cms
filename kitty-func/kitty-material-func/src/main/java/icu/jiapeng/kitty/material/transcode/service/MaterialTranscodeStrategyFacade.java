@@ -3,10 +3,10 @@ package icu.jiapeng.kitty.material.transcode.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import icu.jiapeng.kitty.common.core.constant.ResultStatus;
 import icu.jiapeng.kitty.common.core.exceptions.BizException;
-import icu.jiapeng.kitty.material.catalog.service.CatalogService;
 import icu.jiapeng.kitty.material.catalog.constants.CatalogPermission;
+import icu.jiapeng.kitty.material.catalog.service.CatalogService;
 import icu.jiapeng.kitty.material.resource.entity.KtResource;
-import icu.jiapeng.kitty.material.transcode.TranscodePlatforms;
+import icu.jiapeng.kitty.material.transcode.constants.TranscoderPlatForm;
 import icu.jiapeng.kitty.material.transcode.dto.CatalogTranscodeBindCreateDTO;
 import icu.jiapeng.kitty.material.transcode.dto.MaterialTranscodeStrategyUpsertDTO;
 import icu.jiapeng.kitty.material.transcode.entity.KtCatalogTranscodeStrategyBind;
@@ -245,7 +245,7 @@ public class MaterialTranscodeStrategyFacade {
 
     private void applyStrategy(KtMaterialTranscodeStrategy s, MaterialTranscodeStrategyUpsertDTO req) {
         s.setName(req.getName());
-        s.setPlatformCode(isBlank(req.getPlatformCode()) ? TranscodePlatforms.KITTY_TRANSCODER_GRPC : req.getPlatformCode().trim());
+        s.setPlatformCode(isBlank(req.getPlatformCode()) ? TranscoderPlatForm.KITTY_TRANSCODER_HTTP.name() : req.getPlatformCode().trim());
         s.setExternalStrategyId(req.getExternalStrategyId().trim());
         s.setParamsJson(req.getParamsJson());
         s.setEnabled(req.getEnabled() == null ? 1 : req.getEnabled());

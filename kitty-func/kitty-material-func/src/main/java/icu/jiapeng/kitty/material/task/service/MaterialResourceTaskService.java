@@ -3,10 +3,9 @@ package icu.jiapeng.kitty.material.task.service;
 import icu.jiapeng.kitty.common.core.constant.ResultStatus;
 import icu.jiapeng.kitty.common.core.exceptions.BizException;
 import icu.jiapeng.kitty.common.core.util.PathUtil;
-import icu.jiapeng.kitty.material.catalog.service.CatalogService;
-import icu.jiapeng.kitty.material.config.ConfigCenterGateway;
-import icu.jiapeng.kitty.material.config.MaterialTranscodeProperties;
 import icu.jiapeng.kitty.material.catalog.constants.CatalogPermission;
+import icu.jiapeng.kitty.material.catalog.service.CatalogService;
+import icu.jiapeng.kitty.material.config.MaterialTranscodeProperties;
 import icu.jiapeng.kitty.material.resource.entity.KtMetaFile;
 import icu.jiapeng.kitty.material.resource.entity.KtResource;
 import icu.jiapeng.kitty.material.resource.service.MaterialResourceService;
@@ -21,6 +20,7 @@ import icu.jiapeng.kitty.material.transcode.TranscodeSubmitCommand;
 import icu.jiapeng.kitty.material.transcode.entity.KtMaterialTranscodeStrategy;
 import icu.jiapeng.kitty.material.transcode.model.TranscodeStrategyResolution;
 import icu.jiapeng.kitty.material.transcode.service.MaterialTranscodeStrategyFacade;
+import icu.jiapeng.kitty.user.internal.api.UserInternalConfigApi;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -45,7 +45,7 @@ public class MaterialResourceTaskService {
     private final ResourceTaskService resourceTaskService;
     private final MaterialTranscodeStrategyFacade transcodeStrategyFacade;
     private final TranscodeDispatchGateway transcodeDispatchGateway;
-    private final ConfigCenterGateway configCenterGateway;
+    private final UserInternalConfigApi userInternalConfigApi;
     private final MaterialTranscodeProperties materialTranscodeProperties;
     private final CatalogService catalogService;
     private final RedissonDistributedLockOperator distributedLockOperator;
@@ -179,7 +179,7 @@ public class MaterialResourceTaskService {
     }
 
     private boolean isAutoTranscodeAfterBindEnabled() {
-        Optional<String> flag = configCenterGateway.getString("material", CFG_AUTO_AFTER_BIND);
+        Optional<String> flag = userInternalConfigApi.getString("material", CFG_AUTO_AFTER_BIND);
         if (flag.isPresent()) {
             return Boolean.parseBoolean(flag.get().trim());
         }
@@ -187,7 +187,7 @@ public class MaterialResourceTaskService {
     }
 
     private Optional<String> resolveHttpInputBase() {
-        Optional<String> fromCenter = configCenterGateway.getString("material", CFG_HTTP_INPUT_BASE);
+        Optional<String> fromCenter = userInternalConfigApi.getString("material", CFG_HTTP_INPUT_BASE);
         if (fromCenter.isPresent() && StringUtils.hasText(fromCenter.get())) {
             return Optional.of(fromCenter.get().trim());
         }

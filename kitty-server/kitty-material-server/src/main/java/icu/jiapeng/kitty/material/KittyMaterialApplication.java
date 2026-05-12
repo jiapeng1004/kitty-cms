@@ -1,10 +1,9 @@
 package icu.jiapeng.kitty.material;
 
 
-import icu.jiapeng.kitty.material.config.MaterialTranscodeProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.cloud.openfeign.EnableFeignClients;
 
 /**
  *
@@ -13,9 +12,9 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
  * @since 2026/1/11
  */
 @SpringBootApplication
-@EnableConfigurationProperties(MaterialTranscodeProperties.class)
+@EnableFeignClients(basePackages = "icu.jiapeng.kitty.user.internal.api")
 public class KittyMaterialApplication {
-    public static void main(String[] args) {
+    static void main(String[] args) {
         SpringApplication.run(KittyMaterialApplication.class, args);
     }
 }

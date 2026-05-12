@@ -4,7 +4,7 @@
 所有 API 接口使用 HTTP Exchange 客户端定义，其他服务可以直接引入 jar 包调用。
 
 ### 接口定义规范
-- 使用 HTTP Exchange 注解（@PostExchange、@GetExchange 等）
+- 使用 HTTP Exchange 注解（@PostMapping、@GetMapping 等）
 - 使用 OpenAPI 注解（@Tag、@Operation、@Parameter 等）生成 Swagger 文档
 - 使用 Validator 注解（@NotNull、@NotBlank、@Size 等）进行参数校验
 - 接口定义无外部依赖，仅使用 Spring 和 Jakarta 注解
@@ -15,17 +15,17 @@
 public interface TranscodeApi {
     
     @Operation(summary = "创建转码任务", description = "创建一个新的转码任务并返回任务ID")
-    @PostExchange("/api/transcode/task")
+    @PostMapping("/api/transcode/task")
     String createTask(@Valid @RequestBody CreateTaskRequest request);
     
     @Operation(summary = "查询转码任务", description = "根据任务ID查询转码任务详情")
     @Parameter(name = "id", description = "任务ID", required = true, example = "task_123456")
-    @GetExchange("/api/transcode/task/{id}")
+    @GetMapping("/api/transcode/task/{id}")
     TaskVO getTask(@PathVariable String id);
     
     @Operation(summary = "取消转码任务", description = "取消指定的转码任务")
     @Parameter(name = "id", description = "任务ID", required = true, example = "task_123456")
-    @DeleteExchange("/api/transcode/task/{id}")
+    @DeleteMapping("/api/transcode/task/{id}")
     Boolean cancelTask(@PathVariable String id);
 }
 ```

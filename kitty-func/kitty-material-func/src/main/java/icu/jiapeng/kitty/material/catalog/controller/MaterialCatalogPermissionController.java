@@ -1,16 +1,16 @@
 package icu.jiapeng.kitty.material.catalog.controller;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
+import icu.jiapeng.kitty.material.catalog.api.MaterialCatalogPermissionApi;
 import icu.jiapeng.kitty.material.catalog.dto.CatalogPermissionCellDTO;
 import icu.jiapeng.kitty.material.catalog.dto.CatalogPermissionUpsertDTO;
 import icu.jiapeng.kitty.material.catalog.service.CatalogPermissionService;
-import icu.jiapeng.kitty.material.catalog.api.MaterialCatalogPermissionApi;
 import icu.jiapeng.kitty.material.permission.constants.MaterialPermissionCode;
 import icu.jiapeng.kitty.material.user.UserContextGateway;
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.validation.annotation.Validated;
-import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;

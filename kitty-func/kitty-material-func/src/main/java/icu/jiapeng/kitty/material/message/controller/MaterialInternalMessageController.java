@@ -9,6 +9,7 @@ import icu.jiapeng.kitty.material.message.dto.MaterialInternalMessageSendDTO;
 import icu.jiapeng.kitty.material.message.vo.MaterialInternalMessageVO;
 import icu.jiapeng.kitty.material.permission.constants.MaterialPermissionCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Profile;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;

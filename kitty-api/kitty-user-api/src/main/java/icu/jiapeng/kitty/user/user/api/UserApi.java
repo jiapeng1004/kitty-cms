@@ -26,42 +26,41 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.service.annotation.GetExchange;
-import org.springframework.web.service.annotation.HttpExchange;
-import org.springframework.web.service.annotation.PostExchange;
-import org.springframework.web.service.annotation.PutExchange;
 
 
 @Tag(name = "用户API")
 @Validated
 public interface UserApi {
     @Operation(summary = "用户注册")
-    @PostExchange("/api/user/register")
+    @PostMapping("/api/user/register")
     @ApiResponse(description = "用户id")
     String register(@Valid @RequestBody UserRegister userRegister);
 
     @Operation(summary = "用户登录")
-    @PostExchange("/api/user/login")
+    @PostMapping("/api/user/login")
     LoginResultVo login(@Valid @RequestBody UserLoginParam userLoginParam);
 
     @Operation(summary = "退出登录")
-    @PostExchange("/api/user/logout")
+    @PostMapping("/api/user/logout")
     void logout();
 
     @Operation(summary = "验证码")
-    @GetExchange("/api/user/captcha")
+    @GetMapping("/api/user/captcha")
     void captcha(HttpServletRequest request, HttpServletResponse response);
 
     @Operation(summary = "分页查询用户（管理端）")
-    @GetExchange("/api/user/query")
+    @GetMapping("/api/user/query")
     PageRespVo<UserListVO> query(UserQueryPageDTO query);
 
     @Operation(summary = "根据ID获取用户详情（管理端）")
-    @GetExchange("/api/user/{id}")
+    @GetMapping("/api/user/{id}")
     UserListVO getDetail(@NotBlank String id);
 
     @Operation(summary = "更新用户（管理端）")
-    @PutExchange("/api/user/{id}")
+    @PutMapping("/api/user/{id}")
     boolean update(@NotBlank String id, @Valid UserUpdateDTO dto);
 }

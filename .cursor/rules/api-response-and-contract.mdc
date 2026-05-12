@@ -15,10 +15,10 @@ globs: **/*Controller.java,**/*Api.java,**/*-api/**/*.java
 
 ```java
 // 正确：直接返回
-@GetExchange("/api/user/{id}")
+@GetMapping("/api/user/{id}")
 UserVO getById(String id);
 
-@GetExchange("/api/user/query")
+@GetMapping("/api/user/query")
 PageRespVo<UserVO> query(UserQueryPageDTO query);
 
 // 禁止：成功也包一层 code/data
@@ -48,7 +48,7 @@ return Map.of("code", 404, "message", "用户不存在");  // 不要
 
 - **除明确仅用于内部、不对外暴露的接口外**，所有对外 HTTP API 均需满足：
   1. **DTO、VO** 定义在对应业务的 **`-api` 模块**（如 `kitty-user-api`、`kitty-cms-api`），**不得**放在 `-func`、`-server` 等实现模块。
-  2. 在 **`-api` 模块**中定义 **Api 接口**，使用 Spring **HttpExchange** 系注解（如 `@GetExchange`、`@PostExchange`、`@PutExchange`、`@DeleteExchange`）声明路径与方法签名。
+  2. 在 **`-api` 模块**中定义 **Api 接口**，使用 Spring **HttpExchange** 系注解（如 `@GetMapping`、`@PostMapping`、`@PutMapping`、`@DeleteMapping`）声明路径与方法签名。
   3. **Controller** 在实现模块（如 `-func`）中 **implements** 上述 Api 接口，实现类中只做委托到 Service，不新增对外契约。
 
 ```text

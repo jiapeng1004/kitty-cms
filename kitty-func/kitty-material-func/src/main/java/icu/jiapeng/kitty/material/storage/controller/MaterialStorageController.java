@@ -12,6 +12,7 @@ import icu.jiapeng.kitty.material.storage.vo.MaterialStorageConnectivityVO;
 import icu.jiapeng.kitty.material.storage.vo.MaterialStorageObjectKeyNormalizeVO;
 import icu.jiapeng.kitty.material.storage.vo.MaterialStorageRoutePreviewVO;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Profile;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RestController;
 

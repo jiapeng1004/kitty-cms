@@ -15,6 +15,7 @@ import icu.jiapeng.kitty.material.metadata.vo.MaterialMetadataTemplateVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -26,6 +27,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import java.util.List;
 
 @Tag(name = "Material-编目")
+@FeignClient(name = "kitty-mam", contextId = "materialMetadata")
 public interface MaterialMetadataApi {
 
     @Operation(summary = "创建编目模板")
@@ -38,7 +40,7 @@ public interface MaterialMetadataApi {
 
     @Operation(summary = "删除编目模板")
     @DeleteMapping("/api/material/metadata/template")
-    void deleteTemplate(@RequestParam("id") String id);
+    void deleteTemplate(@RequestParam String id);
 
     @Operation(summary = "模板列表")
     @GetMapping("/api/material/metadata/template/list")
@@ -50,7 +52,7 @@ public interface MaterialMetadataApi {
 
     @Operation(summary = "查询模板已绑定字段（排序）")
     @GetMapping("/api/material/metadata/template/bindings")
-    List<MaterialMetadataFormFieldVO> listTemplateBindings(@RequestParam("templateId") String templateId);
+    List<MaterialMetadataFormFieldVO> listTemplateBindings(@RequestParam String templateId);
 
     @Operation(summary = "创建编目字段定义")
     @PostMapping("/api/material/metadata/field")
@@ -62,7 +64,7 @@ public interface MaterialMetadataApi {
 
     @Operation(summary = "删除编目字段定义")
     @DeleteMapping("/api/material/metadata/field")
-    void deleteField(@RequestParam("id") String id);
+    void deleteField(@RequestParam String id);
 
     @Operation(summary = "字段定义列表")
     @GetMapping("/api/material/metadata/field/list")
@@ -71,8 +73,8 @@ public interface MaterialMetadataApi {
     @Operation(summary = "按资源+模板拉取可填字段（已校验适用性）")
     @GetMapping("/api/material/metadata/instance/form-fields")
     List<MaterialMetadataFormFieldVO> formFieldsForResource(
-            @RequestParam("resourceId") String resourceId,
-            @RequestParam("templateId") String templateId);
+            @RequestParam String resourceId,
+            @RequestParam String templateId);
 
     @Operation(summary = "保存编目实例（新版本）")
     @PostMapping("/api/material/metadata/instance/save")

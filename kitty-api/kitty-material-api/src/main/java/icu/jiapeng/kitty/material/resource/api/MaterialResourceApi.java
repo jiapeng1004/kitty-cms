@@ -6,15 +6,17 @@ import icu.jiapeng.kitty.material.resource.vo.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 /**
- * Material 资源 API（MVC 契约）。
+ * Material 资源 API（OpenFeign + MVC 契约）。
  */
 @Tag(name = "Material-资源")
+@FeignClient(name = "kitty-mam", contextId = "materialResource")
 public interface MaterialResourceApi {
 
     @Operation(summary = "资源列表（无 keyword/semanticText 走 DB；有关键词走 ES 全文；有语义文本走 ES 向量）")
@@ -31,15 +33,15 @@ public interface MaterialResourceApi {
 
     @Operation(summary = "资源详情（含编目最新快照）")
     @GetMapping("/api/material/resource/detail")
-    MaterialResourceDetailVO detail(@RequestParam("resourceId") String resourceId);
+    MaterialResourceDetailVO detail(@RequestParam String resourceId);
 
     @Operation(summary = "预览资源文件（鉴权通过后 302 至源文件地址；列表 previewUrl 指向本接口）")
     @GetMapping("/api/material/resource/preview")
-    ResponseEntity<Void> preview(@RequestParam("resourceId") String resourceId);
+    ResponseEntity<Void> preview(@RequestParam String resourceId);
 
     @Operation(summary = "视频关键帧图（抽帧/转码产物就绪后 302；未就绪时 404）")
     @GetMapping("/api/material/resource/keyframe")
-    ResponseEntity<Void> keyframe(@RequestParam("resourceId") String resourceId);
+    ResponseEntity<Void> keyframe(@RequestParam String resourceId);
 
     @Operation(summary = "新增资源")
     @PostMapping("/api/material/resource")
@@ -71,7 +73,7 @@ public interface MaterialResourceApi {
 
     @Operation(summary = "按资源查询物理文件记录（无记录时 204）")
     @GetMapping("/api/material/resource/meta-file")
-    ResponseEntity<MaterialMetaFileVO> getMetaFile(@RequestParam("resourceId") String resourceId);
+    ResponseEntity<MaterialMetaFileVO> getMetaFile(@RequestParam String resourceId);
 
     @Operation(summary = "绑定资源与存储记录、对象键并写入 meta_file")
     @PostMapping("/api/material/resource/meta-file/bind")
@@ -80,8 +82,8 @@ public interface MaterialResourceApi {
     @Operation(summary = "按分级解析可下载/直链 URL（SOURCE=源码；其它见衍生产物表）")
     @GetMapping("/api/material/resource/download-url")
     MaterialDownloadUrlVO downloadUrl(
-            @RequestParam("resourceId") String resourceId,
-            @RequestParam("destinationType") String destinationType
+            @RequestParam String resourceId,
+            @RequestParam String destinationType
     );
 
     @Operation(summary = "单条下载行为上报（可选转发 kitty-data）")

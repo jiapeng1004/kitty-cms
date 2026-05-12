@@ -15,9 +15,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.service.annotation.GetExchange;
-import org.springframework.web.service.annotation.HttpExchange;
 
 import java.util.List;
 
@@ -31,7 +30,7 @@ import java.util.List;
 public interface KtPermissionApi {
 
     @ApiResponse(description = "权限列表")
-    @GetExchange("/api/user/permission/list")
+    @GetMapping("/api/user/permission/list")
     @Operation(summary = "获取用户的权限列表")
     List<String> list(
             @Schema(description = "用户id,不传递的时候为当前用户", example = "1")

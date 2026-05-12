@@ -9,6 +9,7 @@ import icu.jiapeng.kitty.material.transcode.dto.MaterialTranscodeStrategyUpsertD
 import icu.jiapeng.kitty.material.transcode.vo.CatalogTranscodeBindVO;
 import icu.jiapeng.kitty.material.transcode.vo.MaterialTranscodeStrategyVO;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Profile;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RestController;
 

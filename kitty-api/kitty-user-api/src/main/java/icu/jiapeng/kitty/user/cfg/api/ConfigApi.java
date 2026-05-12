@@ -19,10 +19,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.service.annotation.DeleteExchange;
-import org.springframework.web.service.annotation.GetExchange;
-import org.springframework.web.service.annotation.PostExchange;
-import org.springframework.web.service.annotation.PutExchange;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 
 /**
  * 配置 API
@@ -33,30 +33,30 @@ import org.springframework.web.service.annotation.PutExchange;
 public interface ConfigApi {
 
     @Operation(summary = "分页查询")
-    @GetExchange("/api/config/query")
+    @GetMapping("/api/config/query")
     PageRespVo<ConfigListVo> query(ConfigQueryPageDTO query);
 
     @Operation(summary = "根据ID获取")
-    @GetExchange("/api/config/{id}")
+    @GetMapping("/api/config/{id}")
     ConfigListVo getById(@NotBlank(message = "{id.not.null}") String id);
 
     @Operation(summary = "新增配置项")
-    @PostExchange("/api/config")
+    @PostMapping("/api/config")
     String create(@Valid ConfigCreateDTO dto);
 
     @Operation(summary = "更新配置项")
-    @PutExchange("/api/config/{id}")
+    @PutMapping("/api/config/{id}")
     Boolean update(@NotBlank(message = "{id.not.null}") String id, @Valid ConfigUpdateDTO dto);
 
     @Operation(summary = "删除配置项")
-    @DeleteExchange("/api/config/{id}")
+    @DeleteMapping("/api/config/{id}")
     Boolean remove(@NotBlank(message = "{id.not.null}") String id);
 
     @Operation(description = "获取配置值")
-    @GetExchange("/getVal")
+    @GetMapping("/getVal")
     String getVal(GetValDTO getValDTO);
 
     @Operation(description = "设置配置值")
-    @PostExchange("/setVal")
+    @PostMapping("/setVal")
     String setVal(@Valid @RequestBody SetValDTO setValDTO);
 }

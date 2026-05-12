@@ -8,7 +8,7 @@ import java.util.Optional;
 public interface TranscodeDispatchGateway {
 
     /**
-     * @param platformCode 素材侧策略上的 {@link icu.jiapeng.kitty.material.transcode.entity.MaterialTranscodeStrategy#getPlatformCode()}
+     * @param platformCode 素材侧策略上的}
      */
     Optional<String> submit(String platformCode, TranscodeSubmitCommand command);
 }

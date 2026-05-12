@@ -152,7 +152,7 @@ java -jar kitty-transcoder/kitty-transcoder-server/target/app.jar
 
 - **除非明确仅用于内部、不对外暴露的接口**，其余所有对外的 HTTP API：
   - **DTO、VO** 必须放在对应模块的 **`-api` 包**（如 `kitty-user-api`、`kitty-cms-api`），不得放在 `-func` 或实现模块里。
-  - **Controller** 必须实现以 **HttpExchange**（如 `@GetExchange`、`@PostExchange`）声明在 **`-api` 包** 中的 **Api 接口**，契约与实现分离。
+  - **Controller** 必须实现以 **HttpExchange**（如 `@GetMapping`、`@PostMapping`）声明在 **`-api` 包** 中的 **Api 接口**，契约与实现分离。
 - 入参、出参禁止使用裸 `Map`，必须使用 DTO/VO 类型（参见 `.cursor/rules/controller-request-response.mdc`）。
 
 ### 3. 前端调用后端：RPC 风格

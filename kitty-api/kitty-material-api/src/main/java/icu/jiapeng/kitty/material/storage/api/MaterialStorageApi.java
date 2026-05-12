@@ -10,6 +10,7 @@ import icu.jiapeng.kitty.material.storage.vo.MaterialStorageRoutePreviewVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -20,9 +21,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import java.util.List;
 
 /**
- * Material 存储 API（MVC 契约）。
+ * Material 存储 API（OpenFeign + MVC 契约）。
  */
 @Tag(name = "Material-存储")
+@FeignClient(name = "kitty-mam", contextId = "materialStorage")
 public interface MaterialStorageApi {
 
     @Operation(summary = "存储列表")
@@ -59,5 +61,5 @@ public interface MaterialStorageApi {
 
     @Operation(summary = "删除存储配置")
     @DeleteMapping("/api/material/storage/config/{storageId}")
-    void deleteFileStorage(@PathVariable("storageId") String storageId);
+    void deleteFileStorage(@PathVariable String storageId);
 }

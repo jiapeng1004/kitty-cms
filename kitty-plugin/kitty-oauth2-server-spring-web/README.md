@@ -305,9 +305,9 @@ CREATE TABLE IF NOT EXISTS `kt_oauth2_user_client_consent` (
 
 | 方法 | HttpExchange 注解 | 路径 | 说明 |
 |------|-------------------|------|------|
-| `token` | `@PostExchange`，`contentType = application/x-www-form-urlencoded` | `/oauth2/token` | 参数：`Authorization`（可选）、`@ModelAttribute OAuth2TokenRequest` |
-| `authorize` | `@GetExchange` | `/oauth2/authorize` | 参数：`@ModelAttribute OAuth2AuthorizeRequest`，以及 **`HttpServletRequest` / `HttpServletResponse`**（前者用于拼接登录回跳 URL、供 `OAuth2LoginNavigationPort` 解析登录页等，**非 OAuth 查询字段**） |
-| `authorizationServerMetadata` | `@GetExchange` | `/.well-known/oauth-authorization-server` | 参数：`HttpServletRequest`（issuer 推导） |
+| `token` | `@PostMapping`，`contentType = application/x-www-form-urlencoded` | `/oauth2/token` | 参数：`Authorization`（可选）、`@ModelAttribute OAuth2TokenRequest` |
+| `authorize` | `@GetMapping` | `/oauth2/authorize` | 参数：`@ModelAttribute OAuth2AuthorizeRequest`，以及 **`HttpServletRequest` / `HttpServletResponse`**（前者用于拼接登录回跳 URL、供 `OAuth2LoginNavigationPort` 解析登录页等，**非 OAuth 查询字段**） |
+| `authorizationServerMetadata` | `@GetMapping` | `/.well-known/oauth-authorization-server` | 参数：`HttpServletRequest`（issuer 推导） |
 
 实现类 **`OAuth2AuthorizationServerController`** 在 MVC 层声明 `@PostMapping` / `@GetMapping` 与 `consumes` / `produces`，与项目内其它 `*Api` + `*Controller` 模式一致。
 

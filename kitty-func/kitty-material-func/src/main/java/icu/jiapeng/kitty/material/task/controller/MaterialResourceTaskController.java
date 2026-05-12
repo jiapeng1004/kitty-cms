@@ -7,6 +7,7 @@ import icu.jiapeng.kitty.material.task.api.MaterialResourceTaskApi;
 import icu.jiapeng.kitty.material.task.dto.MaterialTranscodeEnqueueDTO;
 import icu.jiapeng.kitty.material.task.vo.MaterialResourceTaskVO;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Profile;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RestController;
 

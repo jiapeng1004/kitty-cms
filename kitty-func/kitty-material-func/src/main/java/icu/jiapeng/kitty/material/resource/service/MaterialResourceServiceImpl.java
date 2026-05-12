@@ -93,6 +93,7 @@ public class MaterialResourceServiceImpl extends ServiceImpl<KtResourceMapper, K
     @Resource
     private MaterialResourceTaskService materialResourceTaskService;
     @Resource
+    @Lazy
     private MaterialReviewService materialReviewService;
     @Resource
     private MaterialSearchSyncTrigger materialSearchSyncTrigger;

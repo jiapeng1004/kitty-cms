@@ -14,7 +14,7 @@ package icu.jiapeng.kitty.user.dashboard.api;
 import icu.jiapeng.kitty.user.dashboard.vo.DashboardStatsVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.web.service.annotation.GetExchange;
+import org.springframework.web.bind.annotation.GetMapping;
 
 /**
  * 仪表盘 API
@@ -25,6 +25,6 @@ import org.springframework.web.service.annotation.GetExchange;
 public interface DashboardApi {
 
     @Operation(summary = "统计概览")
-    @GetExchange("/api/dashboard/stats")
+    @GetMapping("/api/dashboard/stats")
     DashboardStatsVO stats();
 }

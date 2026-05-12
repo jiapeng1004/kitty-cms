@@ -12,7 +12,6 @@ import icu.jiapeng.kitty.oauth2.server.springweb.port.OAuth2RefreshTokenPersiste
 import icu.jiapeng.kitty.oauth2.server.springweb.properties.OAuth2ExtrasPropertyPrefix;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -33,7 +32,6 @@ import javax.sql.DataSource;
 public class OAuth2ServerExtrasMybatisPlusTokenPersistenceAutoConfiguration {
 
     @Configuration(proxyBeanMethods = false)
-    @ConditionalOnBean(DataSource.class)
     @MapperScan("icu.jiapeng.kitty.oauth2.server.springweb.extras.mybatisplus.mapper")
     static class OAuth2TokenPersistenceMybatisPlusBeans {
 

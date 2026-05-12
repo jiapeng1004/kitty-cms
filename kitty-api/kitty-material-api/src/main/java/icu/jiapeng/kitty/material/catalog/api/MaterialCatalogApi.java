@@ -8,6 +8,7 @@ import icu.jiapeng.kitty.material.permission.constants.MaterialPermissionCode;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -18,9 +19,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import java.util.List;
 
 /**
- * Material 栏目 API（MVC 契约，由 {@code kitty-material-func} Controller 实现）。
+ * Material 栏目 API（OpenFeign + MVC 契约，由 {@code kitty-material-func} Controller 实现）。
  */
 @Tag(name = "Material-栏目")
+@FeignClient(name = "kitty-mam", contextId = "materialCatalog")
 public interface MaterialCatalogApi {
 
     @Operation(summary = "查询栏目树")

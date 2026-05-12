@@ -15,6 +15,6 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import icu.jiapeng.kitty.user.user.entity.KtUserAttr;
 import org.jspecify.annotations.NonNull;
 
-public interface KtUserAttrService extends IService<@NonNull KtUserAttr> {
+public interface KtUserAttrService extends IService<KtUserAttr> {
 
 }

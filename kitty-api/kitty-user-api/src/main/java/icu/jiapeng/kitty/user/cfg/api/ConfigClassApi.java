@@ -20,10 +20,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
-import org.springframework.web.service.annotation.DeleteExchange;
-import org.springframework.web.service.annotation.GetExchange;
-import org.springframework.web.service.annotation.PostExchange;
-import org.springframework.web.service.annotation.PutExchange;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 
 /**
  * 配置分类 API
@@ -34,22 +34,22 @@ import org.springframework.web.service.annotation.PutExchange;
 public interface ConfigClassApi {
 
     @Operation(summary = "分页查询")
-    @GetExchange("/api/configClass/query")
+    @GetMapping("/api/configClass/query")
     PageRespVo<ConfigClassListVo> query(@Valid ConfigClassPageDTO query);
 
     @Operation(summary = "根据ID获取")
-    @GetExchange("/api/configClass/{id}")
+    @GetMapping("/api/configClass/{id}")
     ConfigClassListVo getById(String id);
 
     @Operation(summary = "新增")
-    @PostExchange("/api/configClass")
+    @PostMapping("/api/configClass")
     String create(@Valid ClassCreateDTO dto);
 
     @Operation(summary = "更新")
-    @PutExchange("/api/configClass/{id}")
+    @PutMapping("/api/configClass/{id}")
     Boolean update(@NotBlank(message = "{id.not.null}") String id, @Valid ClassUpdateDTO dto);
 
     @Operation(summary = "删除")
-    @DeleteExchange("/api/configClass/{id}")
+    @DeleteMapping("/api/configClass/{id}")
     Boolean remove(@NotBlank(message = "{id.not.null}") String id);
 }

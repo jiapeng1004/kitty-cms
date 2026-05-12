@@ -14,11 +14,8 @@
     <artifactId>kitty-plugin</artifactId>
 
     <modules>
-        <module>kitty-local-dns-starter</module>
-        <module>kitty-user-plugin-grpc-sa</module>
+        <module>kitty-user-plugin-openfeign-sa</module>
         <module>kitty-oauth2-resource-spring-web</module>
         <module>kitty-oauth2-server-spring-web</module>
-        <module>kitty-s3-spring-boot-starter</module>
     </modules>
-
 </project>

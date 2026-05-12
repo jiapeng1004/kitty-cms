@@ -19,10 +19,10 @@ import icu.jiapeng.kitty.user.tenant.vo.TenantVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.web.service.annotation.DeleteExchange;
-import org.springframework.web.service.annotation.GetExchange;
-import org.springframework.web.service.annotation.PostExchange;
-import org.springframework.web.service.annotation.PutExchange;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 
 import java.util.List;
 
@@ -31,27 +31,27 @@ public interface TenantApi {
 
     /** 开放接口：登录页租户下拉列表，返回 id、name，无需鉴权 */
     @Operation(summary = "租户列表（登录页选择用）")
-    @GetExchange("/api/tenant/list")
+    @GetMapping("/api/tenant/list")
     List<TenantVO> list();
 
     @Operation(summary = "创建租户")
-    @PostExchange("/api/tenant")
+    @PostMapping("/api/tenant")
     @ApiResponse(description = "租户id")
     String create(TenantCreateDTO dto);
 
     @Operation(summary = "分页查询租户")
-    @GetExchange("/api/tenant/query")
+    @GetMapping("/api/tenant/query")
     PageRespVo<TenantVO> query(TenantQueryPageDTO query);
 
     @Operation(summary = "根据ID获取租户")
-    @GetExchange("/api/tenant/{id}")
+    @GetMapping("/api/tenant/{id}")
     TenantVO getById(String id);
 
     @Operation(summary = "更新租户")
-    @PutExchange("/api/tenant/{id}")
+    @PutMapping("/api/tenant/{id}")
     boolean update(String id, TenantUpdateDTO dto);
 
     @Operation(summary = "删除租户")
-    @DeleteExchange("/api/tenant/{id}")
+    @DeleteMapping("/api/tenant/{id}")
     boolean delete(String id);
 }

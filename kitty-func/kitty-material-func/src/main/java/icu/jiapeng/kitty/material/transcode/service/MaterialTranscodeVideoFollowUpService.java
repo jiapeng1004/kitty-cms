@@ -1,7 +1,6 @@
 package icu.jiapeng.kitty.material.transcode.service;
 
 import icu.jiapeng.kitty.common.core.util.PathUtil;
-import icu.jiapeng.kitty.material.config.ConfigCenterGateway;
 import icu.jiapeng.kitty.material.config.MaterialTranscodeProperties;
 import icu.jiapeng.kitty.material.resource.constants.ResourceDestinationTypes;
 import icu.jiapeng.kitty.material.resource.constants.ResourceTypeEnum;
@@ -14,9 +13,10 @@ import icu.jiapeng.kitty.material.task.ResourceTaskTypes;
 import icu.jiapeng.kitty.material.task.entity.KtResourceTask;
 import icu.jiapeng.kitty.material.task.service.ResourceTaskService;
 import icu.jiapeng.kitty.material.transcode.entity.MaterialTranscodeMagicClient;
-import icu.jiapeng.kitty.transcoder.grpc.MagicExtractFramesReq;
-import icu.jiapeng.kitty.transcoder.grpc.MagicImageConvertReq;
-import icu.jiapeng.kitty.transcoder.grpc.TaskResp;
+import icu.jiapeng.kitty.transcoder.api.MagicExtractFramesRequest;
+import icu.jiapeng.kitty.transcoder.api.MagicImageConvertRequest;
+import icu.jiapeng.kitty.transcoder.api.TaskVO;
+import icu.jiapeng.kitty.user.internal.api.UserInternalConfigApi;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -42,7 +42,7 @@ public class MaterialTranscodeVideoFollowUpService {
     private final MetaFileService metaFileService;
     private final ResourceDerivativeService resourceDerivativeService;
     private final ResourceTaskService resourceTaskService;
-    private final ConfigCenterGateway configCenterGateway;
+    private final UserInternalConfigApi userInternalConfigApi;
     private final MaterialTranscodeProperties materialTranscodeProperties;
     private final KtResourceMapper ktResourceMapper;
 
@@ -64,14 +64,17 @@ public class MaterialTranscodeVideoFollowUpService {
                 log.debug("video follow-up skip: no http input resourceId={}", resourceId);
                 return;
             }
-            TaskResp cover = materialTranscodeMagicClient.magicExtractFrames(
-                    MagicExtractFramesReq.newBuilder()
-                            .setInputType("HTTP")
-                            .setInputPath(input.get())
-                            .setFrameInterval(30)
-                            .setFrameCount(1)
-                            .setOutputFormat("jpg")
-                            .build());
+            if (!StringUtils.hasText(materialTranscodeProperties.getTranscoderHttpBase())) {
+                log.debug("video follow-up skip: transcoderHttpBase not configured resourceId={}", resourceId);
+                return;
+            }
+            MagicExtractFramesRequest coverReq = new MagicExtractFramesRequest();
+            coverReq.setInputType("HTTP");
+            coverReq.setInputPath(input.get());
+            coverReq.setFrameInterval(30);
+            coverReq.setFrameCount(1);
+            coverReq.setOutputFormat("jpg");
+            TaskVO cover = materialTranscodeMagicClient.magicExtractFrames(coverReq);
             if (cover.getOutputHttpUrl() != null && !cover.getOutputHttpUrl().isBlank()) {
                 resourceDerivativeService.upsertExternal(
                         resourceId,
@@ -90,14 +93,13 @@ public class MaterialTranscodeVideoFollowUpService {
 
     private void scheduleSpritePlaceholder(String resourceId, String sourceHttpInput) {
         try {
-            TaskResp sprite = materialTranscodeMagicClient.magicImageConvert(
-                    MagicImageConvertReq.newBuilder()
-                            .setInputType("HTTP")
-                            .setInputPath(sourceHttpInput)
-                            .setTargetFormat("webp")
-                            .setQuality(80)
-                            .setResize("320x")
-                            .build());
+            MagicImageConvertRequest spriteReq = new MagicImageConvertRequest();
+            spriteReq.setInputType("HTTP");
+            spriteReq.setInputPath(sourceHttpInput);
+            spriteReq.setTargetFormat("webp");
+            spriteReq.setQuality(80);
+            spriteReq.setResize("320x");
+            TaskVO sprite = materialTranscodeMagicClient.magicImageConvert(spriteReq);
             if (sprite.getOutputHttpUrl() != null && !sprite.getOutputHttpUrl().isBlank()) {
                 resourceDerivativeService.upsertExternal(
                         resourceId,
@@ -142,7 +144,7 @@ public class MaterialTranscodeVideoFollowUpService {
     }
 
     private Optional<String> resolveHttpInputBase() {
-        Optional<String> fromCenter = configCenterGateway.getString("material", CFG_HTTP_INPUT_BASE);
+        Optional<String> fromCenter = userInternalConfigApi.getString("material", CFG_HTTP_INPUT_BASE);
         if (fromCenter.isPresent() && StringUtils.hasText(fromCenter.get())) {
             return Optional.of(fromCenter.get().trim());
         }

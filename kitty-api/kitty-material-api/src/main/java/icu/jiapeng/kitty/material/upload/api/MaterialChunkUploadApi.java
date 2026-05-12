@@ -6,6 +6,7 @@ import icu.jiapeng.kitty.material.upload.vo.MaterialChunkUploadSessionVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
  * 分片上传会话 API（5.5）。
  */
 @Tag(name = "Material-分片上传")
+@FeignClient(name = "kitty-mam", contextId = "materialChunkUpload")
 public interface MaterialChunkUploadApi {
 
     @Operation(summary = "创建上传会话")

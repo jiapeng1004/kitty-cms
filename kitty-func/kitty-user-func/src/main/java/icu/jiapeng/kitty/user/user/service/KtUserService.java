@@ -20,9 +20,8 @@ import icu.jiapeng.kitty.user.user.dto.UserUpdateDTO;
 import icu.jiapeng.kitty.user.user.entity.KtUser;
 import icu.jiapeng.kitty.user.user.vo.LoginResultVo;
 import icu.jiapeng.kitty.user.user.vo.UserListVO;
-import org.jspecify.annotations.NonNull;
 
-public interface KtUserService extends IService<@NonNull KtUser> {
+public interface KtUserService extends IService<KtUser> {
 
     /**
      * 用户组测

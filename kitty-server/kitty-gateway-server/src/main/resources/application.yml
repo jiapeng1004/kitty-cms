@@ -1,0 +1,36 @@
+server:
+  port: 9081
+spring:
+  mvc:
+    format:
+      date-time: yyyy-MM-dd HH:mm:ss
+      date: yyyy-MM-dd
+  jackson:
+    date-format: "yyyy-MM-dd HH:mm:ss"
+    time-zone: Asia/Shanghai
+  threads:
+    virtual:
+      enabled: true
+  profiles:
+    active: prod
+  main:
+    allow-bean-definition-overriding: true
+  application:
+    name: kitty-gateway
+    version: "@project.version@"
+  config:
+    import: optional:nacos:${spring.application.name}-${spring.profiles.active}.yml
+  cloud:
+    nacos:
+      config:
+        enabled: true
+        server-addr: 127.0.0.1:8848
+        file-extension: yml
+        namespace: kitty-${spring.profiles.active}
+        group: "DEFAULT_GROUP"
+      discovery:
+        server-addr: ${spring.cloud.nacos.config.server-addr:}
+        namespace: ${spring.cloud.nacos.config.namespace:}
+        group: ${spring.cloud.nacos.config.group:}
+        username: ${spring.cloud.nacos.config.username:}
+        password: ${spring.cloud.nacos.config.password:}

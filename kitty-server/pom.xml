@@ -16,8 +16,9 @@
 
     <modules>
         <module>kitty-user-server</module>
-        <module>kitty-transcoder-server</module>
         <module>kitty-material-server</module>
+        <module>kitty-application-server</module>
+        <module>kitty-gateway-server</module>
     </modules>
 
 </project>

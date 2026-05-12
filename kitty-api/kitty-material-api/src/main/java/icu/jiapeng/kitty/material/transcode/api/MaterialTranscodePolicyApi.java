@@ -7,6 +7,7 @@ import icu.jiapeng.kitty.material.transcode.vo.MaterialTranscodeStrategyVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -17,12 +18,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import java.util.List;
 
 @Tag(name = "Material-转码策略与栏目绑定")
+@FeignClient(name = "kitty-mam", contextId = "materialTranscodePolicy")
 public interface MaterialTranscodePolicyApi {
 
     @Operation(summary = "转码策略列表")
     @GetMapping("/api/material/transcode/strategy/list")
     List<MaterialTranscodeStrategyVO> listStrategies(
-            @RequestParam(value = "resourceType", required = false) Integer resourceType
+            @RequestParam(required = false) Integer resourceType
     );
 
     @Operation(summary = "创建转码策略")
@@ -35,11 +37,11 @@ public interface MaterialTranscodePolicyApi {
 
     @Operation(summary = "删除转码策略")
     @DeleteMapping("/api/material/transcode/strategy")
-    void deleteStrategy(@RequestParam("id") String id);
+    void deleteStrategy(@RequestParam String id);
 
     @Operation(summary = "栏目绑定列表")
     @GetMapping("/api/material/transcode/bind/list")
-    List<CatalogTranscodeBindVO> listBinds(@RequestParam("catalogId") String catalogId);
+    List<CatalogTranscodeBindVO> listBinds(@RequestParam String catalogId);
 
     @Operation(summary = "新增栏目绑定")
     @PostMapping("/api/material/transcode/bind")
@@ -47,5 +49,5 @@ public interface MaterialTranscodePolicyApi {
 
     @Operation(summary = "删除栏目绑定")
     @DeleteMapping("/api/material/transcode/bind")
-    void deleteBind(@RequestParam("id") String id);
+    void deleteBind(@RequestParam String id);
 }

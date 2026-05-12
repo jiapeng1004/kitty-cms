@@ -19,6 +19,7 @@ import icu.jiapeng.kitty.material.metadata.vo.MaterialMetadataSnapshotVO;
 import icu.jiapeng.kitty.material.metadata.vo.MaterialMetadataTemplateVO;
 import icu.jiapeng.kitty.material.permission.constants.MaterialPermissionCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Profile;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.RestController;
 
