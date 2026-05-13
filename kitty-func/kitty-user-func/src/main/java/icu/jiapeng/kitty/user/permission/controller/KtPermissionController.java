@@ -14,15 +14,13 @@ package icu.jiapeng.kitty.user.permission.controller;
 
 import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.util.StrUtil;
-import icu.jiapeng.kitty.user.permission.api.KtPermissionApi;
+import icu.jiapeng.kitty.user.api.permission.api.KtPermissionApi;
 import icu.jiapeng.kitty.user.permission.service.KtPermissionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -36,7 +34,6 @@ import java.util.Objects;
  * @since 2025/12/20
  */
 @RestController
-@RequestMapping
 @Tag(name = "权限 api")
 public class KtPermissionController implements KtPermissionApi {
     @Resource
@@ -49,7 +46,6 @@ public class KtPermissionController implements KtPermissionApi {
      */
     @ApiResponse(description = "权限列表")
     @Operation(summary = "获取用户的权限列表")
-    @GetMapping("/api/user/permission/list")
     public List<String> list(
             @Schema(description = "用户id,不传递的时候为当前用户", example = "1")
             @RequestParam(required = false) String userId) {

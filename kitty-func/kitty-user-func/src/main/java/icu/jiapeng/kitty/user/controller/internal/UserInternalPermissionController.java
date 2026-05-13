@@ -11,7 +11,7 @@
  */
 package icu.jiapeng.kitty.user.controller.internal;
 
-import icu.jiapeng.kitty.user.internal.api.UserInternalPermissionApi;
+import icu.jiapeng.kitty.user.api.internal.api.UserInternalPermissionApi;
 import icu.jiapeng.kitty.user.permission.service.KtPermissionService;
 import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.RestController;

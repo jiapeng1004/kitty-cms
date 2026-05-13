@@ -26,12 +26,12 @@ import java.util.List;
 public interface MaterialCatalogApi {
 
     @Operation(summary = "查询栏目树")
-    @GetMapping("/api/catalog/tree")
+    @GetMapping("/api/tree")
     @SaCheckPermission(MaterialPermissionCode.MATERIAL_CATALOG_TREE_VIEW)
     List<CatalogNodeVO> queryTree();
 
     @Operation(summary = "查询指定角色栏目权限树")
-    @GetMapping("/api/catalog/permission/tree/role/{roleId}")
+    @GetMapping("/api/permission/tree/role/{roleId}")
     @SaCheckPermission(MaterialPermissionCode.MATERIAL_CATALOG_PERMISSION_VIEW)
     List<CatalogNodeVO> catalogTreeWithRolePermission(@PathVariable String roleId);
 

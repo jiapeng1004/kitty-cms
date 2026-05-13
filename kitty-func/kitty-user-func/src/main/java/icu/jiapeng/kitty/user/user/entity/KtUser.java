@@ -16,6 +16,7 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import icu.jiapeng.kitty.common.core.entity.CommonEntity;
+import icu.jiapeng.kitty.user.api.constans.UserStatus;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -65,7 +66,7 @@ public class KtUser extends CommonEntity {
 
     /**
      * 状态
-     * {@link icu.jiapeng.kitty.user.constans.UserStatus}
+     * {@link UserStatus}
      */
     @TableField("status")
     private Integer status;

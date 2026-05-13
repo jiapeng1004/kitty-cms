@@ -12,8 +12,8 @@
 package icu.jiapeng.kitty.plugin.sa.openfeign;
 
 import cn.dev33.satoken.stp.StpInterface;
-import icu.jiapeng.kitty.user.internal.api.UserInternalPermissionApi;
-import icu.jiapeng.kitty.user.internal.api.UserInternalRoleApi;
+import icu.jiapeng.kitty.user.api.internal.api.UserInternalPermissionApi;
+import icu.jiapeng.kitty.user.api.internal.api.UserInternalRoleApi;
 import lombok.AllArgsConstructor;
 
 import java.util.Collections;

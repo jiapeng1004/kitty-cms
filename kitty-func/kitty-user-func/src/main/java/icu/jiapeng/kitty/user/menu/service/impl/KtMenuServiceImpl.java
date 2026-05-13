@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import icu.jiapeng.kitty.user.menu.entity.KtMenu;
 import icu.jiapeng.kitty.user.menu.mapper.KtMenuMapper;
 import icu.jiapeng.kitty.user.menu.service.KtMenuService;
-import icu.jiapeng.kitty.user.menu.vo.MenuTreeVo;
+import icu.jiapeng.kitty.user.api.menu.vo.MenuTreeVo;
 import org.springframework.stereotype.Service;
 
 import java.util.*;

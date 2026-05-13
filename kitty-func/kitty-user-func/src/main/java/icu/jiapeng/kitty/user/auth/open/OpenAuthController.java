@@ -14,16 +14,17 @@ package icu.jiapeng.kitty.user.auth.open;
 import cn.hutool.core.util.StrUtil;
 import icu.jiapeng.kitty.common.core.constant.ResultStatus;
 import icu.jiapeng.kitty.common.core.exceptions.BizException;
+import icu.jiapeng.kitty.user.api.open.OpenAuthCallbackParams;
+import icu.jiapeng.kitty.user.api.open.OpenAuthRenderParams;
+import icu.jiapeng.kitty.user.api.open.api.OpenAuthApi;
 import icu.jiapeng.kitty.user.cfg.TenantConfigEnum;
-import icu.jiapeng.kitty.user.cfg.dto.GetValDTO;
+import icu.jiapeng.kitty.user.api.cfg.dto.GetValDTO;
 import icu.jiapeng.kitty.user.cfg.service.KtConfigService;
-import icu.jiapeng.kitty.user.user.vo.LoginResultVo;
+import icu.jiapeng.kitty.user.api.user.vo.LoginResultVo;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
@@ -36,9 +37,8 @@ import java.util.Optional;
  */
 @Slf4j
 @RestController
-@RequestMapping("/open/auth")
 @RequiredArgsConstructor
-public class OpenAuthController {
+public class OpenAuthController implements OpenAuthApi {
 
     private final OpenAuthService openAuthService;
     private final KtConfigService ktConfigService;
@@ -49,7 +49,7 @@ public class OpenAuthController {
      * @param source 平台：feishu、dingtalk、github、google、microsoft、wechat
      * @return 就绪时返回 { "ready": true }，未配置时抛异常
      */
-    @GetMapping("/check/{source}")
+    @Override
     public Boolean check(@PathVariable String source) {
         if (!openAuthService.isSourceReady(source)) {
             throw new BizException("该登录方式未配置或不可用", ResultStatus.PARAM_ERROR);
@@ -64,7 +64,7 @@ public class OpenAuthController {
      * @param params   渲染参数（如 next），由请求 query 绑定，next 会拼到 redirect_uri 后
      * @param response 用于重定向
      */
-    @GetMapping("/render/{source}")
+    @Override
     public void render(
             @PathVariable String source,
             OpenAuthRenderParams params,
@@ -84,7 +84,7 @@ public class OpenAuthController {
      * @param params   回调参数（code、state），由请求 query 绑定
      * @param response 用于重定向
      */
-    @GetMapping("/callback/{source}")
+    @Override
     public void callback(
             @PathVariable String source,
             OpenAuthCallbackParams params,
@@ -100,7 +100,7 @@ public class OpenAuthController {
      * @param params   回调参数（code、state），由请求 query 绑定
      * @param response 用于重定向
      */
-    @GetMapping("/callback/{source}/{next}")
+    @Override
     public void callbackNext(
             @PathVariable String source,
             @PathVariable String next,

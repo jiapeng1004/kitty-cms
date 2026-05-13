@@ -13,11 +13,11 @@ package icu.jiapeng.kitty.user.oauth2.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import icu.jiapeng.kitty.common.core.page.PageRespVo;
-import icu.jiapeng.kitty.user.oauth2.dto.Oauth2ClientCreateDTO;
-import icu.jiapeng.kitty.user.oauth2.dto.Oauth2ClientQueryPageDTO;
-import icu.jiapeng.kitty.user.oauth2.dto.Oauth2ClientUpdateDTO;
+import icu.jiapeng.kitty.user.api.oauth2.dto.Oauth2ClientCreateDTO;
+import icu.jiapeng.kitty.user.api.oauth2.dto.Oauth2ClientQueryPageDTO;
+import icu.jiapeng.kitty.user.api.oauth2.dto.Oauth2ClientUpdateDTO;
 import icu.jiapeng.kitty.user.oauth2.entity.KtOauth2Client;
-import icu.jiapeng.kitty.user.oauth2.vo.Oauth2ClientVO;
+import icu.jiapeng.kitty.user.api.oauth2.vo.Oauth2ClientVO;
 
 public interface KtOauth2ClientService extends IService<KtOauth2Client> {
     KtOauth2Client getClientByClientId(String clientId);

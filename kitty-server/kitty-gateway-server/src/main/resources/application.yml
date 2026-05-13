@@ -1,5 +1,10 @@
 server:
   port: 9081
+#logging:
+#  level:
+#    org.springframework.cloud.gateway: TRACE
+#    org.springframework.web: TRACE
+#    org.springframework.web.servlet: TRACE
 spring:
   mvc:
     format:
@@ -34,3 +39,9 @@ spring:
         group: ${spring.cloud.nacos.config.group:}
         username: ${spring.cloud.nacos.config.username:}
         password: ${spring.cloud.nacos.config.password:}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: gateway,health,nacosdiscovery

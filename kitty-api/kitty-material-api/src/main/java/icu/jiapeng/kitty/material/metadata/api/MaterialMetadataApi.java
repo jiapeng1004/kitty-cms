@@ -31,47 +31,47 @@ import java.util.List;
 public interface MaterialMetadataApi {
 
     @Operation(summary = "创建编目模板")
-    @PostMapping("/api/material/metadata/template")
+    @PostMapping("/material/metadata/template")
     MaterialMetadataTemplateVO createTemplate(@Valid @RequestBody MaterialMetadataTemplateUpsertDTO req);
 
     @Operation(summary = "更新编目模板")
-    @PutMapping("/api/material/metadata/template")
+    @PutMapping("/material/metadata/template")
     MaterialMetadataTemplateVO updateTemplate(@Valid @RequestBody MaterialMetadataTemplateUpsertDTO req);
 
     @Operation(summary = "删除编目模板")
-    @DeleteMapping("/api/material/metadata/template")
+    @DeleteMapping("/material/metadata/template")
     void deleteTemplate(@RequestParam String id);
 
     @Operation(summary = "模板列表")
-    @GetMapping("/api/material/metadata/template/list")
+    @GetMapping("/material/metadata/template/list")
     List<MaterialMetadataTemplateVO> listTemplates(@ModelAttribute MaterialMetadataTemplateQueryDTO query);
 
     @Operation(summary = "模板字段绑定全量替换")
-    @PutMapping("/api/material/metadata/template/fields")
+    @PutMapping("/material/metadata/template/fields")
     void bindTemplateFields(@Valid @RequestBody MaterialMetadataTemplateBindFieldsDTO req);
 
     @Operation(summary = "查询模板已绑定字段（排序）")
-    @GetMapping("/api/material/metadata/template/bindings")
+    @GetMapping("/material/metadata/template/bindings")
     List<MaterialMetadataFormFieldVO> listTemplateBindings(@RequestParam String templateId);
 
     @Operation(summary = "创建编目字段定义")
-    @PostMapping("/api/material/metadata/field")
+    @PostMapping("/material/metadata/field")
     MaterialMetadataFieldVO createField(@Valid @RequestBody MaterialMetadataFieldUpsertDTO req);
 
     @Operation(summary = "更新编目字段定义")
-    @PutMapping("/api/material/metadata/field")
+    @PutMapping("/material/metadata/field")
     MaterialMetadataFieldVO updateField(@Valid @RequestBody MaterialMetadataFieldUpsertDTO req);
 
     @Operation(summary = "删除编目字段定义")
-    @DeleteMapping("/api/material/metadata/field")
+    @DeleteMapping("/material/metadata/field")
     void deleteField(@RequestParam String id);
 
     @Operation(summary = "字段定义列表")
-    @GetMapping("/api/material/metadata/field/list")
+    @GetMapping("/material/metadata/field/list")
     List<MaterialMetadataFieldVO> listFields();
 
     @Operation(summary = "按资源+模板拉取可填字段（已校验适用性）")
-    @GetMapping("/api/material/metadata/instance/form-fields")
+    @GetMapping("/material/metadata/instance/form-fields")
     List<MaterialMetadataFormFieldVO> formFieldsForResource(
             @RequestParam String resourceId,
             @RequestParam String templateId);

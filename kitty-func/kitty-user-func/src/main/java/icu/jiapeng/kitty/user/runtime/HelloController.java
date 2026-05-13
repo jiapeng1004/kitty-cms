@@ -11,13 +11,14 @@
  */
 package icu.jiapeng.kitty.user.runtime;
 
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RequestMapping("/hello")
 @RestController
 public class HelloController {
-    @RequestMapping("/world")
+    @GetMapping("/world")
     public String helloWorld() {
         return "hello world";
     }

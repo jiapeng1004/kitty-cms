@@ -13,7 +13,7 @@ package icu.jiapeng.kitty.config;
 
 import cn.dev33.satoken.interceptor.SaInterceptor;
 import cn.dev33.satoken.stp.StpUtil;
-import icu.jiapeng.kitty.user.config.KittyStpInterface;
+import icu.jiapeng.kitty.user.api.config.KittyStpInterface;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;

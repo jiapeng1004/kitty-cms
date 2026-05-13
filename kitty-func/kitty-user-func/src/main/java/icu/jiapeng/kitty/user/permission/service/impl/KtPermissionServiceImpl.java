@@ -21,6 +21,7 @@ import icu.jiapeng.kitty.user.permission.service.KtRolePermissionService;
 import icu.jiapeng.kitty.user.permission.service.KtPermissionService;
 import icu.jiapeng.kitty.user.role.service.KtUserRoleService;
 import jakarta.annotation.Resource;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 

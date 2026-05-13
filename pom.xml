@@ -26,7 +26,6 @@
         <module>kitty-plugin</module>
         <module>kitty-func</module>
         <module>kitty-server</module>
-        <module>kitty-transcoder-java</module>
     </modules>
     <scm>
         <connection/>
@@ -75,6 +74,7 @@
         <spring.grpc.version>1.0.2</spring.grpc.version>
         <spring-cloud.version>2025.1.0</spring-cloud.version>
         <spring-cloud-alibaba.version>2025.1.0.0</spring-cloud-alibaba.version>
+        <spring-modulith.version>2.0.0</spring-modulith.version>
     </properties>
 
     <dependencyManagement>
@@ -94,6 +94,14 @@
                 <version>${spring-cloud-alibaba.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+            <!-- Spring Modulith BOM -->
+            <dependency>
+                <groupId>org.springframework.modulith</groupId>
+                <artifactId>spring-modulith-bom</artifactId>
+                <version>${spring-modulith.version}</version>
+                <scope>import</scope>
+                <type>pom</type>
             </dependency>
             <dependency>
                 <groupId>icu.jiapeng</groupId>
@@ -552,29 +560,39 @@
             <plugin>
                 <groupId>com.google.code.maven-replacer-plugin</groupId>
                 <artifactId>replacer</artifactId>
+                <executions>
+                    <execution>
+                        <!-- 不绑定到任何生命周期 -->
+                        <phase>none</phase>
+                    </execution>
+                </executions>
                 <configuration>
                     <includes>
-                        <include>${project.basedir}/**/*.java</include>
-                        <include>${project.basedir}/**/*.md</include>
-                        <include>${project.basedir}/**/*.mdc</include>
+                        <include>${project.basedir}/**/*Controller.java</include>
+<!--                        <include>${project.basedir}/**/*.md</include>-->
+<!--                        <include>${project.basedir}/**/*.mdc</include>-->
                     </includes>
                     <replacements>
-                        <replacement>
-                            <token>GetExchange</token>
-                            <value>GetMapping</value>
-                        </replacement>
-                        <replacement>
-                            <token>PostExchange</token>
-                            <value>PostMapping</value>
-                        </replacement>
-                        <replacement>
-                            <token>PutExchange</token>
-                            <value>PutMapping</value>
-                        </replacement>
-                        <replacement>
-                            <token>DeleteExchange</token>
-                            <value>DeleteMapping</value>
-                        </replacement>
+<!--                        <replacement>-->
+<!--                            <token>GetExchange</token>-->
+<!--                            <value>GetMapping</value>-->
+<!--                        </replacement>-->
+<!--                        <replacement>-->
+<!--                            <token>PostExchange</token>-->
+<!--                            <value>PostMapping</value>-->
+<!--                        </replacement>-->
+<!--                        <replacement>-->
+<!--                            <token>PutExchange</token>-->
+<!--                            <value>PutMapping</value>-->
+<!--                        </replacement>-->
+<!--                        <replacement>-->
+<!--                            <token>DeleteExchange</token>-->
+<!--                            <value>DeleteMapping</value>-->
+<!--                        </replacement>-->
+<!--                        <replacement>-->
+<!--                            <token>Mapping</token>-->
+<!--                            <value>FIXME</value>-->
+<!--                        </replacement>-->
                     </replacements>
                 </configuration>
             </plugin>

@@ -23,18 +23,18 @@ import java.util.List;
 public interface MaterialInternalMessageApi {
 
     @Operation(summary = "发送站内信")
-    @PostMapping("/api/material/message/send")
+    @PostMapping("/api/message/send")
     MaterialInternalMessageVO send(@Valid @RequestBody MaterialInternalMessageSendDTO req);
 
     @Operation(summary = "收件箱列表")
-    @GetMapping("/api/material/message/list")
+    @GetMapping("/api/message/list")
     List<MaterialInternalMessageVO> list();
 
     @Operation(summary = "标记已读")
-    @PostMapping("/api/material/message/read")
+    @PostMapping("/api/message/read")
     void markRead(@RequestParam String messageId);
 
     @Operation(summary = "SSE 实时推送（event:new-message，data 为 messageId）")
-    @GetMapping(value = "/api/material/message/sse", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @GetMapping(value = "/message/sse", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     SseEmitter sse();
 }

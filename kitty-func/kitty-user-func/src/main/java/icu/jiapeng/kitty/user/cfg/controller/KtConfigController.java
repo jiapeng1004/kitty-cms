@@ -14,15 +14,11 @@ package icu.jiapeng.kitty.user.cfg.controller;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import icu.jiapeng.kitty.common.core.page.PageRespVo;
-import icu.jiapeng.kitty.user.cfg.api.ConfigApi;
+import icu.jiapeng.kitty.user.api.cfg.api.ConfigApi;
+import icu.jiapeng.kitty.user.api.cfg.dto.*;
 import icu.jiapeng.kitty.user.cfg.convert.BeansConvert;
-import icu.jiapeng.kitty.user.cfg.dto.ConfigCreateDTO;
-import icu.jiapeng.kitty.user.cfg.dto.ConfigQueryPageDTO;
-import icu.jiapeng.kitty.user.cfg.dto.ConfigUpdateDTO;
-import icu.jiapeng.kitty.user.cfg.dto.GetValDTO;
-import icu.jiapeng.kitty.user.cfg.dto.SetValDTO;
 import icu.jiapeng.kitty.user.cfg.service.KtConfigService;
-import icu.jiapeng.kitty.user.cfg.vo.ConfigListVo;
+import icu.jiapeng.kitty.user.api.cfg.vo.ConfigListVo;
 import icu.jiapeng.kitty.user.permission.constants.KtPermissionCode;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -30,13 +26,8 @@ import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -47,7 +38,6 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @Tag(name = "配置 API")
 @RestController
-@RequestMapping("/api/config")
 @Validated
 public class KtConfigController implements ConfigApi {
     @Resource
@@ -55,7 +45,6 @@ public class KtConfigController implements ConfigApi {
 
     @Override
     @Operation(description = "分页查询")
-    @GetMapping("/query")
     @SaCheckPermission(KtPermissionCode.CONFIG_VIEW)
     public PageRespVo<ConfigListVo> query(ConfigQueryPageDTO query) {
         return ktConfigService.query(query);
@@ -63,7 +52,6 @@ public class KtConfigController implements ConfigApi {
 
     @Override
     @Operation(description = "获取配置项")
-    @GetMapping("/{id}")
     @SaCheckPermission(KtPermissionCode.CONFIG_VIEW)
     public ConfigListVo getById(@NotBlank(message = "{id.not.null}") @PathVariable String id) {
         return BeansConvert.INSTANCE.config2ListVo(ktConfigService.getById(id));
@@ -71,7 +59,6 @@ public class KtConfigController implements ConfigApi {
 
     @Override
     @Operation(description = "新增配置项")
-    @PostMapping
     @SaCheckPermission(KtPermissionCode.CONFIG_CREATE)
     public String create(@Valid @RequestBody ConfigCreateDTO dto) {
         return ktConfigService.create(dto);
@@ -79,7 +66,6 @@ public class KtConfigController implements ConfigApi {
 
     @Override
     @Operation(description = "更新配置项")
-    @PutMapping("/{id}")
     @SaCheckPermission(KtPermissionCode.CONFIG_UPDATE)
     public Boolean update(@NotBlank(message = "{id.not.null}") @PathVariable String id,
                           @Valid @RequestBody ConfigUpdateDTO dto) {
@@ -88,14 +74,12 @@ public class KtConfigController implements ConfigApi {
 
     @Override
     @Operation(description = "删除配置项")
-    @DeleteMapping("/{id}")
     @SaCheckPermission(KtPermissionCode.CONFIG_DELETE)
     public Boolean remove(@NotBlank(message = "{id.not.null}") @PathVariable String id) {
         return ktConfigService.removeById(id);
     }
 
     @Operation(description = "获取配置值")
-    @GetMapping("/getVal")
     @Override
     @SaCheckPermission(KtPermissionCode.CONFIG_VIEW)
     public String getVal(GetValDTO getValDTO) {
@@ -103,7 +87,6 @@ public class KtConfigController implements ConfigApi {
     }
 
     @Operation(description = "设置配置值")
-    @PostMapping("/setVal")
     @Override
     @SaCheckPermission(KtPermissionCode.CONFIG_SET)
     public String setVal(@Valid @RequestBody SetValDTO setValDTO) {

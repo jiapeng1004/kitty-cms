@@ -11,7 +11,7 @@
  */
 package icu.jiapeng.kitty.user.auth.open;
 
-import icu.jiapeng.kitty.user.user.vo.LoginResultVo;
+import icu.jiapeng.kitty.user.api.user.vo.LoginResultVo;
 
 import java.util.Optional;
 

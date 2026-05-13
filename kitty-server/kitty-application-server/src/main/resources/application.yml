@@ -1,4 +1,10 @@
 spring:
+  threads:
+    virtual:
+      enabled: true
+  modulith:
+    runtime:
+      verification-enabled: true
   profiles:
     # 本仓库未提交 application-prod.yml；含数据源/Redis 的示例在 application-loc.yml（需激活 loc）。
     # 本地调试可改为: active: loc  或  active: prod,loc
@@ -32,3 +38,5 @@ kitty:
       - /user/register
       - /user/login
       - /view/**
+server:
+  port: 8080

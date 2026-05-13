@@ -13,13 +13,13 @@ package icu.jiapeng.kitty.user.user.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import icu.jiapeng.kitty.common.core.page.PageRespVo;
-import icu.jiapeng.kitty.user.user.dto.UserLoginParam;
-import icu.jiapeng.kitty.user.user.dto.UserQueryPageDTO;
-import icu.jiapeng.kitty.user.user.dto.UserRegister;
-import icu.jiapeng.kitty.user.user.dto.UserUpdateDTO;
+import icu.jiapeng.kitty.user.api.user.dto.UserLoginParam;
+import icu.jiapeng.kitty.user.api.user.dto.UserQueryPageDTO;
+import icu.jiapeng.kitty.user.api.user.dto.UserRegister;
+import icu.jiapeng.kitty.user.api.user.dto.UserUpdateDTO;
 import icu.jiapeng.kitty.user.user.entity.KtUser;
-import icu.jiapeng.kitty.user.user.vo.LoginResultVo;
-import icu.jiapeng.kitty.user.user.vo.UserListVO;
+import icu.jiapeng.kitty.user.api.user.vo.LoginResultVo;
+import icu.jiapeng.kitty.user.api.user.vo.UserListVO;
 
 public interface KtUserService extends IService<KtUser> {
 

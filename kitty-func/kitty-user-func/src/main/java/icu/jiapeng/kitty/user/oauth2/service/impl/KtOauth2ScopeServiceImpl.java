@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import icu.jiapeng.kitty.user.oauth2.entity.KtOauth2Scope;
 import icu.jiapeng.kitty.user.oauth2.mapper.KtOauth2ScopeMapper;
 import icu.jiapeng.kitty.user.oauth2.service.KtOauth2ScopeService;
-import icu.jiapeng.kitty.user.oauth2.vo.Oauth2ScopeVO;
+import icu.jiapeng.kitty.user.api.oauth2.vo.Oauth2ScopeVO;
 import org.springframework.stereotype.Service;
 
 import java.util.List;

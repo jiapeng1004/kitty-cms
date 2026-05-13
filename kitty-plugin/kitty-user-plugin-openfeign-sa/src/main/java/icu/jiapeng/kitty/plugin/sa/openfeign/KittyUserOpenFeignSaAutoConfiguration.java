@@ -13,9 +13,9 @@ package icu.jiapeng.kitty.plugin.sa.openfeign;
 
 import cn.dev33.satoken.dao.SaTokenDao;
 import cn.dev33.satoken.stp.StpInterface;
-import icu.jiapeng.kitty.user.internal.api.UserInternalAuthApi;
-import icu.jiapeng.kitty.user.internal.api.UserInternalPermissionApi;
-import icu.jiapeng.kitty.user.internal.api.UserInternalRoleApi;
+import icu.jiapeng.kitty.user.api.internal.api.UserInternalAuthApi;
+import icu.jiapeng.kitty.user.api.internal.api.UserInternalPermissionApi;
+import icu.jiapeng.kitty.user.api.internal.api.UserInternalRoleApi;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.context.annotation.Bean;
 

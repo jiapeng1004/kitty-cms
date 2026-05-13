@@ -12,9 +12,9 @@
 package icu.jiapeng.kitty.plugin.sa.openfeign;
 
 import cn.dev33.satoken.dao.SaTokenDao;
-import icu.jiapeng.kitty.user.internal.api.UserInternalAuthApi;
-import icu.jiapeng.kitty.user.internal.dto.SaTokenDaoUpdateBody;
-import icu.jiapeng.kitty.user.internal.dto.SaTokenValuePayload;
+import icu.jiapeng.kitty.user.api.internal.api.UserInternalAuthApi;
+import icu.jiapeng.kitty.user.api.internal.dto.SaTokenDaoUpdateBody;
+import icu.jiapeng.kitty.user.api.internal.dto.SaTokenValuePayload;
 import lombok.AllArgsConstructor;
 import org.springframework.util.StringUtils;
 

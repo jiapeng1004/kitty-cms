@@ -11,9 +11,9 @@
  */
 package icu.jiapeng.kitty.user.controller.internal;
 
-import icu.jiapeng.kitty.user.cfg.dto.GetValDTO;
+import icu.jiapeng.kitty.user.api.cfg.dto.GetValDTO;
 import icu.jiapeng.kitty.user.cfg.service.KtConfigService;
-import icu.jiapeng.kitty.user.internal.api.UserInternalConfigApi;
+import icu.jiapeng.kitty.user.api.internal.api.UserInternalConfigApi;
 import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.RestController;
 

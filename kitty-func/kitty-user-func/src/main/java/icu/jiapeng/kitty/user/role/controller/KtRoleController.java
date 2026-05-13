@@ -25,9 +25,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -36,7 +34,6 @@ import org.springframework.web.bind.annotation.RestController;
  * @author jiapeng
  * @since 2025/12/20
  */
-@RequestMapping("/api/role")
 @RestController
 @Tag(name = "角色 API")
 @Validated
@@ -44,7 +41,6 @@ public class KtRoleController {
     @Resource
     private KtUserRoleService ktUserRoleService;
 
-    @GetMapping("/detail/{roleId}")
     @ApiResponse(description = "角色详情")
     @Operation(summary = "角色id 获取获取角色详情")
     @SaCheckPermission(KtPermissionCode.ROLE_VIEW)
@@ -52,7 +48,6 @@ public class KtRoleController {
         return ktUserRoleService.detail(roleId);
     }
 
-    @GetMapping("/page")
     @ApiResponse(description = "角色分页查询结果")
     @Operation(summary = "角色分页查询")
     @SaCheckPermission(KtPermissionCode.ROLE_VIEW)

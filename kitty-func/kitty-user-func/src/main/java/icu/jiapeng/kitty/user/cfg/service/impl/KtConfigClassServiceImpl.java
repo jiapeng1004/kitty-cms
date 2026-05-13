@@ -22,13 +22,13 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import icu.jiapeng.kitty.common.core.page.CommonOrder;
 import icu.jiapeng.kitty.common.core.page.PageRespVo;
 import icu.jiapeng.kitty.user.cfg.convert.BeansConvert;
-import icu.jiapeng.kitty.user.cfg.dto.ClassCreateDTO;
-import icu.jiapeng.kitty.user.cfg.dto.ClassUpdateDTO;
-import icu.jiapeng.kitty.user.cfg.dto.ConfigClassPageDTO;
+import icu.jiapeng.kitty.user.api.cfg.dto.ClassCreateDTO;
+import icu.jiapeng.kitty.user.api.cfg.dto.ClassUpdateDTO;
+import icu.jiapeng.kitty.user.api.cfg.dto.ConfigClassPageDTO;
 import icu.jiapeng.kitty.user.cfg.entity.KtConfigClass;
 import icu.jiapeng.kitty.user.cfg.mapper.KtConfigClassMapper;
 import icu.jiapeng.kitty.user.cfg.service.KtConfigClassService;
-import icu.jiapeng.kitty.user.cfg.vo.ConfigClassListVo;
+import icu.jiapeng.kitty.user.api.cfg.vo.ConfigClassListVo;
 import org.springframework.stereotype.Service;
 
 /**

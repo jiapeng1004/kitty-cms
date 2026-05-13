@@ -2,7 +2,7 @@ package icu.jiapeng.kitty.user.oauth2.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import icu.jiapeng.kitty.user.oauth2.entity.KtOauth2Scope;
-import icu.jiapeng.kitty.user.oauth2.vo.Oauth2ScopeVO;
+import icu.jiapeng.kitty.user.api.oauth2.vo.Oauth2ScopeVO;
 
 import java.util.List;
 

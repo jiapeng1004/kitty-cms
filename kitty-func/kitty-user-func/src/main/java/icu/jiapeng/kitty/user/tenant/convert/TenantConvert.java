@@ -11,10 +11,10 @@
  */
 package icu.jiapeng.kitty.user.tenant.convert;
 
-import icu.jiapeng.kitty.user.tenant.dto.TenantCreateDTO;
-import icu.jiapeng.kitty.user.tenant.dto.TenantUpdateDTO;
+import icu.jiapeng.kitty.user.api.tenant.dto.TenantCreateDTO;
+import icu.jiapeng.kitty.user.api.tenant.dto.TenantUpdateDTO;
 import icu.jiapeng.kitty.user.tenant.entity.KtTenant;
-import icu.jiapeng.kitty.user.tenant.vo.TenantVO;
+import icu.jiapeng.kitty.user.api.tenant.vo.TenantVO;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 

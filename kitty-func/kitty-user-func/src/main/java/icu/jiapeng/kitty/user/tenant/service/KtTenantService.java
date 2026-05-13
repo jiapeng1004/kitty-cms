@@ -12,10 +12,10 @@
 package icu.jiapeng.kitty.user.tenant.service;
 
 import icu.jiapeng.kitty.common.core.page.PageRespVo;
-import icu.jiapeng.kitty.user.tenant.dto.TenantCreateDTO;
-import icu.jiapeng.kitty.user.tenant.dto.TenantQueryPageDTO;
-import icu.jiapeng.kitty.user.tenant.dto.TenantUpdateDTO;
-import icu.jiapeng.kitty.user.tenant.vo.TenantVO;
+import icu.jiapeng.kitty.user.api.tenant.dto.TenantCreateDTO;
+import icu.jiapeng.kitty.user.api.tenant.dto.TenantQueryPageDTO;
+import icu.jiapeng.kitty.user.api.tenant.dto.TenantUpdateDTO;
+import icu.jiapeng.kitty.user.api.tenant.vo.TenantVO;
 
 import java.util.List;
 

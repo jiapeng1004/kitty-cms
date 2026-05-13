@@ -13,13 +13,13 @@ package icu.jiapeng.kitty.user.cfg.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import icu.jiapeng.kitty.common.core.page.PageRespVo;
-import icu.jiapeng.kitty.user.cfg.dto.ConfigCreateDTO;
-import icu.jiapeng.kitty.user.cfg.dto.ConfigQueryPageDTO;
-import icu.jiapeng.kitty.user.cfg.dto.ConfigUpdateDTO;
-import icu.jiapeng.kitty.user.cfg.vo.ConfigListVo;
+import icu.jiapeng.kitty.user.api.cfg.dto.ConfigCreateDTO;
+import icu.jiapeng.kitty.user.api.cfg.dto.ConfigQueryPageDTO;
+import icu.jiapeng.kitty.user.api.cfg.dto.ConfigUpdateDTO;
+import icu.jiapeng.kitty.user.api.cfg.vo.ConfigListVo;
 import icu.jiapeng.kitty.user.cfg.TenantConfigEnum;
-import icu.jiapeng.kitty.user.cfg.dto.GetValDTO;
-import icu.jiapeng.kitty.user.cfg.dto.SetValDTO;
+import icu.jiapeng.kitty.user.api.cfg.dto.GetValDTO;
+import icu.jiapeng.kitty.user.api.cfg.dto.SetValDTO;
 import icu.jiapeng.kitty.user.cfg.entity.KtConfig;
 import jakarta.validation.Valid;
 

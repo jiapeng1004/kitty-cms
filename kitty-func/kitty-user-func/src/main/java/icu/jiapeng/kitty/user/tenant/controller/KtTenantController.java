@@ -12,12 +12,12 @@
 package icu.jiapeng.kitty.user.tenant.controller;
 
 import icu.jiapeng.kitty.common.core.page.PageRespVo;
-import icu.jiapeng.kitty.user.tenant.api.TenantApi;
-import icu.jiapeng.kitty.user.tenant.dto.TenantCreateDTO;
-import icu.jiapeng.kitty.user.tenant.dto.TenantQueryPageDTO;
-import icu.jiapeng.kitty.user.tenant.dto.TenantUpdateDTO;
+import icu.jiapeng.kitty.user.api.tenant.api.TenantApi;
+import icu.jiapeng.kitty.user.api.tenant.dto.TenantCreateDTO;
+import icu.jiapeng.kitty.user.api.tenant.dto.TenantQueryPageDTO;
+import icu.jiapeng.kitty.user.api.tenant.dto.TenantUpdateDTO;
 import icu.jiapeng.kitty.user.tenant.service.KtTenantService;
-import icu.jiapeng.kitty.user.tenant.vo.TenantVO;
+import icu.jiapeng.kitty.user.api.tenant.vo.TenantVO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,37 +33,31 @@ public class KtTenantController implements TenantApi {
     private final KtTenantService ktTenantService;
 
     @Override
-    @PostMapping("/api/tenant")
     public String create(@Valid @RequestBody TenantCreateDTO dto) {
         return ktTenantService.create(dto);
     }
 
-    @GetMapping("/api/tenant/list")
     @Override
     public List<TenantVO> list() {
         return ktTenantService.listAll();
     }
 
-    @GetMapping("/api/tenant/query")
     @Override
     public PageRespVo<TenantVO> query(TenantQueryPageDTO query) {
         return ktTenantService.query(query);
     }
 
     @Override
-    @GetMapping("/api/tenant/{id}")
     public TenantVO getById(@PathVariable String id) {
         return ktTenantService.getById(id);
     }
 
     @Override
-    @PutMapping("/api/tenant/{id}")
     public boolean update(@PathVariable String id, @Valid @RequestBody TenantUpdateDTO dto) {
         return ktTenantService.update(id, dto);
     }
 
     @Override
-    @DeleteMapping("/api/tenant/{id}")
     public boolean delete(@PathVariable String id) {
         return ktTenantService.delete(id);
     }

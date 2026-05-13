@@ -12,7 +12,7 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
  * @since 2026/1/11
  */
 @SpringBootApplication
-@EnableFeignClients(basePackages = "icu.jiapeng.kitty.user.internal.api")
+@EnableFeignClients(basePackages = "icu.jiapeng.kitty.user.api.internal.api")
 public class KittyMaterialApplication {
     static void main(String[] args) {
         SpringApplication.run(KittyMaterialApplication.class, args);

@@ -2,12 +2,12 @@ package icu.jiapeng.kitty.user.oauth2.controller;
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
 import icu.jiapeng.kitty.common.core.page.PageRespVo;
-import icu.jiapeng.kitty.user.oauth2.api.KtOauth2ClientApi;
-import icu.jiapeng.kitty.user.oauth2.dto.Oauth2ClientCreateDTO;
-import icu.jiapeng.kitty.user.oauth2.dto.Oauth2ClientQueryPageDTO;
-import icu.jiapeng.kitty.user.oauth2.dto.Oauth2ClientUpdateDTO;
+import icu.jiapeng.kitty.user.api.oauth2.api.KtOauth2ClientApi;
+import icu.jiapeng.kitty.user.api.oauth2.dto.Oauth2ClientCreateDTO;
+import icu.jiapeng.kitty.user.api.oauth2.dto.Oauth2ClientQueryPageDTO;
+import icu.jiapeng.kitty.user.api.oauth2.dto.Oauth2ClientUpdateDTO;
 import icu.jiapeng.kitty.user.oauth2.service.KtOauth2ClientService;
-import icu.jiapeng.kitty.user.oauth2.vo.Oauth2ClientVO;
+import icu.jiapeng.kitty.user.api.oauth2.vo.Oauth2ClientVO;
 import icu.jiapeng.kitty.user.permission.constants.KtPermissionCode;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -35,7 +35,6 @@ public class KtOauth2ClientController implements KtOauth2ClientApi {
      */
     @Override
     @Operation(summary = "分页查询 OAuth2 客户端")
-    @GetMapping("/api/oauth2-client/query")
     @SaCheckPermission(KtPermissionCode.OAUTH2_CLIENT_VIEW)
     public PageRespVo<Oauth2ClientVO> query(Oauth2ClientQueryPageDTO query) {
         return ktOauth2ClientService.query(query);
@@ -46,7 +45,6 @@ public class KtOauth2ClientController implements KtOauth2ClientApi {
      */
     @Override
     @Operation(summary = "根据ID获取 OAuth2 客户端")
-    @GetMapping("/api/oauth2-client/{id}")
     @SaCheckPermission(KtPermissionCode.OAUTH2_CLIENT_VIEW)
     public Oauth2ClientVO getById(@NotBlank @PathVariable String id) {
         return ktOauth2ClientService.getDetail(id);
@@ -57,7 +55,6 @@ public class KtOauth2ClientController implements KtOauth2ClientApi {
      */
     @Override
     @Operation(summary = "新增 OAuth2 客户端")
-    @PostMapping("/api/oauth2-client")
     @SaCheckPermission(KtPermissionCode.OAUTH2_CLIENT_CREATE)
     public Oauth2ClientVO create(@Valid @RequestBody Oauth2ClientCreateDTO dto) {
         return ktOauth2ClientService.create(dto);
@@ -68,7 +65,6 @@ public class KtOauth2ClientController implements KtOauth2ClientApi {
      */
     @Override
     @Operation(summary = "更新 OAuth2 客户端")
-    @PutMapping("/api/oauth2-client/{id}")
     @SaCheckPermission(KtPermissionCode.OAUTH2_CLIENT_UPDATE)
     public boolean update(@NotBlank @PathVariable String id, @Valid @RequestBody Oauth2ClientUpdateDTO dto) {
         return ktOauth2ClientService.update(id, dto);
@@ -79,7 +75,6 @@ public class KtOauth2ClientController implements KtOauth2ClientApi {
      */
     @Override
     @Operation(summary = "删除 OAuth2 客户端")
-    @DeleteMapping("/api/oauth2-client/{id}")
     @SaCheckPermission(KtPermissionCode.OAUTH2_CLIENT_DELETE)
     public boolean delete(@NotBlank @PathVariable String id) {
         return ktOauth2ClientService.delete(id);

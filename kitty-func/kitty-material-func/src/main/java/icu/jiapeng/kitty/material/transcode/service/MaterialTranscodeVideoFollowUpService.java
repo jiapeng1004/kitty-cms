@@ -16,7 +16,7 @@ import icu.jiapeng.kitty.material.transcode.entity.MaterialTranscodeMagicClient;
 import icu.jiapeng.kitty.transcoder.api.MagicExtractFramesRequest;
 import icu.jiapeng.kitty.transcoder.api.MagicImageConvertRequest;
 import icu.jiapeng.kitty.transcoder.api.TaskVO;
-import icu.jiapeng.kitty.user.internal.api.UserInternalConfigApi;
+import icu.jiapeng.kitty.user.api.internal.api.UserInternalConfigApi;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

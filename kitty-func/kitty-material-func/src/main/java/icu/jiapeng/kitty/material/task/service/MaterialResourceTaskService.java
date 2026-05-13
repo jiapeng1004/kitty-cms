@@ -20,7 +20,7 @@ import icu.jiapeng.kitty.material.transcode.TranscodeSubmitCommand;
 import icu.jiapeng.kitty.material.transcode.entity.KtMaterialTranscodeStrategy;
 import icu.jiapeng.kitty.material.transcode.model.TranscodeStrategyResolution;
 import icu.jiapeng.kitty.material.transcode.service.MaterialTranscodeStrategyFacade;
-import icu.jiapeng.kitty.user.internal.api.UserInternalConfigApi;
+import icu.jiapeng.kitty.user.api.internal.api.UserInternalConfigApi;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

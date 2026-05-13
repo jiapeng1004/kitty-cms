@@ -14,15 +14,13 @@ package icu.jiapeng.kitty.user.dashboard.controller;
 import icu.jiapeng.kitty.user.cfg.service.KtConfigClassService;
 import icu.jiapeng.kitty.user.permission.constants.KtPermissionCode;
 import icu.jiapeng.kitty.user.cfg.service.KtConfigService;
-import icu.jiapeng.kitty.user.dashboard.api.DashboardApi;
-import icu.jiapeng.kitty.user.dashboard.vo.DashboardStatsVO;
+import icu.jiapeng.kitty.user.api.dashboard.api.DashboardApi;
+import icu.jiapeng.kitty.user.api.dashboard.vo.DashboardStatsVO;
 import icu.jiapeng.kitty.user.user.service.KtUserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import cn.dev33.satoken.annotation.SaCheckPermission;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -32,7 +30,6 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @Tag(name = "仪表盘 API")
 @RestController
-@RequestMapping("/api/dashboard")
 @RequiredArgsConstructor
 public class DashboardController implements DashboardApi {
 
@@ -42,7 +39,6 @@ public class DashboardController implements DashboardApi {
 
     @Override
     @Operation(summary = "统计概览")
-    @GetMapping("/stats")
     @SaCheckPermission(KtPermissionCode.SYSTEM_DASHBOARD_VIEW)
     public DashboardStatsVO stats() {
         return DashboardStatsVO.builder()

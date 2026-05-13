@@ -44,8 +44,8 @@ export default defineConfig({
     server: {
         port: 3000,
         proxy: {
-            '/kitty-user': {
-                target: 'http://localhost:9701',
+            '/api': {
+                target: 'http://localhost:9081',
                 changeOrigin: true,
             }
         }

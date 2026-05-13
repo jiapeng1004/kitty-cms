@@ -11,7 +11,7 @@
  */
 package icu.jiapeng.kitty.user.controller.internal;
 
-import icu.jiapeng.kitty.user.internal.api.UserInternalRoleApi;
+import icu.jiapeng.kitty.user.api.internal.api.UserInternalRoleApi;
 import icu.jiapeng.kitty.user.role.service.KtUserRoleService;
 import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.RestController;

@@ -15,11 +15,12 @@ import cn.dev33.satoken.secure.BCrypt;
 import cn.dev33.satoken.session.SaSession;
 import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.util.StrUtil;
+import icu.jiapeng.kitty.user.api.constans.UserStatus;
 import icu.jiapeng.kitty.user.auth.open.OpenAuthCallbackService;
 import icu.jiapeng.kitty.user.auth.open.service.KtOpenUserService;
 import icu.jiapeng.kitty.user.user.entity.KtUser;
 import icu.jiapeng.kitty.user.user.service.KtUserService;
-import icu.jiapeng.kitty.user.user.vo.LoginResultVo;
+import icu.jiapeng.kitty.user.api.user.vo.LoginResultVo;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -78,7 +79,7 @@ public class OpenAuthCallbackServiceImpl implements OpenAuthCallbackService {
         user.setNickName(nick);
         user.setRealName(StrUtil.isNotBlank(nickname) ? nickname : null);
         user.setPwd(BCrypt.hashpw(UUID.randomUUID().toString()));
-        user.setStatus(icu.jiapeng.kitty.user.constans.UserStatus.NORMAL.getStatus());
+        user.setStatus(UserStatus.NORMAL.getStatus());
         if (!ktUserService.save(user)) {
             return null;
         }

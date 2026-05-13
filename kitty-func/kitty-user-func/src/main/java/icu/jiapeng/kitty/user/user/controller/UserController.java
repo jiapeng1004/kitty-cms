@@ -19,29 +19,25 @@ import icu.jiapeng.kitty.user.captcha.CaptchaService;
 import icu.jiapeng.kitty.user.captcha.CaptchaServiceType;
 import icu.jiapeng.kitty.user.cfg.TenantConfigEnum;
 import icu.jiapeng.kitty.user.cfg.service.KtConfigService;
-import icu.jiapeng.kitty.user.user.api.UserApi;
-import icu.jiapeng.kitty.user.user.dto.UserLoginParam;
-import icu.jiapeng.kitty.user.user.dto.UserQueryPageDTO;
-import icu.jiapeng.kitty.user.user.dto.UserRegister;
-import icu.jiapeng.kitty.user.user.dto.UserUpdateDTO;
+import icu.jiapeng.kitty.user.api.user.api.UserApi;
+import icu.jiapeng.kitty.user.api.user.dto.UserLoginParam;
+import icu.jiapeng.kitty.user.api.user.dto.UserQueryPageDTO;
+import icu.jiapeng.kitty.user.api.user.dto.UserRegister;
+import icu.jiapeng.kitty.user.api.user.dto.UserUpdateDTO;
 import icu.jiapeng.kitty.user.user.service.KtUserService;
-import icu.jiapeng.kitty.user.user.vo.LoginResultVo;
-import icu.jiapeng.kitty.user.user.vo.UserListVO;
+import icu.jiapeng.kitty.user.api.user.vo.LoginResultVo;
+import icu.jiapeng.kitty.user.api.user.vo.UserListVO;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.RestController;
-
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
 
@@ -56,25 +52,21 @@ public class UserController implements UserApi {
     private final KtConfigService ktConfigService;
 
     @Override
-    @PostMapping("/api/user/register")
     public String register(@RequestBody UserRegister userRegister) {
         return ktUserService.register(userRegister);
     }
 
-    @PostMapping("/api/user/login")
     @Override
     public LoginResultVo login(@RequestBody UserLoginParam userLoginParam) {
         return ktUserService.login(userLoginParam);
     }
 
     @Override
-    @PostMapping("/api/user/logout")
     public void logout() {
         ktUserService.logout();
     }
 
     @Operation(summary = "验证码")
-    @GetMapping("/api/user/captcha")
     @Override
     public void captcha(HttpServletRequest request, HttpServletResponse response) {
         CaptchaService service = resolveCaptchaService(request);
@@ -106,21 +98,18 @@ public class UserController implements UserApi {
 
     @Override
     @Operation(summary = "分页查询用户（管理端）")
-    @GetMapping("/api/user/query")
     public PageRespVo<UserListVO> query(UserQueryPageDTO query) {
         return ktUserService.query(query);
     }
 
     @Override
     @Operation(summary = "根据ID获取用户详情（管理端）")
-    @GetMapping("/api/user/{id}")
     public UserListVO getDetail(@NotBlank @PathVariable String id) {
         return ktUserService.getDetail(id);
     }
 
     @Override
     @Operation(summary = "更新用户（管理端）")
-    @PutMapping("/api/user/{id}")
     public boolean update(@NotBlank @PathVariable String id, @Valid @RequestBody UserUpdateDTO dto) {
         return ktUserService.update(id, dto);
     }

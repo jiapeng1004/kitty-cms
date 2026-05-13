@@ -13,14 +13,14 @@ package icu.jiapeng.kitty.user.auth.open.impl;
 
 import cn.hutool.core.util.StrUtil;
 import icu.jiapeng.kitty.common.core.util.PathUtil;
-import icu.jiapeng.kitty.user.auth.open.OpenAuthCallbackParams;
+import icu.jiapeng.kitty.user.api.open.OpenAuthCallbackParams;
 import icu.jiapeng.kitty.user.auth.open.OpenAuthCallbackService;
-import icu.jiapeng.kitty.user.auth.open.OpenAuthRenderParams;
+import icu.jiapeng.kitty.user.api.open.OpenAuthRenderParams;
 import icu.jiapeng.kitty.user.auth.open.OpenAuthService;
 import icu.jiapeng.kitty.user.cfg.TenantConfigEnum;
 import icu.jiapeng.kitty.user.cfg.service.KtConfigService;
 import icu.jiapeng.kitty.common.core.util.CommonServletUtil;
-import icu.jiapeng.kitty.user.user.vo.LoginResultVo;
+import icu.jiapeng.kitty.user.api.user.vo.LoginResultVo;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import me.zhyd.oauth.config.AuthConfig;

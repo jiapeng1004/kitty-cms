@@ -2,7 +2,7 @@ package icu.jiapeng.kitty.user.menu.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import icu.jiapeng.kitty.user.menu.entity.KtMenu;
-import icu.jiapeng.kitty.user.menu.vo.MenuTreeVo;
+import icu.jiapeng.kitty.user.api.menu.vo.MenuTreeVo;
 
 import java.util.List;
 

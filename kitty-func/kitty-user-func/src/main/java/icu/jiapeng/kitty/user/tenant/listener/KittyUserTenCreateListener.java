@@ -1,13 +1,15 @@
 package icu.jiapeng.kitty.user.tenant.listener;
 
 
+import icu.jiapeng.kitty.user.api.tenant.listener.TenCreateListener;
 import icu.jiapeng.kitty.user.cfg.entity.KtConfig;
 import icu.jiapeng.kitty.user.cfg.service.KtConfigService;
 import icu.jiapeng.kitty.user.config.UserConfigProperties;
-import icu.jiapeng.kitty.user.db.TenantAwareDataSource;
-import icu.jiapeng.kitty.user.scope.TenScoped;
-import icu.jiapeng.kitty.user.tenant.vo.TenantVO;
+import icu.jiapeng.kitty.user.api.db.TenantAwareDataSource;
+import icu.jiapeng.kitty.user.api.scope.TenScoped;
+import icu.jiapeng.kitty.user.api.tenant.vo.TenantVO;
 import jakarta.annotation.Resource;
+import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.springframework.stereotype.Service;
 
@@ -20,9 +22,9 @@ import java.util.List;
  * @since 2026/2/11
  */
 @Service
+@RequiredArgsConstructor
 public class KittyUserTenCreateListener implements TenCreateListener {
-    @Resource
-    private TenantAwareDataSource tenantAwareDataSource;
+    private final TenantAwareDataSource tenantAwareDataSource;
     @Resource
     private UserConfigProperties userConfigProperties;
     @Resource

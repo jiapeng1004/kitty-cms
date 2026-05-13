@@ -13,11 +13,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -56,7 +53,6 @@ public class OAuth2AuthorizationServerController implements OAuth2AuthorizationS
     @Operation(
             summary = "令牌端点",
             description = "POST /oauth2/token，RFC 6749 §3.2，application/x-www-form-urlencoded。")
-    @PostMapping(value = "/oauth2/token", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> token(
             @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization,
             @ModelAttribute OAuth2TokenRequest body) {
@@ -77,7 +73,6 @@ public class OAuth2AuthorizationServerController implements OAuth2AuthorizationS
     @Operation(
             summary = "令牌自省端点",
             description = "POST /oauth2/introspect，RFC 7662，application/x-www-form-urlencoded。")
-    @PostMapping(value = "/oauth2/introspect", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> introspect(
             @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization,
             @ModelAttribute OAuth2TokenIntrospectionRequest body) {
@@ -98,7 +93,6 @@ public class OAuth2AuthorizationServerController implements OAuth2AuthorizationS
     @Operation(
             summary = "令牌撤销端点",
             description = "POST /oauth2/revoke，RFC 7009，application/x-www-form-urlencoded。")
-    @PostMapping(value = "/oauth2/revoke", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
     public ResponseEntity<?> revoke(
             @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization,
             @ModelAttribute OAuth2TokenRevocationRequest body) {
@@ -121,7 +115,6 @@ public class OAuth2AuthorizationServerController implements OAuth2AuthorizationS
     @Operation(
             summary = "授权端点",
             description = "GET /oauth2/authorize，RFC 6749 §4.1.1 授权码模式。")
-    @GetMapping("/oauth2/authorize")
     public void authorize(
             @ModelAttribute OAuth2AuthorizeRequest authorizeRequest,
             HttpServletRequest request,
@@ -141,7 +134,6 @@ public class OAuth2AuthorizationServerController implements OAuth2AuthorizationS
     @Operation(
             summary = "授权服务器元数据",
             description = "GET /.well-known/oauth-authorization-server，RFC 8414。")
-    @GetMapping(value = "/.well-known/oauth-authorization-server", produces = MediaType.APPLICATION_JSON_VALUE)
     public OAuth2AuthorizationServerMetadataResponse authorizationServerMetadata(HttpServletRequest request) {
         return oauth2AuthorizationServerService.buildAuthorizationServerMetadata(request);
     }
