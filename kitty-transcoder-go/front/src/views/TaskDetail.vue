@@ -155,7 +155,7 @@ async function load() {
     if (task.value?.id) {
       const p = await getProgress(task.value.id)
       progressData.value = { progress: p.progress ?? 0, stepProgressList: p.stepProgressList ?? [] }
-      if (task.value?.outputPath) {
+      if (task.value?.outputPath || task.value?.status === 'COMPLETED') {
         try {
           const info = await getPreviewInfo(task.value.id)
           const token = localStorage.getItem('transcoder_token')
