@@ -13,7 +13,7 @@ package icu.jiapeng.kitty.user.role.dto;
 
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.PageDTO;
-import icu.jiapeng.kitty.user.role.vo.KtRoleListInfoVo;
+import icu.jiapeng.kitty.user.api.role.vo.KtRoleListInfoVo;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 

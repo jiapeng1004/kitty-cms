@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 public interface RoleMenuPermissionApi {
 
     @Operation(summary = "Super接口：按菜单全部p_codes为角色开通菜单及权限")
-    @PostMapping("/api/admin/role/menu/super/grant")
+    @PostMapping("/api/role/menu/super/grant")
     void grantMenuWithPermissionsSuper(@NotBlank(message = "role.id.not.blank") String roleId,
                                        @NotBlank(message = "menu.id.not.blank") String menuId);
 

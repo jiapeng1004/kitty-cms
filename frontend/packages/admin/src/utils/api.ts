@@ -1,27 +1,23 @@
-import axios from 'axios'
-import {isUnauthorizedError, redirectToLogin} from '@/utils/authRedirect'
+import axios, {type AxiosInstance} from 'axios'
+import {isUnauthorizedError, normalizeAccessToken, redirectToLogin} from '@/utils/authRedirect'
 
 const baseURL = import.meta.env.VITE_API_BASEURL || ''
-
-const instance = axios.create({
-    baseURL,
-    timeout: 10000,
-    headers: {
-        'Content-Type': 'application/json'
-    }
-})
 
 const TOKEN_KEY = 'kitty_admin_token'
 const TENANT_ID_KEY = 'kitty_admin_tenant_id'
 export const USER_NAME_KEY = 'kitty_admin_user_name'
 
 export function getToken(): string | null {
-    return localStorage.getItem(TOKEN_KEY)
+    return normalizeAccessToken(localStorage.getItem(TOKEN_KEY))
 }
 
 export function setToken(token: string | null): void {
-    if (token) localStorage.setItem(TOKEN_KEY, token)
-    else localStorage.removeItem(TOKEN_KEY)
+    const t = normalizeAccessToken(token)
+    if (t) {
+        localStorage.setItem(TOKEN_KEY, t)
+    } else {
+        localStorage.removeItem(TOKEN_KEY)
+    }
 }
 
 export function getTenantId(): string {
@@ -54,29 +50,53 @@ export function getResponseMessage(error: unknown): string {
     return err.message != null ? String(err.message) : '请求失败'
 }
 
-instance.interceptors.request.use(
-    (config) => {
-        const token = getToken()
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`
+function attachAuthInterceptor(client: AxiosInstance): AxiosInstance {
+    client.interceptors.request.use(
+        (config) => {
+            const token = getToken()
+            if (token) {
+                config.headers.Authorization = `Bearer ${token}`
+            }
+            const tenantId = getTenantId()
+            if (tenantId) {
+                config.headers['X-Tenant-Id'] = tenantId
+            }
+            return config
+        },
+        (error) => Promise.reject(error)
+    )
+    client.interceptors.response.use(
+        (response) => response,
+        (error) => {
+            if (isUnauthorizedError(error)) {
+                redirectToLogin()
+            }
+            return Promise.reject(error)
         }
-        const tenantId = getTenantId()
-        if (tenantId) {
-            config.headers['X-Tenant-Id'] = tenantId
-        }
-        return config
-    },
-    (error) => Promise.reject(error)
-)
+    )
+    return client
+}
+
+/** 未解包 body，用于需要 HTTP 状态码（如 204）的场景 */
+export const httpClient = attachAuthInterceptor(axios.create({
+    baseURL,
+    timeout: 10000,
+    headers: {
+        'Content-Type': 'application/json'
+    }
+}))
+
+const instance = attachAuthInterceptor(axios.create({
+    baseURL,
+    timeout: 10000,
+    headers: {
+        'Content-Type': 'application/json'
+    }
+}))
 
 instance.interceptors.response.use(
     (response) => response.data,
-    (error) => {
-        if (isUnauthorizedError(error)) {
-            redirectToLogin()
-        }
-        return Promise.reject(error)
-    }
+    (error) => Promise.reject(error)
 )
 
 export default instance

@@ -13,7 +13,7 @@ package icu.jiapeng.kitty.user.role.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import icu.jiapeng.kitty.user.role.entity.KtRole;
-import icu.jiapeng.kitty.user.role.vo.RoleDetailInfoVo;
+import icu.jiapeng.kitty.user.api.role.vo.RoleDetailInfoVo;
 
 import java.util.List;
 

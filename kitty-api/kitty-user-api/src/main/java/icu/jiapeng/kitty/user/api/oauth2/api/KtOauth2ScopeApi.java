@@ -19,6 +19,6 @@ public interface KtOauth2ScopeApi {
      * 获取 OAuth2 scope 列表
      */
     @Operation(summary = "获取 OAuth2 scope 列表")
-    @GetMapping("/open/oauth2-scope/list")
+    @GetMapping("/open/oauth2/scope/list")
     List<Oauth2ScopeVO> list();
 }

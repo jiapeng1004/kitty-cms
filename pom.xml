@@ -57,7 +57,7 @@
         <spring-data.r2dbc.version>4.0.0</spring-data.r2dbc.version>
         <r2dbc-postgresql.version>1.1.1.RELEASE</r2dbc-postgresql.version>
         <maven-license-plugin.version>4.2</maven-license-plugin.version>
-        <sa-token.version>1.37.0</sa-token.version>
+        <sa-token.version>1.38.0</sa-token.version>
         <podam.version>8.0.2.RELEASE</podam.version>
         <commons-io.version>2.21.0</commons-io.version>
         <hibernate-validator>9.1.0.Final</hibernate-validator>

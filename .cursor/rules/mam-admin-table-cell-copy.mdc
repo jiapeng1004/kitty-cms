@@ -1,6 +1,6 @@
 ---
 description: MAM 管理列表表格「单击单元格复制」交互（无复制按钮），新管理页应复用同一套实现
-globs: frontend/packages/mam/**/*.vue
+globs: frontend/packages/admin/src/mam/**/*.vue
 alwaysApply: false
 ---
 

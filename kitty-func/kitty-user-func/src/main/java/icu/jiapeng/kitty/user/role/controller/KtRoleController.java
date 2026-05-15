@@ -13,11 +13,11 @@ package icu.jiapeng.kitty.user.role.controller;
 
 
 import cn.dev33.satoken.annotation.SaCheckPermission;
+import icu.jiapeng.kitty.user.api.role.vo.KtRoleListInfoVo;
+import icu.jiapeng.kitty.user.api.role.vo.RoleDetailInfoVo;
 import icu.jiapeng.kitty.user.permission.constants.KtPermissionCode;
 import icu.jiapeng.kitty.user.role.entity.KtRole;
 import icu.jiapeng.kitty.user.role.service.KtUserRoleService;
-import icu.jiapeng.kitty.user.role.vo.KtRoleListInfoVo;
-import icu.jiapeng.kitty.user.role.vo.RoleDetailInfoVo;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -37,7 +37,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @Tag(name = "角色 API")
 @Validated
-public class KtRoleController {
+public class KtRoleController implements icu.jiapeng.kitty.user.api.role.api.KtRoleApi {
     @Resource
     private KtUserRoleService ktUserRoleService;
 

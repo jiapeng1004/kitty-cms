@@ -1,5 +1,23 @@
 /** 与 api.ts 保持一致的键，避免与 api 互相 import 造成循环依赖 */
 const TOKEN_KEY = 'kitty_admin_token'
+
+/**
+ * 与 kitty-user Sa-Token 一致：请求头为 Authorization、前缀 Bearer，持久化层只存 raw token（uuid）。
+ * 若历史数据或回调 URL 误带了 "Bearer " 前缀，读入时剥掉，避免重复拼接成非法头。
+ */
+export function normalizeAccessToken(raw: string | null | undefined): string | null {
+  if (raw == null) {
+    return null
+  }
+  let t = String(raw).trim()
+  if (!t) {
+    return null
+  }
+  if (/^bearer\s+/i.test(t)) {
+    t = t.replace(/^bearer\s+/i, '').trim()
+  }
+  return t || null
+}
 const TENANT_ID_KEY = 'kitty_admin_tenant_id'
 const USER_NAME_KEY = 'kitty_admin_user_name'
 

@@ -36,7 +36,7 @@ public final class CommonServletUtil {
 
     /**
      * 获取当前请求对应的服务根 URL：scheme + host + port（80/443 省略）+ contextPath。
-     * 用于拼接回调等绝对路径（如 /open/auth/callback/feishu）。
+     * 用于拼接回调等绝对路径（如 /open/oauth2/auth/callback/feishu）。
      *
      * @return 当前域根 URL，如 https://example.com/kitty-user；非请求线程或无法获取 request 时返回 null
      */

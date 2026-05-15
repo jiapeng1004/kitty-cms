@@ -1,7 +1,4 @@
 import api from '../utils/api'
-import { USER_SERVICE_PATH } from './constants'
-
-const PREFIX = `${USER_SERVICE_PATH}/api/role`
 
 export interface RoleItem {
   id: string
@@ -14,6 +11,5 @@ export interface RolePageResp {
 }
 
 export function getRolePage(): Promise<RolePageResp> {
-  return api.get(`${PREFIX}/page`)
+  return api.get('/api/role/page')
 }
-

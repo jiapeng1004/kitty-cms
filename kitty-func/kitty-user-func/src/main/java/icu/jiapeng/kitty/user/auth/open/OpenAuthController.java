@@ -33,7 +33,7 @@ import java.util.Optional;
 
 /**
  * 开放认证（三方登录）：跳转授权、回调登录。
- * URL 仍为 /oauth2 以兼容前端与第三方回调；接口不依赖 JustAuth，由实现（如 JustAuth）完成具体协议。
+ * 路径落在网关 {@code /open/oauth2/**} 下（如 {@code /open/oauth2/auth/render/{source}}）；由 JustAuth 等实现具体协议。
  */
 @Slf4j
 @RestController

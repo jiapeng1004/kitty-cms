@@ -26,28 +26,28 @@ import java.util.List;
 public interface MaterialCatalogApi {
 
     @Operation(summary = "查询栏目树")
-    @GetMapping("/api/tree")
+    @GetMapping("/api/material/catalog/tree")
     @SaCheckPermission(MaterialPermissionCode.MATERIAL_CATALOG_TREE_VIEW)
     List<CatalogNodeVO> queryTree();
 
     @Operation(summary = "查询指定角色栏目权限树")
-    @GetMapping("/api/permission/tree/role/{roleId}")
+    @GetMapping("/api/material/catalog/permission/tree/role/{roleId}")
     @SaCheckPermission(MaterialPermissionCode.MATERIAL_CATALOG_PERMISSION_VIEW)
     List<CatalogNodeVO> catalogTreeWithRolePermission(@PathVariable String roleId);
 
 
     @Operation(description = "新建栏目")
-    @PostMapping("/api/catalog")
+    @PostMapping("/api/material/catalog")
     @SaCheckPermission(MaterialPermissionCode.MATERIAL_CATALOG_CREATE)
     String createCatalog(@RequestBody CatalogCreateDTO catalogCreateDTO);
 
     @Operation(description = "更新栏目（重命名/移动/排序）")
-    @PutMapping("/api/catalog")
+    @PutMapping("/api/material/catalog")
     @SaCheckPermission(MaterialPermissionCode.MATERIAL_CATALOG_TREE_VIEW)
     void updateCatalog(@RequestBody @Valid CatalogUpdateDTO dto);
 
     @Operation(description = "删除栏目")
-    @DeleteMapping("/api/catalog/{catalogId}")
+    @DeleteMapping("/api/material/catalog/{catalogId}")
     @SaCheckPermission(MaterialPermissionCode.MATERIAL_CATALOG_TREE_VIEW)
     void deleteCatalog(@PathVariable String catalogId);
 }

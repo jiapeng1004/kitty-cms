@@ -5,12 +5,16 @@ import Login from '@/views/auth/Login.vue'
 import Register from '@/views/auth/Register.vue'
 import Layout from '@/layouts/Layout.vue'
 import Dashboard from '@/views/Dashboard.vue'
+import {embedMamRoutes, mamContentRoutes} from '@/router/mamRoutes'
 
-// 扫描所有视图组件，用于根据菜单中配置的 component 字段动态加载
-const viewModules = import.meta.glob('../views/**/*.vue')
+// 管理端 + MAM 视图，用于菜单 component 动态加载
+const viewModules = import.meta.glob([
+    '../views/**/*.vue',
+    '../mam/views/**/*.vue'
+])
 
 /**
- * 基础路由：仅包含登录、注册和 Layout 壳子，业务路由按菜单和权限动态挂载
+ * 基础路由：登录/注册、统一 Layout 壳子；管理端业务路由按菜单动态挂载，MAM 路由静态注册
  */
 const constantRoutes: RouteRecordRaw[] = [
     {
@@ -31,11 +35,11 @@ const constantRoutes: RouteRecordRaw[] = [
         component: Layout,
         meta: {requiresAuth: true},
         children: [
-            // 首页固定挂在 Layout 下
-            {path: '', name: 'Dashboard', component: Dashboard}
-            // 其余业务路由（/config、/user、/role 等）在登录后根据菜单动态 addRoute
+            {path: '', name: 'Dashboard', component: Dashboard},
+            ...mamContentRoutes
         ]
-    }
+    },
+    ...embedMamRoutes
 ]
 
 const router = createRouter({
@@ -44,34 +48,40 @@ const router = createRouter({
 })
 
 /**
- * 从菜单节点的 component 字段解析出实际组件
- * 例如 menu.component = 'config/ConfigList' -> '../views/config/ConfigList.vue'
+ * 从菜单 component 解析组件：
+ * - config/ConfigList -> views/config/ConfigList.vue
+ * - mam/MaterialWorkspacePage -> mam/views/MaterialWorkspacePage.vue
  */
 function resolveViewComponent(component?: string) {
     if (!component) return undefined
+    if (component.startsWith('mam/')) {
+        const rest = component.slice(4)
+        const mamKey = rest.startsWith('views/')
+            ? `../mam/${rest}.vue`
+            : `../mam/views/${rest}.vue`
+        return viewModules[mamKey]
+    }
     const key = `../views/${component}.vue`
     return viewModules[key]
 }
 
 let dynamicRoutesInited = false
 
+/** 登录态与 kitty-user Sa-Token 对齐：Authorization + Bearer + uuid，见 getToken() */
 router.beforeEach(async (to, _from, next) => {
     const token = getToken()
     const isPublic = to.matched.some((r) => r.meta?.public)
 
-    // 未登录且访问受保护路由 → 强制跳登录
     if (!isPublic && !token) {
         next({path: '/login', query: {redirect: to.fullPath}})
         return
     }
 
-    // 已登录访问登录页 → 跳首页
     if (to.path === '/login' && token) {
         next({path: '/'})
         return
     }
 
-    // 登录后首次路由跳转时，根据当前菜单动态注册业务路由
     if (token && !dynamicRoutesInited) {
         try {
             const menuTree = await getCurrentMenuTree()
@@ -85,11 +95,23 @@ router.beforeEach(async (to, _from, next) => {
                 for (const item of list) {
                     const loader = resolveViewComponent(item.component)
                     if (item.menuType === 'MENU' && item.path && loader) {
-                        if (!router.getRoutes().some((r) => r.path === item.path)) {
+                        const normalizedPath = item.path.replace(/^\//, '')
+                        const exists = router.getRoutes().some((r) => {
+                            const p = r.path.replace(/^\//, '')
+                            return p === normalizedPath || r.path === item.path
+                        })
+                        if (!exists) {
                             router.addRoute('RootLayout', {
-                                path: item.path,
+                                path: normalizedPath,
                                 name: item.menuKey || item.path,
-                                component: loader
+                                component: loader,
+                                meta: item.path.startsWith('/material') ||
+                                item.path.startsWith('/resources') ||
+                                item.path.startsWith('/storage-manage')
+                                    ? {hideAdminChrome: true, flush: true, immersive: true}
+                                    : item.component?.startsWith('mam/')
+                                      ? {hideAdminChrome: true}
+                                      : undefined
                             })
                         }
                     }
@@ -101,13 +123,11 @@ router.beforeEach(async (to, _from, next) => {
 
             walk(Array.isArray(menuTree) ? menuTree : [])
         } catch {
-            // 忽略菜单解析失败，后续接口层仍有权限兜底
+            // 忽略菜单解析失败
         } finally {
             dynamicRoutesInited = true
         }
-        // 动态路由是首次导航过程中才注册的，必须重走一次当前地址，
-        // 否则本次导航仍按「无子路由」匹配，会出现白屏（刷新或直接打开深层链接时尤其明显）。
-        next({ ...to, replace: true })
+        next({...to, replace: true})
         return
     }
 

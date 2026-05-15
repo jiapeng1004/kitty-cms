@@ -5,6 +5,8 @@ import App from './App.vue'
 import Antd from 'ant-design-vue'
 import 'ant-design-vue/dist/reset.css'
 import './styles/variables.css'
+import './mam/styles/mam-theme.css'
+import './mam/styles/mam-admin-table-cell.css'
 
 const app = createApp(App)
 const pinia = createPinia()

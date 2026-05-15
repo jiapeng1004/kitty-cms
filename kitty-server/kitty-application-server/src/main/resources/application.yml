@@ -39,4 +39,4 @@ kitty:
       - /user/login
       - /view/**
 server:
-  port: 8080
+  port: 9081

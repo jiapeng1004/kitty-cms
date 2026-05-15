@@ -33,7 +33,7 @@ public interface OpenAuthService {
 
     /**
      * 获取跳转至第三方授权页的 URL。
-     * redirect_uri 固定为当前服务的 /open/auth/callback/{source}（可选 /{next}），由工具类 {@link icu.jiapeng.kitty.common.core.util.CommonServletUtil#getCurrentBaseUrl()} 与 path 拼接。
+     * redirect_uri 固定为当前服务的 /open/oauth2/auth/callback/{source}（可选 /{next}），由工具类 {@link icu.jiapeng.kitty.common.core.util.CommonServletUtil#getCurrentBaseUrl()} 与 path 拼接。
      *
      * @param source 平台标识：feishu、dingtalk、github、google、microsoft、wechat
      * @param params 渲染参数（如 next），由请求 query 绑定，可为 null
@@ -43,7 +43,7 @@ public interface OpenAuthService {
 
     /**
      * 用回调参数（code、state 等）完成第三方登录，由实现内部完成换码、查/建用户、登录等，返回登录结果。
-     * 换 token 时使用的 redirect_uri 与授权时一致，通过 {@link icu.jiapeng.kitty.common.core.util.CommonServletUtil#getCurrentBaseUrl()} 获取当前域并拼接 /open/auth/callback/{source}[/{next}]。
+     * 换 token 时使用的 redirect_uri 与授权时一致，通过 {@link icu.jiapeng.kitty.common.core.util.CommonServletUtil#getCurrentBaseUrl()} 获取当前域并拼接 /open/oauth2/auth/callback/{source}[/{next}]。
      *
      * @param source 平台标识
      * @param params 回调参数（由实现解析）

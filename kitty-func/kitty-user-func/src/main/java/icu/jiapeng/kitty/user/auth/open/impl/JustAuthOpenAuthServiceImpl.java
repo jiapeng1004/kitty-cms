@@ -114,7 +114,7 @@ public class JustAuthOpenAuthServiceImpl implements OpenAuthService {
         if (source == null || StrUtil.isBlank(callbackBaseUrl)) {
             return Optional.empty();
         }
-        String redirectUri = PathUtil.builderPath(callbackBaseUrl, "/open/auth/callback", source, next);
+        String redirectUri = PathUtil.builderPath(callbackBaseUrl, "/open/oauth2/auth/callback", source, next);
         return switch (source.trim().toLowerCase()) {
             case "feishu" -> buildFeishuRequest(redirectUri);
             case "dingtalk" -> buildDingTalkRequest(redirectUri);

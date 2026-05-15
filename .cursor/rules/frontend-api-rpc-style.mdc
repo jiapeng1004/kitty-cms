@@ -14,21 +14,15 @@ globs: frontend/**/*.vue,frontend/**/src/**/*.js,frontend/**/src/**/*.ts
 - **必须**：
   - 按业务域建立 `*_api.js`（或 `*_api.ts`）模块（如 `auth_api.js`、`user_api.js`、`config_api.js`）。
   - 在该模块内：`import api from '../utils/api'`（或项目内统一的 api 实例路径）。
-  - 若后端有 **servlet.context-path**（如 `/kitty-user`），在 `api/constants.js` 中统一定义服务路径（如 `USER_SERVICE_PATH = '/kitty-user'`），各 API 模块从 constants 引入后拼成 `PREFIX = \`${USER_SERVICE_PATH}/api/xxx\``，保证请求发往 `baseURL + context-path + /api/xxx`。
-  - 定义好 `PREFIX` 后，**只在该模块内**使用 `api.get/post/put/delete`，并**导出**具名函数（如 `login(data)`、`getUserList(params)`）。
+  - **路径写法**：经网关且 `axios` 的 `baseURL` 已指向网关根时，在 `*_api` 内直接写**与网关 Route 一致的完整路径字面量**（如 `'/api/user/login'`、`'/api/user/dashboard/stats'`），便于对照网关 Predicate 与抓包排查。若仍直连某服务且存在 **servlet.context-path**，可在该路径前拼一段固定前缀（或把前缀放进 `baseURL`），原则同上：**一眼能看出最终请求路径**。
+  - **只在该模块内**使用 `api.get/post/put/delete`，并**导出**具名函数（如 `login(data)`、`getUserList(params)`）。
   - 在 Vue 或其它业务文件中：只 `import { login, getUserList } from '@/api/xxx_api'`，调用这些函数，不直接使用 `api`。
 
 ## 2. 推荐结构示例
 
 ```javascript
-// api/constants.js：与后端 servlet.context-path 一致
-export const USER_SERVICE_PATH = '/kitty-user'
-
-// 例如 src/api/auth_api.js
+// 例如 src/api/auth_api.js（路径与网关 /api/user/** 一致）
 import api, { getBaseURL } from '../utils/api'
-import { USER_SERVICE_PATH } from './constants'
-
-const PREFIX = `${USER_SERVICE_PATH}/api/user`
 
 /**
  * 用户登录
@@ -36,44 +30,41 @@ const PREFIX = `${USER_SERVICE_PATH}/api/user`
  * @returns {Promise<{ token: string, timeout: number }>}
  */
 export function login(data) {
-  return api.post(`${PREFIX}/login`, data)
+  return api.post('/api/user/login', data)
 }
 
 /**
  * 获取验证码图片 URL（若需拼接 baseURL）
  */
 export function getCaptchaUrl() {
-  return `${getBaseURL()}${PREFIX}/captcha?t=${Date.now()}`
+  return `${getBaseURL()}/api/user/captcha?t=${Date.now()}`
 }
 ```
 
 ```javascript
 // 例如 src/api/user_api.js
 import api from '../utils/api'
-import { USER_SERVICE_PATH } from './constants'
-
-const PREFIX = `${USER_SERVICE_PATH}/api/user`
 
 /**
  * 分页查询用户
  * @param {{ page?: number, size?: number, searchKey?: string }} params
  */
 export function getUserPage(params) {
-  return api.get(`${PREFIX}/query`, { params })
+  return api.get('/api/user/query', { params })
 }
 
 /**
  * 根据 ID 获取用户详情
  */
 export function getUserById(id) {
-  return api.get(`${PREFIX}/${id}`)
+  return api.get(`/api/user/${id}`)
 }
 
 /**
  * 更新用户
  */
 export function updateUser(id, data) {
-  return api.put(`${PREFIX}/${id}`, data)
+  return api.put(`/api/user/${id}`, data)
 }
 ```
 

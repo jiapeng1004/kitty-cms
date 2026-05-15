@@ -24,3 +24,7 @@ spring:
         group: ${spring.cloud.nacos.config.group:}
         username: ${spring.cloud.nacos.config.username:}
         password: ${spring.cloud.nacos.config.password:}
+sa-token:
+  token-name: Authorization
+  token-style: uuid
+  token-prefix: Bearer

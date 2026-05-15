@@ -25,6 +25,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 public interface DashboardApi {
 
     @Operation(summary = "统计概览")
-    @GetMapping("/dashboard/stats")
+    @GetMapping("/api/user/dashboard/stats")
     DashboardStatsVO stats();
 }

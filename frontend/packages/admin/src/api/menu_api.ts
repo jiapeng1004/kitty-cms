@@ -1,7 +1,4 @@
 import api from '../utils/api'
-import { USER_SERVICE_PATH } from './constants'
-
-const PREFIX = `${USER_SERVICE_PATH}/api/menu`
 
 export interface MenuTreeItem {
   id: string
@@ -21,10 +18,9 @@ export interface MenuTreeItem {
 }
 
 export function getCurrentMenuTree(): Promise<MenuTreeItem[]> {
-  return api.get(`${PREFIX}/tree/current`)
+  return api.get('/api/menu/tree/current')
 }
 
 export function getAllMenuTree(): Promise<MenuTreeItem[]> {
-  return api.get(`${PREFIX}/tree/all`)
+  return api.get('/api/menu/tree/all')
 }
-

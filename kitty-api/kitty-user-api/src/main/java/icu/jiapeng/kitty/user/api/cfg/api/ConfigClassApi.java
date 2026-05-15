@@ -34,22 +34,22 @@ import org.springframework.web.bind.annotation.PutMapping;
 public interface ConfigClassApi {
 
     @Operation(summary = "分页查询")
-    @GetMapping("/api/configClass/query")
+    @GetMapping("/api/config/class/query")
     PageRespVo<ConfigClassListVo> query(@Valid ConfigClassPageDTO query);
 
     @Operation(summary = "根据ID获取")
-    @GetMapping("/api/configClass/{id}")
+    @GetMapping("/api/config/class/{id}")
     ConfigClassListVo getById(String id);
 
     @Operation(summary = "新增")
-    @PostMapping("/api/configClass")
+    @PostMapping("/api/config/class")
     String create(@Valid ClassCreateDTO dto);
 
     @Operation(summary = "更新")
-    @PutMapping("/api/configClass/{id}")
+    @PutMapping("/api/config/class/{id}")
     Boolean update(@NotBlank(message = "{id.not.null}") String id, @Valid ClassUpdateDTO dto);
 
     @Operation(summary = "删除")
-    @DeleteMapping("/api/configClass/{id}")
+    @DeleteMapping("/api/config/class/{id}")
     Boolean remove(@NotBlank(message = "{id.not.null}") String id);
 }

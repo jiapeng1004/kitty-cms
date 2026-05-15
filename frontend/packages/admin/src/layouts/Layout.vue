@@ -1,5 +1,6 @@
 <template>
-  <a-layout class="admin-layout">
+  <MamLayout v-if="hideAdminChrome" />
+  <a-layout v-else class="admin-layout">
     <!-- 左侧导航：云控制台风格 -->
     <a-layout-sider
         v-model:collapsed="collapsed"
@@ -88,12 +89,14 @@ import {
   LogoutOutlined
 } from '@ant-design/icons-vue'
 import SidebarMenuItem from '@/components/layout/SidebarMenuItem.vue'
+import MamLayout from '@/mam/layouts/Layout.vue'
 import {setToken, setUserName, USER_NAME_KEY} from '@/utils/api'
 import {getCurrentMenuTree, type MenuTreeItem} from '@/api/menu_api'
 import {logout} from '@/api/auth_api'
 
 const route = useRoute()
 const router = useRouter()
+const hideAdminChrome = computed(() => route.matched.some((r) => r.meta?.hideAdminChrome === true))
 const collapsed = ref(false)
 const menuTree = ref<MenuTreeItem[]>([])
 const displayName = ref(localStorage.getItem(USER_NAME_KEY) || '用户')

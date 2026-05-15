@@ -47,6 +47,10 @@ export default defineConfig({
             '/api': {
                 target: 'http://localhost:9081',
                 changeOrigin: true,
+            },
+            '/open': {
+                target: 'http://localhost:9081',
+                changeOrigin: true,
             }
         }
     }

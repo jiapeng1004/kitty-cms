@@ -49,10 +49,10 @@ public interface ConfigApi {
     Boolean remove(@NotBlank(message = "{id.not.null}") @PathVariable String id);
 
     @Operation(description = "获取配置值")
-    @GetMapping("/api/getVal")
+    @GetMapping("/api/config/getVal")
     String getVal(GetValDTO getValDTO);
 
     @Operation(description = "设置配置值")
-    @PostMapping("/api/setVal")
+    @PostMapping("/api/config/setVal")
     String setVal(@Valid @RequestBody SetValDTO setValDTO);
 }

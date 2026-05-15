@@ -20,7 +20,7 @@ import icu.jiapeng.kitty.user.role.entity.KtUserRole;
 import icu.jiapeng.kitty.user.role.mapper.KtUserRoleMapper;
 import icu.jiapeng.kitty.user.role.service.KtUserRoleService;
 import icu.jiapeng.kitty.user.role.service.KtUserRoleUserService;
-import icu.jiapeng.kitty.user.role.vo.RoleDetailInfoVo;
+import icu.jiapeng.kitty.user.api.role.vo.RoleDetailInfoVo;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 

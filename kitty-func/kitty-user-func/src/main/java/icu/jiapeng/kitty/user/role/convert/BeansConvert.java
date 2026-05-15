@@ -12,7 +12,7 @@
 package icu.jiapeng.kitty.user.role.convert;
 
 import icu.jiapeng.kitty.user.role.entity.KtRole;
-import icu.jiapeng.kitty.user.role.vo.RoleDetailInfoVo;
+import icu.jiapeng.kitty.user.api.role.vo.RoleDetailInfoVo;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 

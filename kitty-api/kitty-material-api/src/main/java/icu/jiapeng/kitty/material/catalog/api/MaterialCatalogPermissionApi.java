@@ -24,32 +24,32 @@ import java.util.Map;
 public interface MaterialCatalogPermissionApi {
 
     @Operation(summary = "判断当前用户栏目上是否有指定权限")
-    @GetMapping("/api/catalogPermission/check")
+    @GetMapping("/api/material/catalogPermission/check")
     @SaCheckPermission(MaterialPermissionCode.MATERIAL_CATALOG_PERMISSION_VIEW)
     boolean checkPermission(@RequestParam String catalogId, @RequestParam String permissionCode);
 
     @Operation(summary = "获取指定角色的权限树")
     @SaCheckPermission(MaterialPermissionCode.MATERIAL_CATALOG_PERMISSION_VIEW)
-    @PostMapping("/api/catalogPermission/map")
+    @PostMapping("/api/material/catalogPermission/map")
     Map<String, List<String>> getCatalogPermissions(@RequestBody List<String> roleIds);
 
     @Operation(summary = "获取当前用户的权限树")
     @SaCheckPermission(MaterialPermissionCode.MATERIAL_CATALOG_PERMISSION_VIEW)
-    @GetMapping("/api/catalogPermission/tree/currentUser")
+    @GetMapping("/api/material/catalogPermission/tree/currentUser")
     Map<String, List<String>> getCatalogPermissions();
 
     @Operation(summary = "栏目权限批量替换：roleIds 指定角色；permissionCodesReplace 非空时仅替换这些权限码的可编辑行，为空则清空这些角色下全部可编辑规则后再写入 permissionItems")
     @SaCheckPermission(MaterialPermissionCode.MATERIAL_CATALOG_PERMISSION_EDIT)
-    @PostMapping("/api/catalogPermission/upsert")
+    @PostMapping("/api/material/catalogPermission/upsert")
     void upsertCatalogPermission(@RequestBody @Valid CatalogPermissionUpsertDTO catalogPermissionUpsertDTO);
 
     @Operation(summary = "单格授权（栏目 × 角色 × 权限码）")
     @SaCheckPermission(MaterialPermissionCode.MATERIAL_CATALOG_PERMISSION_EDIT)
-    @PostMapping("/api/catalogPermission/grant")
+    @PostMapping("/api/material/catalogPermission/grant")
     void grantCatalogPermission(@RequestBody @Valid CatalogPermissionCellDTO dto);
 
     @Operation(summary = "单格撤销（仅删除可编辑的规则行）")
     @SaCheckPermission(MaterialPermissionCode.MATERIAL_CATALOG_PERMISSION_EDIT)
-    @PostMapping("/api/catalogPermission/revoke")
+    @PostMapping("/api/material/catalogPermission/revoke")
     void revokeCatalogPermission(@RequestBody @Valid CatalogPermissionCellDTO dto);
 }
