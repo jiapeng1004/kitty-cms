@@ -11,9 +11,13 @@ pluginManagement {
     includeBuild("$flutterSdkPath/packages/flutter_tools/gradle")
 
     repositories {
+        maven("https://mirrors.cloud.tencent.com/nexus/repository/maven-public/")
+        maven("https://maven.aliyun.com/repository/google")
+        maven("https://maven.aliyun.com/repository/jcenter")
+        maven("https://maven.aliyun.com/repository/central")
+        // 可选：保留 google() 和 mavenCentral() 作为 fallback
         google()
         mavenCentral()
-        gradlePluginPortal()
     }
 }
 

@@ -75,6 +75,7 @@
         <spring-cloud.version>2025.1.0</spring-cloud.version>
         <spring-cloud-alibaba.version>2025.1.0.0</spring-cloud-alibaba.version>
         <spring-modulith.version>2.0.0</spring-modulith.version>
+    <kotlin.version>2.3.21</kotlin.version>
     </properties>
 
     <dependencyManagement>
@@ -469,6 +470,20 @@
         </dependencies>
     </dependencyManagement>
 
+<dependencies>
+    <dependency>
+        <groupId>org.jetbrains.kotlin</groupId>
+        <artifactId>kotlin-stdlib-jdk8</artifactId>
+        <version>${kotlin.version}</version>
+    </dependency>
+    <dependency>
+        <groupId>org.jetbrains.kotlin</groupId>
+        <artifactId>kotlin-test</artifactId>
+        <version>${kotlin.version}</version>
+        <scope>test</scope>
+    </dependency>
+</dependencies>
+
 
     <build>
         <extensions>
@@ -594,6 +609,40 @@
 <!--                            <value>FIXME</value>-->
 <!--                        </replacement>-->
                     </replacements>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.jetbrains.kotlin</groupId>
+                <artifactId>kotlin-maven-plugin</artifactId>
+                <version>${kotlin.version}</version>
+                <extensions>true</extensions>
+                <executions>
+                    <execution>
+                        <id>compile</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>compile</goal>
+                        </goals>
+                        <configuration>
+                            <sourceDirs>
+                                <sourceDir>kitty-data</sourceDir>
+                                <sourceDir>kitty-sentiment</sourceDir>
+                                <sourceDir>kitty_news</sourceDir>
+                                <sourceDir>kitty-transcoder-go</sourceDir>
+                                <sourceDir>kitty_news_rn</sourceDir>
+                            </sourceDirs>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>test-compile</id>
+                        <phase>test-compile</phase>
+                        <goals>
+                            <goal>test-compile</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <jvmTarget>1.8</jvmTarget>
                 </configuration>
             </plugin>
         </plugins>

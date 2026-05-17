@@ -1,6 +1,6 @@
 # kitty_news
 
-A new Flutter project.
+a news project
 
 ## Getting Started
 
